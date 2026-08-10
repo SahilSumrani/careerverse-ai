@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const authPaths = ["/auth/signin", "/auth/signup", "/auth/forgot-password"];
 
-export default auth((req) => {
+function hasSecureSessionCookie(req: NextRequest) {
+  return req.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("__Secure-authjs.session-token"));
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const session = req.auth;
+  const secret = process.env.AUTH_SECRET;
+
+  // Edge-safe JWT read only — do not import @/lib/auth (Prisma / Node deps).
+  const token = secret
+    ? await getToken({
+        req,
+        secret,
+        secureCookie: hasSecureSessionCookie(req),
+      })
+    : null;
 
   const isAuthPage = authPaths.some((p) => pathname.startsWith(p));
   const isProtected =
@@ -23,27 +39,27 @@ export default auth((req) => {
     pathname.startsWith("/profile") ||
     pathname.startsWith("/institutions");
 
-  if (!session?.user && isProtected) {
+  if (!token && isProtected) {
     const url = new URL("/auth/signin", req.nextUrl.origin);
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (session?.user && isAuthPage) {
-    const dest = session.user.onboardingComplete ? "/dashboard" : "/onboarding";
+  if (token && isAuthPage) {
+    const dest = token.onboardingComplete ? "/dashboard" : "/onboarding";
     return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }
 
-  if (session?.user && pathname.startsWith("/admin")) {
-    const roles = session.user.roles || [];
+  if (token && pathname.startsWith("/admin")) {
+    const roles = (token.roles as string[] | undefined) || [];
     if (!roles.includes("PLATFORM_ADMIN") && !roles.includes("INSTITUTION_ADMIN")) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
   }
 
   if (
-    session?.user &&
-    !session.user.onboardingComplete &&
+    token &&
+    !token.onboardingComplete &&
     !pathname.startsWith("/onboarding") &&
     isProtected &&
     !pathname.startsWith("/admin")
@@ -52,11 +68,15 @@ export default auth((req) => {
   }
 
   const response = NextResponse.next();
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/onboarding")) {
+  if (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding")
+  ) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
   return response;
-});
+}
 
 export const config = {
   matcher: [

@@ -32,17 +32,11 @@ export default function SignUpPage() {
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
 
-  async function routeAfterAuth(onboardingComplete: boolean) {
-    router.push(onboardingComplete ? "/dashboard" : "/onboarding");
-    router.refresh();
-  }
-
   async function onGoogle() {
     setGoogleBusy(true);
     setError("");
     try {
-      const result = await completeGoogleAuth();
-      await routeAfterAuth(result.onboardingComplete);
+      await completeGoogleAuth();
     } catch (err) {
       const msg = googleAuthErrorMessage(err);
       if (msg) setError(msg);

@@ -4,6 +4,9 @@ import { AppTopbar } from "@/components/layout/app-topbar";
 import { CopilotWidget } from "@/components/career/copilot-widget";
 import { redirect } from "next/navigation";
 
+/** Session + Prisma pages — skip static generation when env/DB unavailable at build. */
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session?.user) redirect("/auth/signin");

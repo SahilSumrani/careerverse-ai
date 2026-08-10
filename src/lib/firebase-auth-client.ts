@@ -19,7 +19,8 @@ export async function signInWithGooglePopup(): Promise<{ user: User; idToken: st
   const idToken = await result.user.getIdToken();
 
   void getFirebaseAnalytics();
-  await upsertFirestoreUser(result.user);
+  // Never block auth on Firestore (DB may be missing / rules may hang)
+  void upsertFirestoreUser(result.user);
 
   return { user: result.user, idToken };
 }

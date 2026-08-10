@@ -4,8 +4,8 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { assignRole, ensureDefaultRoles } from "@/lib/rbac";
 import { verifyFirebaseIdToken } from "@/lib/firebase-id-token";
+import { upsertUserFromFirebaseClaims } from "@/lib/firebase-user";
 import { signInSchema } from "@/lib/validators";
 import type { RoleName } from "@prisma/client";
 
@@ -78,80 +78,14 @@ const providers = [
 
       try {
         const claims = await verifyFirebaseIdToken(idToken);
-        const email = claims.email?.toLowerCase();
-        if (!email) return null;
-
-        await ensureDefaultRoles();
-
-        let user = await prisma.user.findUnique({
-          where: { email },
-          include: {
-            roles: { include: { role: true } },
-            profile: true,
-          },
-        });
-
-        if (user?.suspendedAt) return null;
-
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
-              email,
-              name: claims.name ?? email.split("@")[0],
-              image: typeof claims.picture === "string" ? claims.picture : null,
-              emailVerified: claims.email_verified ? new Date() : null,
-              profile: {
-                create: {
-                  onboardingComplete: false,
-                  profileCompleteness: 15,
-                },
-              },
-            },
-            include: {
-              roles: { include: { role: true } },
-              profile: true,
-            },
-          });
-          await assignRole(user.id, "STUDENT");
-          user = await prisma.user.findUniqueOrThrow({
-            where: { id: user.id },
-            include: {
-              roles: { include: { role: true } },
-              profile: true,
-            },
-          });
-        } else {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              name: user.name || claims.name || undefined,
-              image: user.image || (typeof claims.picture === "string" ? claims.picture : undefined),
-              emailVerified: user.emailVerified ?? (claims.email_verified ? new Date() : null),
-            },
-            include: {
-              roles: { include: { role: true } },
-              profile: true,
-            },
-          });
-          if (!user.roles.length) {
-            await assignRole(user.id, "STUDENT");
-            user = await prisma.user.findUniqueOrThrow({
-              where: { id: user.id },
-              include: {
-                roles: { include: { role: true } },
-                profile: true,
-              },
-            });
-          }
-        }
-
+        const user = await upsertUserFromFirebaseClaims(claims);
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           image: user.image,
-          roles: user.roles.map((r) => r.role.name),
-          onboardingComplete: user.profile?.onboardingComplete ?? false,
+          roles: user.roles,
+          onboardingComplete: user.onboardingComplete,
         };
       } catch (error) {
         console.error("Firebase auth bridge failed", error);
@@ -190,7 +124,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.onboardingComplete = session.onboardingComplete ?? token.onboardingComplete;
         token.name = session.name ?? token.name;
       }
-      if (token.id && (!token.roles || trigger === "update")) {
+      // Refresh roles + onboarding from DB (first token, updates, or missing flag)
+      if (
+        token.id &&
+        (user || trigger === "update" || !token.roles || token.onboardingComplete === undefined)
+      ) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
           include: {

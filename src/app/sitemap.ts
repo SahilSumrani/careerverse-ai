@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { prisma } from "@/lib/db";
 
 const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
@@ -19,7 +18,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === "" ? 1 : 0.7,
   }));
 
+  if (!process.env.DATABASE_URL) {
+    return staticRoutes;
+  }
+
   try {
+    const { prisma } = await import("@/lib/db");
     const [opportunities, events, careers] = await Promise.all([
       prisma.opportunity.findMany({
         where: { status: "PUBLISHED" },

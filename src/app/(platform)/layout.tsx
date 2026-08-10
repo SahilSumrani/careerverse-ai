@@ -5,6 +5,9 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CopilotWidget } from "@/components/career/copilot-widget";
 
+/** DB/auth-backed routes — never prerender at build (Vercel may lack DATABASE_URL). */
+export const dynamic = "force-dynamic";
+
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   const isAdmin =

@@ -30,7 +30,8 @@ export default auth((req) => {
   }
 
   if (session?.user && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+    const dest = session.user.onboardingComplete ? "/dashboard" : "/onboarding";
+    return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }
 
   if (session?.user && pathname.startsWith("/admin")) {

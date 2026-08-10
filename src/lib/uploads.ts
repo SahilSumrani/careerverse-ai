@@ -28,10 +28,11 @@ export async function saveResumeFile(file: File) {
     throw Object.assign(new Error("Invalid DOCX file."), { status: 400 });
   }
 
-  const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || "uploads");
+  const uploadRoot = process.env.UPLOAD_DIR || "uploads";
+  const uploadDir = path.join(/* turbopackIgnore: true */ process.cwd(), uploadRoot);
   await mkdir(uploadDir, { recursive: true });
   const storageName = `${Date.now()}-${randomBytes(8).toString("hex")}${extFromName}`;
-  const storagePath = path.join(uploadDir, storageName);
+  const storagePath = path.join(/* turbopackIgnore: true */ uploadDir, storageName);
   await writeFile(storagePath, buffer);
   return {
     storagePath,

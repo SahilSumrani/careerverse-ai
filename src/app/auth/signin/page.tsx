@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { completeGoogleAuth, googleAuthErrorMessage } from "@/lib/google-auth";
 import "@/components/auth/auth-shell.css";
@@ -20,7 +20,6 @@ function GoogleMark() {
 }
 
 function SignInForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,35 +30,35 @@ function SignInForm() {
 
   async function routeAfterAuth(onboardingComplete: boolean) {
     const callback = params.get("callbackUrl");
-    if (onboardingComplete) {
-      router.push(callback || "/dashboard");
-    } else {
-      router.push("/onboarding");
-    }
-    router.refresh();
+    const dest = onboardingComplete ? callback || "/dashboard" : "/onboarding";
+    window.location.assign(dest);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const res = await signIn("credentials", { email, password, redirect: false });
-    setBusy(false);
-    if (res?.error) {
-      setError("Invalid email or password.");
-      return;
+    try {
+      const res = await signIn("credentials", { email, password, redirect: false });
+      if (res?.error || res?.ok === false) {
+        setError("Invalid email or password.");
+        return;
+      }
+      const me = await fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" });
+      const data = me.ok ? await me.json() : null;
+      await routeAfterAuth(Boolean(data?.user?.onboardingComplete));
+    } catch {
+      setError("Unable to sign in. Try again.");
+    } finally {
+      setBusy(false);
     }
-    const me = await fetch("/api/auth/me", { cache: "no-store" });
-    const data = me.ok ? await me.json() : null;
-    await routeAfterAuth(Boolean(data?.user?.onboardingComplete));
   }
 
   async function onGoogle() {
     setGoogleBusy(true);
     setError("");
     try {
-      const result = await completeGoogleAuth();
-      await routeAfterAuth(result.onboardingComplete);
+      await completeGoogleAuth({ callbackUrl: params.get("callbackUrl") });
     } catch (err) {
       const msg = googleAuthErrorMessage(err);
       if (msg) setError(msg);

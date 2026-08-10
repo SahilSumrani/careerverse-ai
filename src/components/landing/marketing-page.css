@@ -1,0 +1,181 @@
+/* Shared marketing page sections — CareerVerse landing language */
+.cv-mkt-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 4.5rem 1.25rem 3.5rem;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 0%, #dae6ff 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 20%, #eef3ff 0%, transparent 50%),
+    linear-gradient(180deg, #f7f9fc 0%, #ffffff 70%);
+}
+
+.cv-mkt-hero-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cv-mkt-hero h1 {
+  margin: 1rem auto 0;
+  max-width: 18ch;
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  color: #0b1220;
+}
+
+.cv-mkt-hero h1 em {
+  font-style: normal;
+  color: #225aea;
+}
+
+.cv-mkt-hero p {
+  margin: 1rem auto 0;
+  max-width: 42rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #667085;
+}
+
+.cv-mkt-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.cv-mkt-grid {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .cv-mkt-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cv-mkt-grid.is-two {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cv-mkt-card {
+  border: 1px solid #eef2f8;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.35rem 1.25rem;
+  box-shadow: rgba(0, 0, 0, 0.04) 0 12px 32px;
+  text-align: left;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cv-mkt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: rgba(16, 24, 40, 0.1) 0 18px 40px;
+}
+
+.cv-mkt-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #0b1220;
+}
+
+.cv-mkt-card p {
+  margin: 0.45rem 0 0;
+  font-size: 0.925rem;
+  line-height: 1.5;
+  color: #667085;
+}
+
+.cv-mkt-meta {
+  display: inline-flex;
+  margin-top: 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #225aea;
+}
+
+.cv-mkt-band {
+  max-width: 72rem;
+  margin: 0 auto 4rem;
+  padding: 1.75rem 1.5rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #225aea 0%, #3b6ef5 55%, #5b8aff 100%);
+  color: #fff;
+  text-align: center;
+}
+
+.cv-mkt-band h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  letter-spacing: -0.03em;
+}
+
+.cv-mkt-band p {
+  margin: 0.55rem auto 0;
+  max-width: 36rem;
+  opacity: 0.92;
+  font-size: 0.95rem;
+}
+
+.cv-mkt-band .cv-mkt-ctas {
+  margin-top: 1.15rem;
+}
+
+.cv-mkt-band .cv-btn-wrap.is-secondary .cv-btn {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.cv-mkt-steps {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1.25rem 4.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .cv-mkt-steps {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.cv-mkt-step {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid #e8eef8;
+  background: #f7f9fc;
+  padding: 1.25rem;
+}
+
+.cv-mkt-step strong {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #225aea;
+}
+
+.cv-mkt-step h3 {
+  margin: 0.45rem 0 0;
+  font-size: 1.05rem;
+  color: #0b1220;
+}
+
+.cv-mkt-step p {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: #667085;
+  line-height: 1.45;
+}

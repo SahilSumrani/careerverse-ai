@@ -1,0 +1,303 @@
+/* CareerVerse home — Dropship design tokens (user-provided + scrape #225aea) */
+.cv-home {
+  --cv-bg: #ffffff;
+  --cv-bg-soft: #f7f9fc;
+  --cv-bg-muted: #eef3ff;
+  --cv-card: #ffffff;
+  --cv-border: #0000000d;
+  --cv-text: #000000;
+  --cv-muted: #667085;
+  --cv-accent: #225aea;
+  --cv-accent-soft: #eef3ff;
+  --cv-accent-lighter: #dae6ff;
+  --cv-wave: #ddecfc;
+  --cv-secondary-btn: #f3f3f3;
+  --cv-secondary-fg: #1f1f1f;
+  --cv-shadow-sm: rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
+  --cv-space-xs: 2px;
+  --cv-space-sm: 10px;
+  --cv-space-md: 20px;
+  --cv-space-lg: 32px;
+  --cv-space-xl: 96px;
+  --cv-radius: 12px;
+  --font-heading: var(--font-sans), "Plus Jakarta Sans", sans-serif;
+  --font-body: var(--font-body), Inter, sans-serif;
+  background: #fff;
+  color: var(--cv-text);
+  font-family: var(--font-body);
+  overflow-x: clip;
+}
+
+/* Opaque sticky nav — translucent blur was smearing hero blue into tools */
+.cv-home > header {
+  background: #fff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.cv-home a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cv-container {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-left: var(--cv-space-md);
+  padding-right: var(--cv-space-md);
+}
+
+.cv-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe6ff;
+  background: #f5f8ff;
+  color: var(--cv-accent);
+  border-radius: 999px;
+  padding: 6px 14px 6px 6px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.24px;
+}
+
+.cv-eyebrow-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--cv-accent);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Primary / secondary buttons — Dropship tokens */
+.cv-btn-wrap {
+  display: inline-flex;
+  border-radius: var(--cv-radius);
+  text-decoration: none;
+}
+
+.cv-btn-wrap.is-secondary {
+  background: transparent;
+}
+
+.cv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  /* Dropship .button — height 2.5rem, font 0.875rem, pad 0 1rem */
+  min-width: 0;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.69rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  background: var(--cv-accent);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: none;
+  border: 0;
+}
+
+.cv-btn-wrap.is-secondary .cv-btn {
+  background: var(--cv-secondary-btn);
+  color: var(--cv-secondary-fg);
+}
+
+.cv-section-title {
+  font-family: var(--font-heading);
+  /* Dropship h2 scale */
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--cv-text);
+}
+
+.cv-section-sub {
+  margin-top: var(--cv-space-sm);
+  color: var(--cv-muted);
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  max-width: 36rem;
+}
+
+.cv-card {
+  background: var(--cv-card);
+  border: 1px solid var(--cv-border);
+  border-radius: var(--cv-radius);
+  box-shadow: var(--cv-shadow-sm);
+}
+
+/* —— Signature funnel / cone ——
+   Default: wide-top → narrow-bottom
+   Invert: narrow-top (badge) → wide-bottom pedestal (Dropship hero) */
+.cv-funnel {
+  position: relative;
+  width: min(36rem, 72vw);
+  height: 18rem;
+  margin: 0 auto;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.cv-funnel-sm {
+  width: min(24rem, 70vw);
+  height: 12rem;
+}
+
+.cv-funnel-lg {
+  width: min(30rem, 70vw);
+  height: 14rem;
+}
+
+.cv-funnel-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.cv-funnel-glow {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 60%;
+  height: 75%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 8%, rgba(147, 180, 255, 0.28), rgba(34, 90, 234, 0.08) 40%, transparent 72%);
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.cv-funnel-invert .cv-funnel-glow {
+  top: 0;
+  width: 40%;
+  height: 58%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(95, 140, 255, 0.28), rgba(34, 90, 234, 0.06) 42%, transparent 72%);
+  filter: blur(20px);
+  clip-path: polygon(40% 0%, 60% 0%, 90% 100%, 10% 100%);
+}
+
+.cv-funnel-beam {
+  display: none;
+}
+
+.cv-funnel-invert .cv-funnel-beam {
+  top: -18%;
+  height: 22%;
+}
+
+.cv-funnel-beam-blur {
+  display: none;
+}
+
+.cv-funnel-badge {
+  position: absolute;
+  left: 50%;
+  bottom: -0.35rem;
+  transform: translateX(-50%);
+  width: 6.5rem;
+  height: 6.5rem;
+  border-radius: 2rem;
+  padding: 2.5px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent),
+    linear-gradient(90deg, #5f8cff, #225aea);
+  box-shadow:
+    0 0 0 10px rgba(255, 255, 255, 0.95),
+    0 18px 40px rgba(34, 90, 234, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.cv-funnel-invert .cv-funnel-badge {
+  bottom: auto;
+  top: -0.35rem;
+}
+
+.cv-funnel-badge-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 1.88rem;
+  background: linear-gradient(145deg, #6b96ff, #225aea);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
+}
+
+/* Header buttons inherit Dropship .cv-btn scale */
+header .cv-btn-wrap {
+  display: inline-flex;
+  border-radius: 0.69rem;
+}
+
+header .cv-btn-wrap.is-secondary .cv-btn {
+  background: #f3f3f3;
+  color: #1f1f1f;
+}
+
+@media (max-width: 768px) {
+  .cv-section-title {
+    font-size: 1.75rem;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+  }
+
+  .cv-section-sub {
+    font-size: 1rem;
+  }
+
+  .cv-funnel {
+    height: 16rem;
+  }
+
+  .cv-funnel-badge {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 1.5rem;
+  }
+
+  .cv-funnel-badge-inner {
+    border-radius: 1.35rem;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-section-title {
+    font-size: 1.5rem;
+  }
+
+  .cv-section-sub {
+    font-size: 0.9375rem;
+  }
+
+  .cv-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

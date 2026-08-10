@@ -1,0 +1,224 @@
+.cv-onboard {
+  min-height: 100svh;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 0%, #dae6ff 0%, transparent 55%),
+    linear-gradient(180deg, #f7f9fc 0%, #fff 50%);
+  padding: 1.25rem;
+}
+
+.cv-onboard-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .cv-onboard-shell {
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem 0 3rem;
+  }
+}
+
+.cv-onboard-rail {
+  border: 1px solid #e8eef8;
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 1.35rem 1.25rem;
+}
+
+.cv-onboard-brand {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.cv-onboard-brand span {
+  color: #225aea;
+}
+
+.cv-onboard-rail h1 {
+  margin: 0.85rem 0 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.cv-onboard-lead {
+  margin: 0.45rem 0 0;
+  color: #667085;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.cv-onboard-steps {
+  list-style: none;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cv-onboard-steps li {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  opacity: 0.55;
+}
+
+.cv-onboard-steps li.is-active,
+.cv-onboard-steps li.is-done {
+  opacity: 1;
+}
+
+.cv-onboard-steps li span {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #225aea;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.cv-onboard-steps li.is-active span {
+  background: #225aea;
+  color: #fff;
+}
+
+.cv-onboard-steps strong {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.cv-onboard-steps em {
+  display: block;
+  font-style: normal;
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+.cv-onboard-main {
+  min-width: 0;
+}
+
+.cv-onboard-progress {
+  height: 0.35rem;
+  border-radius: 999px;
+  background: #e8eef8;
+  overflow: hidden;
+}
+
+.cv-onboard-progress > div {
+  height: 100%;
+  background: #225aea;
+  transition: width 0.25s ease;
+}
+
+.cv-onboard-step-label {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: #667085;
+}
+
+.cv-onboard-card {
+  margin-top: 0.75rem;
+  border: 1px solid #e8eef8;
+  background: #fff;
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.05);
+}
+
+.cv-onboard-fields {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cv-onboard-fields h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+.cv-onboard-fields > p {
+  margin: 0 0 0.35rem;
+  color: #667085;
+  font-size: 0.9rem;
+}
+
+.cv-onboard-upload {
+  margin-top: 0.5rem;
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  border: 1.5px dashed #c7d7fe;
+  background: #f8faff;
+  border-radius: 1rem;
+  padding: 2rem 1rem;
+  cursor: pointer;
+}
+
+.cv-onboard-upload.is-ready {
+  border-style: solid;
+  border-color: #9db7ff;
+  background: #eef3ff;
+}
+
+.cv-onboard-upload strong {
+  font-size: 0.95rem;
+}
+
+.cv-onboard-upload span {
+  font-size: 0.8rem;
+  color: #667085;
+}
+
+.cv-onboard-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: #225aea;
+}
+
+.cv-onboard-error {
+  margin-top: 0.85rem;
+  color: #d92d20;
+  font-size: 0.875rem;
+}
+
+.cv-onboard-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eef2f8;
+}
+
+.cv-onboard-result {
+  display: grid;
+  gap: 0.85rem;
+  border-radius: 1rem;
+  background: #f5f8ff;
+  padding: 1rem;
+}
+
+.cv-onboard-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cv-onboard-result-head p {
+  margin: 0;
+  font-weight: 650;
+}

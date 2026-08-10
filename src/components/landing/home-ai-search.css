@@ -1,0 +1,291 @@
+/* Dropship .section.is-ai */
+.cv-ai {
+  position: relative;
+  height: 100svh;
+  max-height: 60rem;
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dropship background-wrap / AI Search BG */
+.cv-ai-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cv-ai-bg-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90rem;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+/* Soft white fades so beams read like Dropship */
+.cv-ai-bg-fade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    rgba(255, 255, 255, 0) 18%,
+    rgba(255, 255, 255, 0) 82%,
+    #fff 100%
+  );
+  pointer-events: none;
+}
+
+.cv-ai-bg-fade.is-left {
+  background: linear-gradient(
+    180deg,
+    #fff 0%,
+    rgba(255, 255, 255, 0) 22%,
+    rgba(255, 255, 255, 0) 78%,
+    #fff 100%
+  );
+}
+
+.cv-ai-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Dropship heading: “NEW: Magic AI Search” as H2 */
+.cv-ai-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: #000;
+}
+
+.cv-ai-sub {
+  margin: 0.75rem auto 0;
+  max-width: 34rem;
+  color: #667085;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: -0.28px;
+}
+
+.cv-ai-link {
+  margin-top: 1.5rem;
+  display: inline-flex;
+}
+
+/* Dropship .ai-component — tall padding so spilled prompts have room */
+.cv-ai-component {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 9rem 0;
+  overflow: hidden;
+}
+
+/* Dropship .ai_search-wrap */
+.cv-ai-box {
+  width: 100%;
+  max-width: 48rem;
+  border-radius: 100vw;
+  padding: 0.06rem;
+  background-image: linear-gradient(180deg, rgba(148, 178, 255, 0.6), rgba(20, 72, 203, 0.6));
+  box-shadow: 0 0 84px 0 #dae6ff;
+}
+
+.cv-ai-box-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: inherit;
+  background: #fff;
+}
+
+.cv-ai-icon,
+.cv-ai-send {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.cv-ai-icon {
+  background: #f3f5f9;
+  color: #667085;
+}
+
+.cv-ai-send {
+  background: #225aea;
+  color: #fff;
+  transition: transform 0.2s ease;
+}
+
+.cv-ai-send:hover {
+  transform: scale(1.06);
+}
+
+.cv-ai-text-wrap {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+
+/* Dropship .ai_looping-words — 2.5rem window; list spills via overflow:visible */
+.cv-ai-loop {
+  height: 2.5rem;
+  position: relative;
+}
+
+.cv-ai-loop-viewport {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: visible;
+}
+
+.cv-ai-loop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  justify-content: center;
+  align-items: flex-start;
+  color: #aaa;
+  white-space: nowrap;
+  position: relative;
+  will-change: transform;
+}
+
+.cv-ai-loop-item {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  white-space: nowrap;
+}
+
+/* Dropship .ai_looping-words-text — line-height 4rem creates ghost spacing */
+.cv-ai-loop-text {
+  display: block;
+  font-size: 1.125rem;
+  line-height: 4rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+@media (max-width: 991px) {
+  .cv-ai-component {
+    padding: 6rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .cv-ai {
+    height: auto;
+    max-height: none;
+    min-height: 36rem;
+    padding: 4rem 0;
+  }
+
+  .cv-ai-title {
+    font-size: 2rem;
+  }
+
+  .cv-ai-component {
+    padding: 4.5rem 0;
+  }
+
+  .cv-ai-loop-text {
+    font-size: 0.9375rem;
+    line-height: 3.25rem;
+  }
+
+  .cv-ai-bg-img {
+    width: 70rem;
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-ai-box {
+    border-radius: 1.25rem;
+  }
+
+  .cv-ai-box-inner {
+    padding: 0.55rem;
+    gap: 0.5rem;
+  }
+
+  .cv-ai-icon,
+  .cv-ai-send {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .cv-ai-loop-text {
+    font-size: 0.78rem;
+    line-height: 2.5rem;
+    white-space: normal;
+    max-width: 14rem;
+  }
+
+  .cv-ai-loop {
+    height: 2.5rem;
+  }
+
+  .cv-ai-loop-item {
+    white-space: normal;
+  }
+
+  .cv-ai-title {
+    font-size: 1.65rem;
+    padding: 0 0.5rem;
+  }
+
+  .cv-ai-sub {
+    font-size: 13px;
+    padding: 0 0.75rem;
+  }
+}

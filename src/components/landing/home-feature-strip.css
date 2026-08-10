@@ -1,0 +1,129 @@
+/* Dropship dual cards — gap 3rem, pad 3rem, radius 1rem, image bleed */
+.cv-strip {
+  background: #f7f9fc;
+  padding: 7rem 0;
+}
+
+.cv-strip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+}
+
+.cv-strip-card {
+  border: 1px solid #e8eef8;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 3rem;
+  overflow: hidden;
+  box-shadow: 0 16px 44px rgba(16, 24, 40, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.cv-strip-card h3 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #0b1220;
+}
+
+.cv-strip-card > p {
+  margin: 0.85rem 0 0;
+  color: #667085;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  max-width: 28rem;
+}
+
+.cv-strip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1.2rem;
+  color: #225aea;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cv-strip-art {
+  position: relative;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.cv-strip-art-photo {
+  align-items: flex-end;
+  overflow: hidden;
+  /* Dropship image bleed into card pad */
+  margin-bottom: -3rem;
+  margin-left: -3rem;
+  margin-right: -3rem;
+  aspect-ratio: 584 / 400;
+}
+
+.cv-strip-photo {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  object-position: bottom center;
+}
+
+@media (max-width: 900px) {
+  .cv-strip {
+    padding: 5rem 0;
+  }
+
+  .cv-strip-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .cv-strip-card {
+    padding: 2rem;
+  }
+
+  .cv-strip-card h3 {
+    font-size: 1.5rem;
+  }
+
+  .cv-strip-card > p {
+    font-size: 1rem;
+  }
+
+  .cv-strip-art-photo {
+    margin-bottom: -2rem;
+    margin-left: -2rem;
+    margin-right: -2rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-strip {
+    padding: 3.5rem 0;
+  }
+
+  .cv-strip-card {
+    padding: 1.5rem;
+    border-radius: 0.85rem;
+  }
+
+  .cv-strip-card h3 {
+    font-size: 1.35rem;
+  }
+
+  .cv-strip-card > p {
+    font-size: 0.9375rem;
+  }
+
+  .cv-strip-art-photo {
+    margin-bottom: -1.5rem;
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    aspect-ratio: 4 / 3;
+  }
+}

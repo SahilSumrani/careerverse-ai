@@ -1,0 +1,518 @@
+/* Dropship .section.is-hero — copy → 3 horizontal marquees + icon + Hero Wave */
+.cv-hero {
+  position: relative;
+  /* Extra top space so hero copy sits lower under the sticky header */
+  padding: 10rem 0 7rem;
+  overflow-x: clip;
+  overflow-y: visible;
+  background: #fff;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cv-hero-copy {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0 var(--cv-space-md, 20px);
+}
+
+.cv-hero-icon-arc {
+  list-style: none;
+  margin: 0 auto 1.25rem;
+  padding: 0.5rem 0 0.75rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: clamp(0.35rem, 1.2vw, 0.7rem);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.cv-hero-icon-arc::-webkit-scrollbar {
+  display: none;
+}
+
+.cv-hero-icon-arc li {
+  flex: none;
+  transform: translateY(calc(sin((var(--i) - (var(--n) - 1) / 2) * 0.42) * -14px));
+}
+
+.cv-hero-icon-tile {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.9rem;
+  background: var(--bg, #eef3ff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+}
+
+.cv-hero-icon-tile img {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+@media (max-width: 768px) {
+  .cv-hero-icon-arc {
+    justify-content: flex-start;
+    padding-inline: 0.25rem;
+  }
+
+  .cv-hero-icon-arc li {
+    transform: none;
+  }
+
+  .cv-hero-icon-tile {
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: 0.75rem;
+  }
+
+  .cv-hero-icon-tile img {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+.cv-hero-copy h1 {
+  margin: var(--cv-space-md, 20px) 0 0;
+  font-family: var(--font-heading);
+  /* Dropship h1: 3.5rem / 120% */
+  font-size: 3.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  color: #000;
+}
+
+.cv-hero-copy h1 .cv-hero-highlight {
+  font-style: normal;
+  font-weight: 600;
+  color: #225aea;
+}
+
+.cv-hero-copy .cv-hero-sub {
+  margin: var(--cv-space-sm, 10px) auto 0;
+  max-width: 34rem;
+  color: #667085;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 19.6px;
+  font-weight: 500;
+  letter-spacing: -0.28px;
+}
+
+.cv-hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--cv-space-sm, 10px);
+  margin-top: var(--cv-space-md, 20px);
+}
+
+/* Dropship .hero_marquee-wrap — no fake min-height; wave bleeds into tools */
+.cv-hero-stage {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 100rem;
+  margin: 2rem auto 0;
+  padding: 3rem 0;
+  overflow: visible;
+}
+
+/* Dropship .hero_marquee_component */
+.cv-hero-visual {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* Dropship .hero_gradient — vertical brand scanner beam */
+.cv-hero-gradient {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  width: 4rem;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background-image: linear-gradient(90deg, rgba(34, 90, 234, 0.28), rgba(34, 90, 234, 0));
+  filter: blur(10px);
+}
+
+/* Dropship .hero_marquee_layout — padding applied in JS (120px) like odyn */
+.cv-hero-marquee-layout {
+  position: relative;
+  z-index: 3;
+  flex: none;
+  width: 100%;
+  display: flex;
+  overflow-x: clip;
+  overflow-y: visible;
+  -webkit-mask-image: linear-gradient(90deg, #0000, #000 10% 90%, #0000);
+  mask-image: linear-gradient(90deg, #0000, #000 10% 90%, #0000);
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+@keyframes cv-hero-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.cv-hero-marquee-track {
+  display: flex;
+  flex: none;
+  animation: cv-hero-marquee 35s linear infinite;
+  will-change: transform;
+}
+
+.cv-hero-marquee-track.is-reversed {
+  animation-direction: reverse;
+}
+
+/* Dropship .hero_marquee_panel — two panels = seamless -50% loop */
+.cv-hero-marquee-panel {
+  display: flex;
+  flex: none;
+  overflow: visible;
+}
+
+.cv-hero-marquee-list {
+  display: flex;
+  flex: none;
+  gap: 2rem;
+  min-width: 100cqw;
+  padding-right: 2rem;
+  justify-content: space-around;
+  overflow: visible;
+}
+
+/* Dropship .hero_icon-wrap — above marquees; large hit for click burst */
+.cv-hero-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 8;
+  width: 6.5rem;
+  height: 6.5rem;
+  transform: translate(-50%, -50%);
+  border-radius: 2rem;
+  padding: 2.5px;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)),
+    linear-gradient(90deg, #5f8cff, #225aea);
+  box-shadow:
+    0 0 0 10px rgba(255, 255, 255, 0.95),
+    0 18px 40px rgba(34, 90, 234, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+
+/* Expand clickable glow (“daag”) around the badge */
+.cv-hero-icon-hit {
+  position: absolute;
+  inset: -2.5rem;
+  border-radius: 50%;
+}
+
+.cv-hero-icon-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 1.88rem;
+  background-image: linear-gradient(90deg, #5f8cff, #225aea);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+
+/* Dropship hero_marquee_item — no pointer events so icon click always wins */
+.cv-marquee-item {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  gap: 0.88rem;
+  width: auto;
+  padding: 0.63rem 1rem 0.63rem 0.63rem;
+  border: 1px solid #0000000d;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 0 24px #0000000d;
+  will-change: transform;
+  transform-origin: center center;
+  pointer-events: none;
+}
+
+/* Dropship skeleton overlay — clipped from right as card crosses center */
+.cv-marquee-skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  margin: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: stretch;
+  gap: 0.88rem;
+  padding: 0.63rem 1rem 0.63rem 0.63rem;
+  border-radius: 0.75rem;
+  background: #fafafa;
+  border: 1px solid #0000000d;
+  overflow: hidden;
+}
+
+.cv-marquee-img-skel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #e8e8e8, #d4d4d4);
+}
+
+.cv-skel-line {
+  display: block;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #e0e0e0;
+}
+
+.cv-skel-line.is-lg {
+  width: 5.5rem;
+}
+
+.cv-skel-line.is-sm {
+  width: 4rem;
+  margin-top: 0.15rem;
+  opacity: 0.75;
+}
+
+.cv-skel-line.is-md {
+  width: 2.4rem;
+}
+
+.cv-skel-pill {
+  display: block;
+  width: 3.4rem;
+  height: 0.85rem;
+  margin-top: 0.2rem;
+  border-radius: 4px;
+  background: #ebebeb;
+}
+
+.cv-marquee-img-wrap {
+  position: relative;
+  width: 3.38rem;
+  height: 3.38rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f3f3;
+  flex: none;
+}
+
+.cv-marquee-img {
+  object-fit: cover;
+  width: 3.38rem !important;
+  height: 3.38rem !important;
+}
+
+.cv-marquee-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cv-marquee-text.is-right {
+  align-items: flex-end;
+  text-align: right;
+  margin-left: auto;
+}
+
+.cv-marquee-name {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.24px;
+  color: #000;
+  white-space: nowrap;
+}
+
+.cv-marquee-meta {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  color: #667085;
+  letter-spacing: -0.22px;
+  white-space: nowrap;
+}
+
+.cv-marquee-meta.is-brand {
+  color: #225aea;
+}
+
+.cv-marquee-score {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #225aea;
+  letter-spacing: -0.24px;
+  white-space: nowrap;
+}
+
+.cv-marquee-line {
+  width: 1px;
+  align-self: stretch;
+  background: #0000000d;
+  flex: none;
+}
+
+/* Dropship .hero_fade */
+.cv-hero-fade {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 1;
+  width: 90rem;
+  max-width: none;
+  height: 100%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ddecfc;
+  overflow: visible;
+}
+
+/* Dropship .hero_fade_img */
+.cv-hero-wave-img {
+  display: block;
+  width: 118rem;
+  max-width: none;
+  height: 54.4rem;
+  object-fit: contain;
+  object-position: 50% 100%;
+  flex: none;
+}
+
+/* Dropship .hero_fade-block */
+.cv-hero-fade-block {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 2;
+  width: 100vw;
+  height: 36rem;
+  transform: translate(-50%, 151%);
+  background-image: linear-gradient(#ddecfc, #fff);
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .cv-hero {
+    padding: 7.5rem 0 4rem;
+  }
+
+  .cv-hero-copy h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+  }
+
+  .cv-hero-copy .cv-hero-sub {
+    font-size: 13px;
+    max-width: 22rem;
+  }
+
+  .cv-hero-ctas {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 22rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cv-hero-ctas .cv-btn-wrap {
+    width: 100%;
+  }
+
+  .cv-hero-ctas .cv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cv-hero-stage {
+    padding-top: 1.25rem;
+    padding-bottom: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .cv-hero-icon {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .cv-hero-wave-img {
+    width: 70rem;
+    height: 36rem;
+  }
+
+  .cv-hero-fade-block {
+    height: 28rem;
+    transform: translate(-50%, 120%);
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-hero {
+    padding: 6.5rem 0 3rem;
+  }
+
+  .cv-hero-copy h1 {
+    font-size: 1.75rem;
+  }
+
+  .cv-hero-icon {
+    width: 3.75rem;
+    height: 3.75rem;
+    border-radius: 1.25rem;
+  }
+
+  .cv-hero-marquee-list {
+    gap: 1rem;
+  }
+}

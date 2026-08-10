@@ -1,0 +1,330 @@
+/* Dropship .section.is-tabs — wave bleeds behind heading; white floor under panel */
+.cv-tabs {
+  position: relative;
+  z-index: 3;
+  background: transparent;
+  padding: 9.5rem 0 7rem;
+  margin-top: 0;
+}
+
+/* White floor starts under the icon rail so cards sit on white */
+.cv-tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58%;
+  bottom: 0;
+  background: #fff;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cv-tabs-head {
+  text-align: center;
+  max-width: 42rem;
+  margin: 0 auto 1.75rem;
+  padding: 0 var(--cv-space-md, 20px);
+  position: relative;
+  z-index: 3;
+  /* Dropship text-color-alternate over blue wave */
+  color: #fff;
+}
+
+.cv-tabs-head .cv-section-title {
+  color: #fff;
+}
+
+.cv-tabs-head .cv-section-sub {
+  margin-left: auto;
+  margin-right: auto;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.cv-tabs-pill {
+  display: inline-flex;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-family: var(--font-body), Inter, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.24px;
+  padding: 4px 10px;
+}
+
+.cv-tabs-rail-wrap {
+  position: relative;
+  z-index: 3;
+  max-width: 42rem;
+  margin: 0 auto 2rem;
+  padding: 0 1rem;
+}
+
+/* Dropship .home-tab-list — height 4rem, tint #fff6, radius 1rem */
+.cv-tabs-rail {
+  display: flex;
+  gap: 0;
+  justify-content: center;
+  flex-wrap: nowrap;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  min-height: 4rem;
+  padding: 0.38rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.38);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cv-tabs-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* Dropship .home-tab-item width 4rem; link pad 0.38rem → ~3.24rem icon */
+.cv-tab-btn {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.85rem;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: none;
+  position: relative;
+  padding: 0.38rem;
+  overflow: visible;
+  flex: none;
+}
+
+.cv-tab-icon {
+  width: 3.24rem !important;
+  height: 3.24rem !important;
+  border-radius: 0.75rem;
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(16, 24, 40, 0.12));
+}
+
+.cv-tab-btn.is-active {
+  transform: scale(1.08);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.95), 0 12px 28px rgba(34, 90, 234, 0.28);
+  border-radius: 1rem;
+}
+
+.cv-tab-btn:hover:not(.is-active) {
+  transform: translateY(-2px) scale(1.04);
+}
+
+.cv-tab-tip {
+  position: absolute;
+  top: -2.35rem;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #fff;
+  color: #0b1220;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.63rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.14);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.cv-tab-tip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.cv-tabs-panel {
+  position: relative;
+  z-index: 3;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* Dropship .home-tab_wrap — padding 3rem 4rem, radius 1rem */
+.cv-tabs-card {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  border: 1px solid #0000000d;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 24px 0px;
+}
+
+.cv-tabs-main {
+  padding: 3rem 4rem;
+}
+
+.cv-tabs-badge {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  overflow: hidden;
+}
+
+.cv-tabs-badge.is-asset {
+  background: transparent;
+  width: 3rem;
+  height: 3rem;
+  box-shadow: none;
+}
+
+.cv-tabs-badge.is-asset img {
+  width: 3rem !important;
+  height: 3rem !important;
+  border-radius: 0.75rem;
+}
+
+.cv-tabs-main h3 {
+  margin: 1.25rem 0 0;
+  /* Dropship h6 pane title */
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #0b1220;
+}
+
+.cv-tabs-main p {
+  margin: 0.75rem 0 0;
+  color: #667085;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 28rem;
+}
+
+.cv-tabs-link {
+  margin-top: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.69rem;
+  background: #225aea;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.cv-tabs-side {
+  border-left: 1px solid #eef2f8;
+  background: #f8fafc;
+  padding: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.cv-tabs-shot {
+  width: 100%;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  border: 1px solid #e8eef8;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.06);
+}
+
+.cv-tabs-shot-img {
+  width: 100% !important;
+  height: auto !important;
+  display: block;
+}
+
+.cv-tabs-footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem 1.5rem;
+  padding: 1.25rem 4rem 1.5rem;
+  border-top: 1px solid #eef2f8;
+  background: #fff;
+}
+
+.cv-tabs-footer strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0b1220;
+}
+
+.cv-tabs-footer span {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: #667085;
+}
+
+@media (max-width: 900px) {
+  .cv-tabs-card {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-tabs-side {
+    border-left: 0;
+    border-top: 1px solid #eef2f8;
+    min-height: 14rem;
+  }
+
+  .cv-tabs-main {
+    padding: 2rem 1.5rem;
+  }
+
+  .cv-tabs-footer {
+    grid-template-columns: 1fr;
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cv-tabs {
+    padding: 6rem 0 5rem;
+  }
+
+  .cv-tabs::after {
+    top: 52%;
+  }
+
+  .cv-tabs-head .cv-section-title {
+    font-size: 1.75rem;
+    line-height: 1.25;
+  }
+
+  .cv-tab-btn {
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0.3rem;
+  }
+
+  .cv-tab-icon {
+    width: 2.65rem !important;
+    height: 2.65rem !important;
+  }
+
+  .cv-tabs-rail {
+    justify-content: flex-start;
+    min-height: 3.5rem;
+  }
+}

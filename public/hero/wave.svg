@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 980" preserveAspectRatio="xMidYMax meet">
+  <defs>
+    <radialGradient id="tip" cx="50%" cy="6%" r="18%">
+      <stop offset="0%" stop-color="#dbe6ff" stop-opacity="1"/>
+      <stop offset="40%" stop-color="#7ea2ff" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#225aea" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#b8ccff" stop-opacity="0.15"/>
+      <stop offset="18%" stop-color="#6f96ff" stop-opacity="0.75"/>
+      <stop offset="55%" stop-color="#225aea" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0b1220" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="side" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#5f8cff" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#225aea" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#0b1220" stop-opacity="0.9"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+  </defs>
+  <ellipse cx="960" cy="70" rx="160" ry="110" fill="url(#tip)" filter="url(#glow)"/>
+  <path d="M880 40 C920 40 940 90 960 160 C1000 320 1120 520 1400 720 C1600 840 1780 900 1920 940
+    L1920 980 L0 980 L0 940 C140 900 320 840 520 720 C800 520 920 320 960 160 C980 90 1000 40 1040 40
+    C1000 40 980 40 960 40 C940 40 920 40 880 40Z" fill="url(#beam)" opacity="0.92"/>
+  <path d="M920 80 C945 80 955 140 960 220 C980 420 1100 640 1500 820 C1680 900 1840 940 1920 960
+    L0 960 C80 940 240 900 420 820 C820 640 940 420 960 220 C965 140 975 80 1000 80
+    C970 80 965 80 960 80 C955 80 950 80 920 80Z" fill="url(#side)" opacity="0.85"/>
+</svg>

@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CareerVerse AI
 
-## Getting Started
+Career operating system for students and early professionals: career intelligence, opportunity matching, application tracking, resume analysis, roadmaps, events, network, mentors, community, and an AI copilot.
 
-First, run the development server:
+Demo listings, careers, events, and accounts are explicitly marked as **Demo** in the UI. No fabricated company logos or testimonials.
+
+## Stack
+
+- Next.js (App Router) + React + TypeScript
+- Prisma + SQLite (default) / configurable via `DATABASE_URL`
+- NextAuth (Auth.js) credentials (+ optional Google)
+- Tailwind CSS (teal/slate theme, Manrope + Fraunces)
+- Optional OpenAI-compatible AI provider with deterministic fallbacks
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env
+# set AUTH_SECRET (e.g. openssl rand -base64 32)
+npx prisma migrate dev
+npx prisma db seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+If `prisma db seed` is not wired in your Prisma config, run the seed script with:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx tsx prisma/seed.ts
+```
 
-## Learn More
+## Demo accounts
 
-To learn more about Next.js, take a look at the following resources:
+| Role | Email | Password |
+|------|-------|----------|
+| Student | `demo.student@careerverse.local` | `DemoPass123!` |
+| Platform admin | `admin@careerverse.local` | `DemoPass123!` |
+| Mentor | `demo.mentor@careerverse.local` | `DemoPass123!` |
+| Speaker | `demo.speaker@careerverse.local` | `DemoPass123!` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Sign-in defaults to the student demo credentials for local exploration.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Environment variables
 
-## Deploy on Vercel
+See `.env.example`. Important keys:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Prisma datasource (default `file:./dev.db`) |
+| `AUTH_SECRET` | NextAuth secret (required) |
+| `AUTH_URL` | App URL for auth callbacks (`http://localhost:3000`) |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Optional Google OAuth |
+| `AI_PROVIDER` | e.g. `openai` |
+| `AI_API_KEY` | Provider API key (optional — app uses fallbacks without it) |
+| `AI_BASE_URL` | OpenAI-compatible base URL |
+| `AI_MODEL` | Model id (default `gpt-4o-mini`) |
+| `AI_MAX_TOKENS` | Max completion tokens |
+| `STORAGE_PROVIDER` | `local` for resume uploads |
+| `UPLOAD_DIR` | Local upload directory |
+| `MAX_UPLOAD_BYTES` | Upload size limit |
+| `NEXT_PUBLIC_APP_NAME` | Display name |
+| `NEXT_PUBLIC_APP_URL` | Canonical URL for sitemap/robots |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Key routes
+
+| Path | Description |
+|------|-------------|
+| `/dashboard` | Career OS home |
+| `/career` | Career intelligence |
+| `/applications` | Kanban / list application tracker |
+| `/resume` | Resume upload + analysis |
+| `/roadmap` | Personalized career roadmaps |
+| `/copilot` | Full-page AI chat |
+| `/opportunities` | Opportunity discovery |
+| `/events` | Events catalog + detail/register |
+| `/careers` | Career catalog |
+| `/community` | Posts, reactions, comments |
+| `/network` | People + connection requests |
+| `/mentors` | Mentor directory |
+| `/institutions` | Approval requests |
+| `/admin` | Admin overview (admin role) |
+| `/profile` | Current user profile |
+
+## Scripts
+
+```bash
+npm run dev      # development server
+npm run build    # production build
+npm run start    # serve production build
+npm run lint     # ESLint
+```
+
+## Notes
+
+- AI scores and match percentages are **estimates**, not guarantees of hiring or fit.
+- Resume analysis accepts PDF/DOCX via `POST /api/resume` (multipart).
+- SEO: `src/app/robots.ts` and `src/app/sitemap.ts` expose `/robots.txt` and `/sitemap.xml`.

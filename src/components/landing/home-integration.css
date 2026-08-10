@@ -1,0 +1,124 @@
+/* Dropship extension-scale visual (~21.25rem) for Slack/Discord section */
+.cv-integ {
+  padding: 7rem 0 4rem;
+  text-align: center;
+  background: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+.cv-integ-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.cv-integ-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.cv-integ-stars-text {
+  color: #667085;
+  font-weight: 500;
+}
+
+.cv-integ .cv-section-title {
+  margin-top: 1rem;
+  font-size: 2.5rem;
+  line-height: 1.2;
+}
+
+.cv-integ .cv-section-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cv-integ-cta {
+  margin-top: 1.5rem;
+  display: inline-flex;
+}
+
+.cv-integ-funnel {
+  margin-top: 2.5rem;
+  position: relative;
+  z-index: 1;
+  /* Dropship .extention_visual-wrap max-width 21.25rem */
+  width: min(21.25rem, 80vw);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cv-integ-funnel .cv-funnel {
+  width: 100%;
+  height: 16rem;
+}
+
+.cv-integ-funnel .cv-funnel-badge {
+  width: 10.6rem;
+  height: 10.6rem;
+  border-radius: 2rem;
+  bottom: 1.5rem;
+  box-shadow:
+    0 0 0 12px rgba(255, 255, 255, 0.95),
+    0 22px 48px rgba(34, 90, 234, 0.28);
+}
+
+.cv-integ-funnel .cv-funnel-beam {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: -8%;
+  width: 42%;
+  height: 55%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(147, 180, 255, 0.55), rgba(34, 90, 234, 0.08) 70%, transparent);
+  filter: blur(18px);
+  pointer-events: none;
+  clip-path: polygon(38% 0%, 62% 0%, 88% 100%, 12% 100%);
+}
+
+.cv-integ-badge {
+  background: #fff !important;
+  box-shadow: none;
+  padding: 0.85rem;
+}
+
+.cv-integ-badge img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 7.5rem;
+  max-height: 7.5rem;
+  display: block;
+  border-radius: 1.25rem;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .cv-integ {
+    padding: 5rem 0 3rem;
+  }
+
+  .cv-integ .cv-section-title {
+    font-size: 1.75rem;
+  }
+
+  .cv-integ-funnel .cv-funnel {
+    height: 12rem;
+  }
+
+  .cv-integ-funnel .cv-funnel-badge {
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+
+  .cv-integ-badge img {
+    max-width: 5rem;
+    max-height: 5rem;
+  }
+}

@@ -1,0 +1,129 @@
+/* Continues Dropship footer_component blue — not a separate dark slab */
+.cv-site-footer {
+  background: #225aea;
+  color: #fff;
+  padding: 0 1.25rem 0;
+  position: relative;
+  margin-top: -1px;
+}
+
+.cv-site-footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.5rem 0 2.75rem;
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: 1.1fr 2fr;
+}
+
+.cv-site-footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cv-site-footer-mark {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 12px;
+  background: #fff;
+  color: #225aea;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.cv-site-footer-tag {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.cv-site-footer-desc {
+  margin: 0.5rem 0 0;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.cv-site-footer-cols {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.cv-site-footer-h {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.cv-site-footer-cols ul {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.cv-site-footer-cols a {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: none;
+}
+
+.cv-site-footer-cols a:hover {
+  color: #fff;
+}
+
+.cv-site-footer-bar {
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.1rem 0 1.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.cv-site-footer-bar p {
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .cv-site-footer-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-site-footer-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-site-footer-inner {
+    padding: 2rem 0 1.75rem;
+    gap: 1.75rem;
+  }
+
+  .cv-site-footer-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    padding: 1rem 0 1.25rem;
+  }
+
+  .cv-site-footer-desc {
+    font-size: 0.8125rem;
+  }
+}

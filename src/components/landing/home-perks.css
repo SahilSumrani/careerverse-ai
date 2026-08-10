@@ -1,0 +1,128 @@
+.cv-perks {
+  background: #f7f9fc;
+  padding: 5.5rem 0;
+}
+
+.cv-perks-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem 1.5rem;
+  margin-top: 2.5rem;
+}
+
+@media (min-width: 901px) {
+  .cv-perks-grid {
+    gap: 3rem;
+  }
+}
+
+.cv-perk-card {
+  border: 1px solid #e8eef8;
+  background: #fff;
+  border-radius: 1.35rem;
+  padding: 1.5rem 1.5rem 1.15rem;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.04);
+  display: flex;
+  flex-direction: column;
+  min-height: 18.5rem;
+}
+
+.cv-perk-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cv-perk-dot {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: #225aea;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.cv-perk-glass {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cv-perk-glass img {
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  display: block;
+}
+
+.cv-perk-glyph {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.cv-perk-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0b1220;
+}
+
+.cv-perk-card > p {
+  margin: 0.85rem 0 0;
+  color: #667085;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.cv-perk-visual {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 7rem;
+}
+
+.cv-perk-art {
+  width: 7.5rem;
+  height: 6rem;
+}
+
+.cv-perk-photo {
+  width: auto;
+  max-width: 11rem;
+  height: 7rem;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .cv-perks {
+    padding: 4rem 0;
+  }
+
+  .cv-perks-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .cv-perks {
+    padding: 3.25rem 0;
+  }
+
+  .cv-perks-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-top: 1.75rem;
+  }
+
+  .cv-perk-card {
+    min-height: 0;
+    padding: 1.25rem;
+  }
+}

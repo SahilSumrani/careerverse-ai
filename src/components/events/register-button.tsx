@@ -44,7 +44,7 @@ export function RegisterButton({
   return (
     <div className="space-y-2">
       <Button onClick={() => void register()} disabled={disabled || busy || done}>
-        {done ? "Registered" : busy ? "Registering…" : "Register"}
+        {done ? "RSVP saved" : busy ? "Saving…" : "RSVP"}
       </Button>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>

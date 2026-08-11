@@ -36,7 +36,9 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/mentors") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/profile") ||
-    pathname.startsWith("/institutions");
+    pathname.startsWith("/institutions") ||
+    pathname.startsWith("/opportunities/") ||
+    pathname.startsWith("/events/");
 
   if (!token && isProtected) {
     const url = new URL("/auth/signin", req.nextUrl.origin);
@@ -91,6 +93,9 @@ export const config = {
     "/admin/:path*",
     "/profile/:path*",
     "/institutions/:path*",
+    "/opportunities/:path*",
+    "/events/browse/:path*",
+    "/events/:id",
     "/auth/:path*",
   ],
 };

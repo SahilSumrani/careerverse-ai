@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getCareerContext } from "@/lib/api";
@@ -31,13 +31,13 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/jobs" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Jobs
+        ΓåÉ Jobs
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl tracking-tight">{job.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {job.company} · {job.type} · {job.location} · {job.workMode} · Demo listing
+            {job.company} ┬╖ {job.type} ┬╖ {job.location} ┬╖ {job.workMode} ┬╖ Demo listing
           </p>
         </div>
         {match ? <Badge tone="success">{match.score}% match</Badge> : null}
@@ -104,7 +104,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
             </Link>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Application tracking on Firestore is coming next — save this role from /jobs for now.
+              Application tracking on Firestore is coming next ΓÇö save this role from /jobs for now.
             </p>
           )}
         </div>

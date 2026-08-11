@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import {
   ArrowUpRight,
   Briefcase,
@@ -9,7 +10,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { auth } from "@/lib/auth";
+import Link from "next/link";
 import { getUserById, listDirectoryUsers } from "@/lib/firestore-users";
 import { EmptyState } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
@@ -21,7 +22,7 @@ import { DUMMY_JOBS } from "@/data/jobs";
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session?.user?.id) return null;
+  if (!session?.user?.id) redirect("/auth/signin");
 
   const firstName = session.user.name?.split(" ")[0] || "there";
   const roles = session.user.roles ?? ["STUDENT"];

@@ -32,12 +32,13 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const { CAREER_ROADMAP_ROLES } = await import("@/data/career-roadmaps");
   return jsonOk({
-    careers: [
-      { id: "swe", title: "Software Engineer", isDemo: true },
-      { id: "pm", title: "Product Manager", isDemo: true },
-      { id: "da", title: "Data Analyst", isDemo: true },
-      { id: "ux", title: "UX Designer", isDemo: true },
-    ],
+    careers: CAREER_ROADMAP_ROLES.map((r) => ({
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      isDemo: r.isDemo ?? true,
+    })),
   });
 }

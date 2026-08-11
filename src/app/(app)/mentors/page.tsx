@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { MessageSquare, UserPlus } from "lucide-react";
 import { PageHeader, EmptyState, Skeleton } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { createSoftCache } from "@/lib/client-cache";
 
 type Mentor = {
@@ -61,14 +63,14 @@ export default function MentorsPage() {
     <div>
       <PageHeader
         title="Mentors"
-        description="Find mentors by expertise and industry. Connect through your network — demo profiles are marked."
+        description="Find mentors by expertise and industry. Request a connection — demo profiles are marked."
       />
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-44" />
+            <Skeleton key={i} className="h-52" />
           ))}
         </div>
       ) : !mentors.length ? (
@@ -84,26 +86,42 @@ export default function MentorsPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {mentors.map((m) => (
-            <Card key={m.id}>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <CardTitle>{m.user.name || "Mentor"}</CardTitle>
-                  {m.isDemo ? <Badge tone="warning">Demo</Badge> : null}
+            <Card key={m.id} className="flex h-full flex-col overflow-hidden p-0">
+              <div className="flex items-start gap-3 border-b border-border px-4 py-4">
+                <Avatar name={m.user.name} className="h-11 w-11" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-base">{m.user.name || "Mentor"}</CardTitle>
+                    {m.isDemo ? <Badge tone="warning">Demo</Badge> : null}
+                  </div>
+                  <CardDescription className="mt-0.5 line-clamp-2">
+                    {m.user.profile?.headline || m.expertise || "Career mentor"}
+                  </CardDescription>
                 </div>
-                <CardDescription>
-                  {m.user.profile?.headline || m.expertise || "Career mentor"}
-                </CardDescription>
-              </CardHeader>
-              <ul className="mb-4 space-y-1 text-sm text-muted-foreground">
-                {m.industry ? <li>Industry: {m.industry}</li> : null}
-                {m.experienceYears != null ? <li>Experience: {m.experienceYears} years</li> : null}
-                {m.mentoringTopics ? <li>Topics: {m.mentoringTopics}</li> : null}
-                {m.availability ? <li>Availability: {m.availability}</li> : null}
-                {m.preferredAudience ? <li>Audience: {m.preferredAudience}</li> : null}
-              </ul>
-              <Link href="/network">
-                <Button size="sm">Connect</Button>
-              </Link>
+              </div>
+              <div className="flex flex-1 flex-col px-4 py-4">
+                <ul className="mb-4 space-y-1.5 text-sm text-muted-foreground">
+                  {m.industry ? <li>Industry · {m.industry}</li> : null}
+                  {m.experienceYears != null ? <li>Experience · {m.experienceYears} years</li> : null}
+                  {m.mentoringTopics ? <li>Topics · {m.mentoringTopics}</li> : null}
+                  {m.availability ? <li>Availability · {m.availability}</li> : null}
+                  {m.preferredAudience ? <li>Audience · {m.preferredAudience}</li> : null}
+                </ul>
+                <div className="mt-auto flex flex-wrap gap-2">
+                  <Link href="/network">
+                    <Button size="sm" className="gap-1.5">
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Connect
+                    </Button>
+                  </Link>
+                  <Link href="/copilot">
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      Ask Copilot
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </Card>
           ))}
         </div>

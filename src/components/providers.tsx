@@ -7,7 +7,7 @@ import { useState } from "react";
 export function Providers({ children }: { children: React.ReactNode }) {
   const [client] = useState(() => new QueryClient());
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </SessionProvider>
   );

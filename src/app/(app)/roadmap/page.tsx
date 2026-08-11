@@ -1,16 +1,11 @@
 import { PageHeader } from "@/components/ui/states";
 import { RoadmapGenerator } from "@/components/roadmap/roadmap-generator";
+import { CAREER_ROADMAP_ROLES } from "@/data/career-roadmaps";
 
 export const metadata = {
   title: "Career Roadmap",
-  description: "Generate staged skill, learning, project, and interview roadmaps for target careers.",
+  description: "Interactive staged skill, learning, project, and interview roadmaps for target careers.",
 };
-
-const STATIC_CAREERS = [
-  { id: "swe", title: "Software Engineer", isDemo: true },
-  { id: "pm", title: "Product Manager", isDemo: true },
-  { id: "da", title: "Data Analyst", isDemo: true },
-];
 
 export default async function RoadmapPage({
   searchParams,
@@ -23,9 +18,12 @@ export default async function RoadmapPage({
     <div>
       <PageHeader
         title="Career Roadmap"
-        description="Pick a target career and generate staged guidance for skills, learning, projects, experience, and interviews."
+        description="Pick a role, expand stages, and check off milestones. Progress saves on this device."
       />
-      <RoadmapGenerator careers={STATIC_CAREERS} initialTitle={sp.career} />
+      <RoadmapGenerator
+        careers={CAREER_ROADMAP_ROLES.map((r) => ({ id: r.id, title: r.title, isDemo: r.isDemo }))}
+        initialTitle={sp.career}
+      />
     </div>
   );
 }

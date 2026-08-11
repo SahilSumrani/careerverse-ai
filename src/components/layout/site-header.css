@@ -51,6 +51,7 @@
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   min-height: 280px;
+  max-height: min(72vh, 440px);
 }
 
 .cv-mega-side {
@@ -60,6 +61,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cv-mega-side::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .cv-mega-side-item {
@@ -81,16 +92,25 @@
 }
 
 .cv-mega-links {
-  padding: 0.55rem 0.35rem;
-  max-height: 360px;
+  padding: 0.45rem 0.3rem;
+  min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
+  /* Keep scroll if needed, hide the ugly system scrollbar */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cv-mega-links::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .cv-mega-link {
   display: block;
-  padding: 0.55rem 0.9rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 500;

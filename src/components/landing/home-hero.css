@@ -2,9 +2,9 @@
 .cv-hero {
   position: relative;
   /* Extra top space so hero copy sits lower under the sticky header */
-  padding: 10rem 0 7rem;
-  overflow-x: clip;
-  overflow-y: visible;
+  padding: 10rem 0 4.5rem;
+  /* Do not clip the headline — overflow-x:clip + negative tracking cuts glyphs */
+  overflow: visible;
   background: #fff;
   z-index: 1;
   display: flex;
@@ -14,22 +14,32 @@
 
 .cv-hero-copy {
   position: relative;
-  z-index: 3;
+  z-index: 5;
   text-align: center;
-  max-width: 46rem;
+  width: 100%;
+  max-width: min(52rem, 100%);
   margin: 0 auto;
   padding: 0 var(--cv-space-md, 20px);
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .cv-hero-copy h1 {
   margin: var(--cv-space-md, 20px) 0 0;
   font-family: var(--font-heading);
-  /* Dropship h1: 3.5rem / 120% */
-  font-size: 3.5rem;
-  line-height: 1.2;
+  /* Fluid type so the full line stays readable on desktop + mobile */
+  font-size: clamp(1.75rem, 4.6vw, 3.5rem);
+  line-height: 1.22;
   font-weight: 600;
   letter-spacing: -0.04em;
   color: #000;
+  overflow: visible;
+  /* Negative tracking can paint outside the ink box — pad so glyphs aren’t clipped */
+  padding-inline: 0.12em;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual;
 }
 
 .cv-hero-copy h1 .cv-hero-highlight {
@@ -65,7 +75,8 @@
   max-width: 100rem;
   margin: 2rem auto 0;
   padding: 3rem 0;
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 /* Dropship .hero_marquee_component */
@@ -430,9 +441,10 @@
   }
 
   .cv-hero-copy h1 {
-    font-size: 2rem;
-    line-height: 1.2;
+    font-size: clamp(1.65rem, 7.2vw, 2.15rem);
+    line-height: 1.25;
     letter-spacing: -0.03em;
+    padding-inline: 0.06em;
   }
 
   .cv-hero-copy .cv-hero-sub {
@@ -493,10 +505,7 @@
   }
 
   .cv-hero-copy h1 {
-    font-size: 1.75rem;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    hyphens: auto;
+    font-size: clamp(1.5rem, 7.5vw, 1.85rem);
   }
 
   .cv-hero-icon {
@@ -550,8 +559,8 @@
   }
 
   .cv-hero-copy h1 {
-    font-size: 1.4rem;
-    line-height: 1.25;
+    font-size: clamp(1.35rem, 7vw, 1.55rem);
+    line-height: 1.28;
     letter-spacing: -0.025em;
   }
 

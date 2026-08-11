@@ -25,7 +25,9 @@
   background: #fff;
   color: var(--cv-text);
   font-family: var(--font-body);
+  /* Avoid clip + visible quirk that can crop hero headline glyphs */
   overflow-x: clip;
+  overflow-y: visible;
 }
 
 /* Opaque sticky nav — translucent blur was smearing hero blue into tools */

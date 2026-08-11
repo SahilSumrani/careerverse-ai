@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { completeGoogleAuth, googleAuthErrorMessage } from "@/lib/google-auth";
+import {
+  completeGoogleAuth,
+  googleAuthBusyLabel,
+  googleAuthErrorMessage,
+  prefetchGoogleAuth,
+  type GoogleAuthPhase,
+} from "@/lib/google-auth";
 import "@/components/auth/auth-shell.css";
 
 function GoogleMark() {
@@ -26,7 +32,12 @@ function SignInForm() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googlePhase, setGooglePhase] = useState<GoogleAuthPhase>("idle");
+  const googleBusy = googlePhase !== "idle";
+
+  useEffect(() => {
+    prefetchGoogleAuth();
+  }, []);
 
   async function routeAfterAuth(onboardingComplete: boolean) {
     const callback = params.get("callbackUrl");
@@ -55,14 +66,17 @@ function SignInForm() {
   }
 
   async function onGoogle() {
-    setGoogleBusy(true);
+    if (googleBusy) return;
     setError("");
     try {
-      await completeGoogleAuth({ callbackUrl: params.get("callbackUrl") });
+      await completeGoogleAuth({
+        callbackUrl: params.get("callbackUrl"),
+        onPhase: setGooglePhase,
+      });
     } catch (err) {
       const msg = googleAuthErrorMessage(err);
       if (msg) setError(msg);
-      setGoogleBusy(false);
+      setGooglePhase("idle");
     }
   }
 
@@ -131,7 +145,7 @@ function SignInForm() {
 
           <button type="button" className="cv-auth-social" disabled={busy || googleBusy} onClick={() => void onGoogle()}>
             <GoogleMark />
-            {googleBusy ? "Connecting Google…" : "Continue with Google"}
+            {googleAuthBusyLabel(googlePhase)}
           </button>
 
           <p className="cv-auth-foot">

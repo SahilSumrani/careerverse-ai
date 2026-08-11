@@ -9,7 +9,6 @@ export const PERMISSIONS = {
   OPPORTUNITY_MANAGE: "opportunity.manage",
   OPPORTUNITY_CREATE: "opportunity.create",
   EVENT_MANAGE: "event.manage",
-  COMMUNITY_MODERATE: "community.moderate",
   APPROVAL_REVIEW: "approval.review",
   INSTITUTION_MANAGE: "institution.manage",
   AI_CONFIGURE: "ai.configure",

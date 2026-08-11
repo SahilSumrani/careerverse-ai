@@ -5,6 +5,7 @@ import { PageHeader, EmptyState, Skeleton } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { createSoftCache } from "@/lib/client-cache";
 
 type Person = {
   id: string;
@@ -24,16 +25,25 @@ type ConnectionRow = {
   receiver?: Person;
 };
 
+type NetworkCache = {
+  people: Person[];
+  sent: ConnectionRow[];
+  received: ConnectionRow[];
+};
+const networkCache = createSoftCache<NetworkCache>();
+
 export default function NetworkPage() {
-  const [people, setPeople] = useState<Person[]>([]);
-  const [sent, setSent] = useState<ConnectionRow[]>([]);
-  const [received, setReceived] = useState<ConnectionRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = networkCache.peek();
+  const [people, setPeople] = useState<Person[]>(cached?.people ?? []);
+  const [sent, setSent] = useState<ConnectionRow[]>(cached?.sent ?? []);
+  const [received, setReceived] = useState<ConnectionRow[]>(cached?.received ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? networkCache.has();
+    if (!soft) setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/network");
@@ -42,9 +52,15 @@ export default function NetworkPage() {
         setError(data.error || "Unable to load network");
         return;
       }
-      setPeople(data.people || []);
-      setSent(data.sent || []);
-      setReceived(data.received || []);
+      const next = {
+        people: (data.people || []) as Person[],
+        sent: (data.sent || []) as ConnectionRow[],
+        received: (data.received || []) as ConnectionRow[],
+      };
+      setPeople(next.people);
+      setSent(next.sent);
+      setReceived(next.received);
+      networkCache.set(next);
     } catch {
       setError("Unable to load network");
     } finally {
@@ -53,7 +69,7 @@ export default function NetworkPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    void load({ soft: networkCache.has() });
   }, [load]);
 
   async function connect(receiverId: string) {
@@ -70,7 +86,7 @@ export default function NetworkPage() {
         setError(data.error || "Unable to send request");
         return;
       }
-      await load();
+      await load({ soft: true });
     } catch {
       setError("Unable to send request");
     } finally {
@@ -92,7 +108,7 @@ export default function NetworkPage() {
         setError(data.error || "Unable to respond");
         return;
       }
-      await load();
+      await load({ soft: true });
     } catch {
       setError("Unable to respond");
     } finally {

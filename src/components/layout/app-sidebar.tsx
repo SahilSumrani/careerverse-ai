@@ -8,7 +8,6 @@ import {
   Compass,
   FileText,
   Home,
-  MessageSquare,
   Network,
   Route,
   Sparkles,
@@ -32,7 +31,6 @@ const mainLinks = [
 const moreLinks = [
   { href: "/roadmap", label: "Roadmaps", icon: Route },
   { href: "/copilot", label: "Copilot", icon: Compass },
-  { href: "/community", label: "Community", icon: MessageSquare },
   { href: "/network", label: "Network", icon: Network },
   { href: "/events/browse", label: "Events", icon: Calendar },
   { href: "/mentors", label: "Mentors", icon: Users },

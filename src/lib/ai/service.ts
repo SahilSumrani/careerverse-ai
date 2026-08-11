@@ -1244,7 +1244,7 @@ class CareerVerseAIService implements AIService {
           `1) Close one gap${skillGaps[0] ? `: ${skillGaps[0]}` : ""} with a tiny public artifact.`,
           "2) Tailor resume for one target role and re-analyze.",
           "3) Save 3 matched opportunities in Applications.",
-          "4) Message one mentor or peer in Network/Community.",
+          "4) Message one mentor or peer in Network.",
         ].join("\n");
       }
 

@@ -49,7 +49,7 @@ export default async function EventsPage() {
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
       <PageHeader
         title="Browse events"
-        description="Workshops, career panels, and community meetups."
+        description="Workshops, career panels, and campus meetups."
       />
       {items.length ? (
         <div className="grid gap-3 md:grid-cols-2">

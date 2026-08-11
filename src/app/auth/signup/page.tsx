@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
-import { completeGoogleAuth, googleAuthErrorMessage } from "@/lib/google-auth";
+import {
+  completeGoogleAuth,
+  googleAuthBusyLabel,
+  googleAuthErrorMessage,
+  prefetchGoogleAuth,
+  type GoogleAuthPhase,
+} from "@/lib/google-auth";
 import "@/components/auth/auth-shell.css";
 
 function GoogleMark() {
@@ -30,17 +36,22 @@ export default function SignUpPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googlePhase, setGooglePhase] = useState<GoogleAuthPhase>("idle");
+  const googleBusy = googlePhase !== "idle";
+
+  useEffect(() => {
+    prefetchGoogleAuth();
+  }, []);
 
   async function onGoogle() {
-    setGoogleBusy(true);
+    if (googleBusy) return;
     setError("");
     try {
-      await completeGoogleAuth();
+      await completeGoogleAuth({ onPhase: setGooglePhase });
     } catch (err) {
       const msg = googleAuthErrorMessage(err);
       if (msg) setError(msg);
-      setGoogleBusy(false);
+      setGooglePhase("idle");
     }
   }
 
@@ -165,7 +176,7 @@ export default function SignUpPage() {
 
           <button type="button" className="cv-auth-social" disabled={busy || googleBusy} onClick={() => void onGoogle()}>
             <GoogleMark />
-            {googleBusy ? "Connecting Google…" : "Continue with Google"}
+            {googleAuthBusyLabel(googlePhase)}
           </button>
 
           <p className="cv-auth-foot">

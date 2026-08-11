@@ -1,7 +1,7 @@
 "use client";
 
-import { signInWithGooglePopup } from "@/lib/firebase-auth-client";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
+import { signInWithGooglePopup, warmFirebaseAuth } from "@/lib/firebase-auth-client";
 
 export type GoogleAuthResult = {
   ok: true;
@@ -9,47 +9,45 @@ export type GoogleAuthResult = {
   onboardingComplete: boolean;
 };
 
+export type GoogleAuthPhase = "idle" | "popup" | "session";
+
 function destinationFor(onboardingComplete: boolean, callbackUrl?: string | null) {
   if (onboardingComplete) return callbackUrl || "/dashboard";
   return "/onboarding";
 }
 
+/** Call on auth page mount so the Google popup opens without waiting on cold SDK init. */
+export function prefetchGoogleAuth() {
+  warmFirebaseAuth();
+}
+
 /**
- * Firebase Google popup → Prisma upsert → NextAuth JWT session → hard navigate.
+ * Firebase Google popup → NextAuth JWT session → hard navigate.
  * Hard navigation avoids cookie/session races with client router.push.
+ *
+ * Flow is intentionally lean: one token verify/upsert inside NextAuth authorize
+ * (no separate /api/auth/firebase + /api/auth/me round-trips).
  */
 export async function completeGoogleAuth(options?: {
   callbackUrl?: string | null;
+  onPhase?: (phase: GoogleAuthPhase) => void;
 }): Promise<GoogleAuthResult> {
+  warmFirebaseAuth();
+  options?.onPhase?.("popup");
+
   const { idToken } = await signInWithGooglePopup();
 
-  const prep = await fetch("/api/auth/firebase", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-    cache: "no-store",
-  });
-  const prepData = (await prep.json().catch(() => ({}))) as {
-    error?: string;
-    user?: { onboardingComplete?: boolean; isNewUser?: boolean };
-  };
-  if (!prep.ok) {
-    throw new Error(prepData.error || "Unable to verify Google account");
-  }
-
-  const onboardingComplete = Boolean(prepData.user?.onboardingComplete);
-  const isNewUser = Boolean(prepData.user?.isNewUser);
+  options?.onPhase?.("session");
 
   const res = await signIn("firebase", { idToken, redirect: false });
   if (!res || res.error || res.ok === false) {
     throw new Error("Could not create a secure session. Try again.");
   }
 
-  // Confirm cookie session before leaving the page
-  const me = await fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" });
-  if (!me.ok) {
-    throw new Error("Session was not established. Please try Google sign-in again.");
-  }
+  const session = await getSession();
+  const onboardingComplete = Boolean(session?.user?.onboardingComplete);
+  // New Google accounts land on onboarding; treat incomplete as "new" for callers.
+  const isNewUser = !onboardingComplete;
 
   const dest = destinationFor(onboardingComplete, options?.callbackUrl);
   window.location.assign(dest);
@@ -73,4 +71,10 @@ export function googleAuthErrorMessage(err: unknown): string {
   }
   if (err instanceof Error && err.message) return err.message;
   return "Unable to sign in with Google.";
+}
+
+export function googleAuthBusyLabel(phase: GoogleAuthPhase): string {
+  if (phase === "session") return "Signing you in…";
+  if (phase === "popup") return "Choose a Google account…";
+  return "Continue with Google";
 }

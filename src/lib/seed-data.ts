@@ -1,46 +1,10 @@
 /** Demo / seed payloads when Firestore collections are empty. */
 
-export const SEED_POSTS = [
-  {
-    id: "seed-post-1",
-    title: "How I used Career Intelligence to pick a target role",
-    content:
-      "Ran analysis after onboarding, picked the top path with the fewest skill gaps, and added those gaps to my roadmap. Happy to share the process.",
-    category: "CAREER",
-    isDemo: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-    author: { id: "demo-author-1", name: "Aisha K.", image: null },
-    _count: { comments: 2, reactions: 8 },
-  },
-  {
-    id: "seed-post-2",
-    title: "Resume ATS tips that actually helped",
-    content:
-      "Kept a single-column layout, quantified 3 bullets, and aligned keywords to one target role. Resume Intelligence score jumped after a re-upload.",
-    category: "JOBS",
-    isDemo: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 50).toISOString(),
-    author: { id: "demo-author-2", name: "Rohan M.", image: null },
-    _count: { comments: 1, reactions: 12 },
-  },
-  {
-    id: "seed-post-3",
-    title: "Looking for mock interview partners (frontend)",
-    content:
-      "Anyone free this weekend for a 30-min React/TS mock? I can swap behavioral practice.",
-    category: "INTERVIEWS",
-    isDemo: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-    author: { id: "demo-author-3", name: "Priya S.", image: null },
-    _count: { comments: 4, reactions: 5 },
-  },
-];
-
 export const SEED_EVENTS = [
   {
     id: "seed-evt-1",
     title: "Campus-to-Career panel: product & eng",
-    organizationName: "CareerVerse Community",
+    organizationName: "CareerVerse Campus",
     location: "Online",
     startsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString(),
     endsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5 + 1000 * 60 * 90).toISOString(),

@@ -6,6 +6,7 @@ import { PageHeader, EmptyState, Skeleton } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { createSoftCache } from "@/lib/client-cache";
 
 type Mentor = {
   id: string;
@@ -23,13 +24,17 @@ type Mentor = {
   };
 };
 
+const mentorsCache = createSoftCache<Mentor[]>();
+
 export default function MentorsPage() {
-  const [mentors, setMentors] = useState<Mentor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = mentorsCache.peek();
+  const [mentors, setMentors] = useState<Mentor[]>(cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? mentorsCache.has();
+    if (!soft) setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/mentors");
@@ -38,7 +43,9 @@ export default function MentorsPage() {
         setError(data.error || "Unable to load mentors");
         return;
       }
-      setMentors(data.mentors || []);
+      const next = (data.mentors || []) as Mentor[];
+      setMentors(next);
+      mentorsCache.set(next);
     } catch {
       setError("Unable to load mentors");
     } finally {
@@ -47,7 +54,7 @@ export default function MentorsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    void load({ soft: mentorsCache.has() });
   }, [load]);
 
   return (

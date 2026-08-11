@@ -13,10 +13,25 @@ import { getFirebaseAuth, getFirebaseAnalytics, getFirebaseDb } from "@/lib/fire
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
 
+let authWarmed = false;
+
+/** Prefetch Firebase Auth so the first Google click does not wait on cold SDK init. */
+export function warmFirebaseAuth(): void {
+  if (typeof window === "undefined" || authWarmed) return;
+  try {
+    getFirebaseAuth();
+    authWarmed = true;
+  } catch {
+    // Env missing — sign-in will surface a clear error on click.
+  }
+}
+
 export async function signInWithGooglePopup(): Promise<{ user: User; idToken: string }> {
+  warmFirebaseAuth();
   const auth = getFirebaseAuth();
   const result = await signInWithPopup(auth, googleProvider);
-  const idToken = await result.user.getIdToken();
+  // Prefer cached token from the popup result; force-refresh only if needed.
+  const idToken = await result.user.getIdToken(/* forceRefresh */ false);
 
   void getFirebaseAnalytics();
   // Never block auth on Firestore (DB may be missing / rules may hang)

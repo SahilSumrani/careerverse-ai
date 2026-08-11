@@ -7,6 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/input";
+import { createSoftCache } from "@/lib/client-cache";
 
 const STATUSES = [
   "SAVED",
@@ -40,6 +41,9 @@ type ApplicationItem = {
 
 const LS_KEY = "cv-applications-v1";
 
+type ApplicationsCache = { items: ApplicationItem[]; source: string };
+const appsCache = createSoftCache<ApplicationsCache>();
+
 function readLocal(): ApplicationItem[] | null {
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -59,15 +63,17 @@ function writeLocal(items: ApplicationItem[]) {
 }
 
 export default function ApplicationsPage() {
-  const [items, setItems] = useState<ApplicationItem[]>([]);
+  const cached = appsCache.peek();
+  const [items, setItems] = useState<ApplicationItem[]>(cached?.items ?? []);
   const [view, setView] = useState<"list" | "kanban">("list");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [source, setSource] = useState<string>("");
+  const [source, setSource] = useState<string>(cached?.source ?? "");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? appsCache.has();
+    if (!soft) setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/applications");
@@ -91,7 +97,9 @@ export default function ApplicationsPage() {
       }
       setItems(next);
       writeLocal(next);
-      setSource(data.source || (data.demo ? "demo" : "firestore"));
+      const nextSource = data.source || (data.demo ? "demo" : "firestore");
+      setSource(nextSource);
+      appsCache.set({ items: next, source: nextSource });
     } catch {
       setError("Unable to load applications");
       setItems(readLocal() || []);
@@ -102,7 +110,7 @@ export default function ApplicationsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    void load({ soft: appsCache.has() });
   }, [load]);
 
   const byStatus = useMemo(() => {
@@ -123,6 +131,7 @@ export default function ApplicationsPage() {
     setItems((prev) => {
       const next = prev.map((a) => (a.id === id ? { ...a, status, updatedAt: new Date().toISOString() } : a));
       writeLocal(next);
+      appsCache.set({ items: next, source: source || "local" });
       return next;
     });
     try {
@@ -139,6 +148,7 @@ export default function ApplicationsPage() {
       setItems((prev) => {
         const next = prev.map((a) => (a.id === id ? { ...a, ...data.application } : a));
         writeLocal(next);
+        appsCache.set({ items: next, source: source || "firestore" });
         return next;
       });
     } catch {

@@ -32,7 +32,6 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/resume") ||
     pathname.startsWith("/roadmap") ||
     pathname.startsWith("/copilot") ||
-    pathname.startsWith("/community") ||
     pathname.startsWith("/network") ||
     pathname.startsWith("/mentors") ||
     pathname.startsWith("/admin") ||
@@ -87,7 +86,6 @@ export const config = {
     "/resume/:path*",
     "/roadmap/:path*",
     "/copilot/:path*",
-    "/community/:path*",
     "/network/:path*",
     "/mentors/:path*",
     "/admin/:path*",

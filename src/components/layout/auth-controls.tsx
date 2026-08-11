@@ -21,7 +21,9 @@ export function AuthControls({ compact }: AuthControlsProps) {
     } catch {
       // ignore
     }
-    await signOut({ callbackUrl: "/" });
+    // Avoid Auth.js resolving `/` against a mis-set AUTH_URL (e.g. localhost on Vercel).
+    await signOut({ redirect: false });
+    window.location.assign("/");
   }
 
   if (status === "loading") {

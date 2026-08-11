@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
 
 async function signOutAction() {
   "use server";
-  await signOut({ redirectTo: "/" });
+  // Clear session without Auth.js Location header (AUTH_URL can be localhost on Vercel).
+  await signOut({ redirect: false });
+  redirect("/");
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

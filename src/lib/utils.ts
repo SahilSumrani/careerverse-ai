@@ -26,8 +26,31 @@ export function formatPercent(n: number): string {
   return `${Math.round(n)}%`;
 }
 
+/** Canonical public origin — never prefer localhost when a deploy URL is available. */
+export function appOrigin(): string {
+  const configured = (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.AUTH_URL ||
+    process.env.NEXTAUTH_URL ||
+    ""
+  ).replace(/\/$/, "");
+
+  const looksLocal =
+    !configured ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured);
+
+  if (!looksLocal) return configured;
+
+  const vercel = process.env.VERCEL_URL?.replace(/\/$/, "");
+  if (vercel) {
+    return vercel.startsWith("http") ? vercel : `https://${vercel}`;
+  }
+
+  return configured || "http://localhost:3000";
+}
+
 export function absoluteUrl(path = "") {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = appOrigin();
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

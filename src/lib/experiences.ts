@@ -140,17 +140,62 @@ export function computeMonths(start: string, end: string): number | null {
   return Math.max(1, months);
 }
 
+const MONTH_LABELS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** Friendly date label: "Jan 2023", "2023", or "Present". */
+export function formatExperienceDate(value: string): string {
+  const raw = value.trim();
+  if (!raw) return "";
+  if (/^present|current|now$/i.test(raw)) return "Present";
+  const parsed = parseYearMonth(raw);
+  if (!parsed) return raw.slice(0, 40);
+  // Year-only storage often normalizes to YYYY-01 — show year alone when input was year-only
+  if (/^\d{4}$/.test(raw)) return String(parsed.y);
+  return `${MONTH_LABELS[parsed.m - 1]} ${parsed.y}`;
+}
+
+/** "Jan 2023 – Present" (no duplicated year tokens). */
+export function formatExperiencePeriod(start: string, end: string): string {
+  const s = formatExperienceDate(start);
+  const e = formatExperienceDate(end) || (start.trim() ? "Present" : "");
+  if (!s && !e) return "";
+  if (!s) return e;
+  if (!e) return s;
+  return `${s} – ${e}`;
+}
+
+export function formatExperienceHeadline(entry: ExperienceEntry): string {
+  const e = toStoredExperience(entry);
+  const period = formatExperiencePeriod(e.start, e.end);
+  const months =
+    e.months != null
+      ? e.months
+      : e.start
+        ? computeMonths(e.start, e.end || "Present")
+        : null;
+  const duration = months != null && months > 0 ? `${months} mo` : "";
+  return [e.company, period, duration].filter(Boolean).join(" · ");
+}
+
 export function deriveExperienceSummary(entries: ExperienceEntry[]): string {
   const parts = entries
     .map(toStoredExperience)
     .filter((e) => e.company)
     .map((e) => {
-      const period =
-        e.start || e.end
-          ? [e.start || "—", e.end || "—"].join(" → ")
-          : "";
-      const duration = e.months != null ? `${e.months} mo` : "";
-      const head = [e.company, period, duration].filter(Boolean).join(" · ");
+      const head = formatExperienceHeadline(e);
       return e.responsibilities ? `${head}\n${e.responsibilities}` : head;
     });
   return parts.join("\n\n").slice(0, 2000);

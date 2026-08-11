@@ -115,6 +115,10 @@ export type UserCareerContext = {
   careerStage?: string | null;
   profileCompleteness: number;
   resumeText?: string | null;
+  /** From cached career analysis when available */
+  skillGaps?: string[];
+  topPaths?: string[];
+  careerScore?: number | null;
 };
 
 export interface AIService {

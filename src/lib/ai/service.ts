@@ -1182,42 +1182,129 @@ class CareerVerseAIService implements AIService {
     history?: Array<{ role: "user" | "assistant"; content: string }>;
     ctx?: UserCareerContext;
   }): Promise<{ reply: string }> {
-    const fallbackReply = (() => {
+    const ctx = input.ctx;
+    const skills = ctx?.skills ?? [];
+    const gapsFromCtx = (ctx?.skillGaps ?? []).filter(Boolean);
+    const catalogGaps = Array.from(
+      new Set(CAREER_CATALOG.flatMap((c) => missingFrom(c.skills, skills))),
+    ).slice(0, 12);
+    const skillGaps = gapsFromCtx.length ? gapsFromCtx : catalogGaps;
+    const topPaths =
+      ctx?.topPaths?.length
+        ? ctx.topPaths
+        : buildMatches({
+            skills,
+            interests: ctx?.interests ?? [],
+            preferredIndustries: ctx?.preferredIndustries ?? [],
+            preferredLocations: ctx?.preferredLocations ?? [],
+            profileCompleteness: ctx?.profileCompleteness ?? 0,
+            careerGoals: ctx?.careerGoals ?? null,
+            experienceSummary: ctx?.experienceSummary ?? null,
+            workPreference: ctx?.workPreference ?? null,
+            careerStage: ctx?.careerStage ?? null,
+          }).map((m) => m.title);
+
+    const heuristicReply = (() => {
       const q = norm(input.message);
-      if (q.includes("missing") || q.includes("skill gap")) {
-        return `Based on your profile skills (${input.ctx?.skills.slice(0, 6).join(", ") || "not set yet"}), focus this week on one demonstrable gap tied to your top career match, then update your profile.`;
+      const skillList = skills.length ? skills.slice(0, 8).join(", ") : "none listed yet";
+      const gapList = skillGaps.length
+        ? skillGaps.slice(0, 6).join(", ")
+        : "none computed yet — complete profile + run Career Intelligence";
+
+      if (
+        /\b(skill\s*gaps?|gaps?\s*in\s*(my\s*)?skills?|missing\s*skills?|what\s*(am\s*i|i'?m)\s*missing|close\s*(the\s*)?gap)\b/.test(
+          q,
+        ) ||
+        (q.includes("gap") && (q.includes("skill") || q.includes("missing")))
+      ) {
+        const top = topPaths[0] ? ` for ${topPaths[0]}` : "";
+        return [
+          `Here’s what your CareerVerse profile suggests${top}:`,
+          `• Skills you already have: ${skillList}`,
+          `• Priority skill gaps: ${gapList}`,
+          skillGaps[0]
+            ? `This week: pick one gap (“${skillGaps[0]}”), ship a small project or certificate proof, then add it on Profile and re-run Career Intelligence.`
+            : "Add more skills and goals on Profile, then regenerate Career Intelligence so I can name concrete gaps.",
+          "Want me to draft a 7-day plan for the top gap, or open Roadmaps for that path?",
+        ].join("\n");
       }
-      if (q.includes("career") && q.includes("right")) {
-        return "Start from goals + interests + skills, generate Career Intelligence, then compare the top 3 paths by missing skills and next actions—not by score alone.";
+
+      if (/\b(career|path|role)\b/.test(q) && /\b(right|fit|match|suit|best|recommend)\b/.test(q)) {
+        const paths = topPaths.slice(0, 3).join("; ") || "run Career Intelligence for ranked paths";
+        return `Top paths from your profile: ${paths}. Compare them by missing skills and next actions—not score alone. Skills on file: ${skillList}.`;
       }
-      if (q.includes("resume")) {
-        return "Upload your resume and run analysis for a specific target role. Improve clarity, truthful keywords, and quantified outcomes.";
+
+      if (/\bresume\b/.test(q)) {
+        return `Upload/analyze under Resume Intelligence for a target role. With skills (${skillList}), emphasize truthful keywords and quantified outcomes. Re-upload after edits.`;
       }
-      if (q.includes("this week") || q.includes("next")) {
-        return "This week: (1) close one skill gap with a tiny project, (2) improve resume for one role, (3) save 3 matched opportunities, (4) request one relevant connection.";
+
+      if (/\b(this week|next steps?|what should i do|plan)\b/.test(q)) {
+        return [
+          "This week (profile-aware):",
+          `1) Close one gap${skillGaps[0] ? `: ${skillGaps[0]}` : ""} with a tiny public artifact.`,
+          "2) Tailor resume for one target role and re-analyze.",
+          "3) Save 3 matched opportunities in Applications.",
+          "4) Message one mentor or peer in Network/Community.",
+        ].join("\n");
       }
-      return "I can help with career fit, skill gaps, opportunities, resume feedback, interview prep, and weekly plans. Ask a specific question, and I’ll use your CareerVerse profile context when available.";
+
+      if (/\b(interview|prep)\b/.test(q)) {
+        const role = topPaths[0] || "your target role";
+        return `For ${role}: prepare 3 STAR stories from your experience, review fundamentals tied to gaps (${gapList}), and practice aloud. I can generate likely questions if you name the role.`;
+      }
+
+      if (ctx && (skills.length || ctx.careerGoals)) {
+        return `I see ${skills.length} skills on your profile${ctx.careerGoals ? ` and goals around “${ctx.careerGoals.slice(0, 80)}”` : ""}. Ask about skill gaps, career fit, resume, interview prep, or a weekly plan — I’ll answer from your data.`;
+      }
+
+      return "I can help with career fit, skill gaps, opportunities, resume feedback, interview prep, and weekly plans. Complete onboarding or ask a specific question so I can use your profile.";
     })();
 
     const raw = await callOpenAICompatible(
-      "You are CareerVerse Copilot, a concise career coach. Never invent user qualifications. Prefer actionable next steps. Return JSON {\"reply\":\"...\"}.",
+      [
+        "You are CareerVerse Copilot, a concise career coach.",
+        "Answer the user's latest message directly using the provided profile context.",
+        "Never invent credentials. Never reply with a generic greeting or capability list if the user asked a specific question.",
+        "If they ask about skill gaps, list concrete gaps from context.skillGaps (or infer from skills vs topPaths).",
+        'Return JSON only: {"reply":"..."}',
+      ].join(" "),
       JSON.stringify({
         message: input.message,
         history: input.history?.slice(-8),
-        context: input.ctx
+        context: ctx
           ? {
-              skills: input.ctx.skills,
-              interests: input.ctx.interests,
-              goals: input.ctx.careerGoals,
-              stage: input.ctx.careerStage,
+              name: ctx.name,
+              skills: ctx.skills,
+              skillGaps,
+              topPaths,
+              interests: ctx.interests,
+              goals: ctx.careerGoals,
+              stage: ctx.careerStage,
+              careerScore: ctx.careerScore,
+              experienceSummary: ctx.experienceSummary?.slice(0, 500),
             }
           : null,
+        heuristicHint: heuristicReply,
       }),
     );
-    const parsed = safeParse(raw, { reply: fallbackReply });
-    return { reply: parsed.reply || fallbackReply };
+
+    const parsed = safeParse(raw, { reply: heuristicReply });
+    let reply = (parsed.reply || heuristicReply).trim();
+
+    // Reject canned greetings / capability dumps when the user asked something specific
+    const looksLikeGreeting =
+      /^(hi|hello|hey)\b/i.test(reply) ||
+      (/careerverse copilot/i.test(reply) && /ask about/i.test(reply)) ||
+      (/i can help with career fit/i.test(reply) && norm(input.message).length > 12);
+
+    if (looksLikeGreeting && heuristicReply && !/^(hi|hello)/i.test(heuristicReply)) {
+      reply = heuristicReply;
+    }
+
+    return { reply };
   }
 }
+
 
 export const aiService: AIService = new CareerVerseAIService();
 export { CAREER_CATALOG, DISCLAIMER, heuristicParseResumeProfile };

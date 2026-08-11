@@ -448,7 +448,13 @@ h1 em,
 }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--muted), color-mix(in oklab, var(--muted) 35%, white), var(--muted));
+  min-height: 1rem;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--muted) 100%, transparent),
+    color-mix(in oklab, var(--foreground) 8%, var(--muted)),
+    color-mix(in oklab, var(--muted) 100%, transparent)
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease infinite;
 }

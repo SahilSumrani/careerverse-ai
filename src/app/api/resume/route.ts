@@ -57,11 +57,12 @@ export async function GET() {
   try {
     const session = await requireSession();
     const user = await getUserById(session.user.id);
-    const resumes = user?.resumes?.length
+    const resumes = (user?.resumes?.length
       ? user.resumes
       : user?.resume
         ? [user.resume]
-        : [];
+        : []
+    ).slice().sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1));
     return jsonOk({ resumes });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

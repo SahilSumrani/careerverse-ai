@@ -24,6 +24,30 @@ export async function requireSession() {
 export async function getCareerContext(userId: string): Promise<UserCareerContext | null> {
   const user = await getUserById(userId);
   if (!user) return null;
+
+  let skillGaps: string[] = [];
+  let topPaths: string[] = [];
+  if (user.careerAnalysisJson) {
+    try {
+      const parsed = JSON.parse(user.careerAnalysisJson) as {
+        skillGaps?: string[];
+        suitablePaths?: Array<{ title?: string; missing?: string[] }>;
+      };
+      skillGaps = Array.isArray(parsed.skillGaps) ? parsed.skillGaps.map(String).slice(0, 12) : [];
+      topPaths = (parsed.suitablePaths || [])
+        .map((p) => p.title)
+        .filter((t): t is string => Boolean(t))
+        .slice(0, 5);
+      if (!skillGaps.length) {
+        skillGaps = Array.from(
+          new Set((parsed.suitablePaths || []).flatMap((p) => p.missing || []).map(String)),
+        ).slice(0, 12);
+      }
+    } catch {
+      // ignore bad cached analysis
+    }
+  }
+
   return {
     name: user.name,
     education: user.education ?? null,
@@ -40,6 +64,9 @@ export async function getCareerContext(userId: string): Promise<UserCareerContex
     careerStage: user.careerStage ?? null,
     profileCompleteness: user.profileCompleteness,
     resumeText: user.resume?.extractedText ?? user.resumes?.[0]?.extractedText ?? null,
+    skillGaps,
+    topPaths,
+    careerScore: user.careerScore ?? null,
   };
 }
 

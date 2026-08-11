@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { PageHeader } from "@/components/ui/states";
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader, Skeleton } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,13 +20,74 @@ type ResumeAnalysis = {
   recommendations: string[];
 };
 
+type ResumeMeta = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageUrl?: string | null;
+  storagePath?: string | null;
+  extractedText?: string | null;
+  uploadedAt: string;
+  analyses?: Array<{
+    id: string;
+    targetRole?: string | null;
+    score: number;
+    resultJson: string;
+    createdAt: string;
+  }>;
+};
+
+function isPdf(mime: string, name: string) {
+  return mime.includes("pdf") || name.toLowerCase().endsWith(".pdf");
+}
+
 export default function ResumePage() {
   const [file, setFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadingMeta, setLoadingMeta] = useState(true);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
   const [fileName, setFileName] = useState("");
+  const [resumes, setResumes] = useState<ResumeMeta[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const loadResumes = useCallback(async () => {
+    setLoadingMeta(true);
+    try {
+      const res = await fetch("/api/resume");
+      const data = await res.json();
+      if (!res.ok) return;
+      const list: ResumeMeta[] = data.resumes || [];
+      setResumes(list);
+      const latest = list[0];
+      if (latest) {
+        setFileName(latest.fileName);
+        setPreviewUrl(latest.storageUrl || null);
+        const last = latest.analyses?.[latest.analyses.length - 1];
+        if (last?.resultJson) {
+          try {
+            setAnalysis(JSON.parse(last.resultJson) as ResumeAnalysis);
+          } catch {
+            // ignore
+          }
+        }
+        // Refresh signed URL when we only have a path
+        if (!latest.storageUrl && latest.storagePath) {
+          const signed = await fetch(`/api/resume/file?id=${encodeURIComponent(latest.id)}`);
+          const signedData = await signed.json();
+          if (signed.ok && signedData.url) setPreviewUrl(signedData.url);
+        }
+      }
+    } finally {
+      setLoadingMeta(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadResumes();
+  }, [loadResumes]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +110,7 @@ export default function ResumePage() {
       }
       setFileName(data.resume?.fileName || file.name);
       setAnalysis(data.analysis);
+      await loadResumes();
     } catch {
       setError("Unable to analyze resume");
     } finally {
@@ -56,47 +118,105 @@ export default function ResumePage() {
     }
   }
 
+  const latest = resumes[0];
+  const pdf = latest ? isPdf(latest.mimeType, latest.fileName) : false;
+
   return (
-    <div>
+    <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
       <PageHeader
         title="Resume Intelligence"
-        description="Upload a PDF or DOCX for structure, keyword, and role-alignment feedback. Scores are AI-generated estimates."
+        description="Preview your uploaded resume and get structure, keyword, and role-alignment feedback."
       />
 
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle>Upload resume</CardTitle>
-          <CardDescription>Accepted formats: PDF, DOCX. Optional target role improves alignment notes.</CardDescription>
-        </CardHeader>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="resume-file">Resume file</Label>
-            <Input
-              id="resume-file"
-              type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              required
+      <div className="grid gap-4 lg:grid-cols-5">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Upload & analyze</CardTitle>
+            <CardDescription>PDF or DOCX. Optional target role improves alignment notes.</CardDescription>
+          </CardHeader>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="resume-file">Resume file</Label>
+              <Input
+                id="resume-file"
+                type="file"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target-role">Target role (optional)</Label>
+              <Input
+                id="target-role"
+                value={targetRole}
+                onChange={(e) => setTargetRole(e.target.value)}
+                placeholder="e.g. Software Engineer"
+              />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            <Button type="submit" disabled={busy}>
+              {busy ? "Analyzing resume…" : "Analyze resume"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <CardTitle>Your resume</CardTitle>
+                <CardDescription>
+                  {loadingMeta
+                    ? "Loading…"
+                    : latest
+                      ? `${latest.fileName} · uploaded ${new Date(latest.uploadedAt).toLocaleDateString()}`
+                      : "No resume on file yet"}
+                </CardDescription>
+              </div>
+              {previewUrl ? (
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Download / open
+                </a>
+              ) : null}
+            </div>
+          </CardHeader>
+
+          {loadingMeta ? (
+            <Skeleton className="h-72 w-full" />
+          ) : latest && pdf && previewUrl && !previewUrl.startsWith("gs://") ? (
+            <iframe
+              title="Resume preview"
+              src={previewUrl}
+              className="h-[28rem] w-full rounded-xl border border-border bg-muted"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="target-role">Target role (optional)</Label>
-            <Input
-              id="target-role"
-              value={targetRole}
-              onChange={(e) => setTargetRole(e.target.value)}
-              placeholder="e.g. Software Engineer"
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={busy}>
-            {busy ? "Analyzing resume…" : "Analyze resume"}
-          </Button>
-        </form>
-      </Card>
+          ) : latest ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {pdf
+                  ? "PDF preview unavailable (missing Storage URL). Use download if a link appears, or re-upload."
+                  : "DOCX preview shows extracted text below. Use download when Storage URL is available."}
+              </p>
+              <div className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/40 p-4 text-sm leading-relaxed">
+                {latest.extractedText?.trim() || "No extracted text stored for this file."}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Upload a resume to see a preview and analysis.</p>
+          )}
+        </Card>
+      </div>
 
       {busy ? (
-        <Card className="mt-4 p-6 text-sm text-muted-foreground">Analyzing resume…</Card>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
       ) : null}
 
       {analysis ? (
@@ -149,7 +269,11 @@ export default function ResumePage() {
               </CardHeader>
               <div className="flex flex-wrap gap-2">
                 {analysis.keywords?.length
-                  ? analysis.keywords.map((s) => <Badge key={s} tone="success">{s}</Badge>)
+                  ? analysis.keywords.map((s) => (
+                      <Badge key={s} tone="success">
+                        {s}
+                      </Badge>
+                    ))
                   : <p className="text-sm text-muted-foreground">None flagged</p>}
               </div>
             </Card>

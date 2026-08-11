@@ -32,10 +32,19 @@ export function RoadmapGenerator({
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/search", {
+      const res = await fetch("/api/roadmap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "roadmap", careerTitle }),
+        body: JSON.stringify({
+          careerTitle,
+          skillGaps: (() => {
+            try {
+              return JSON.parse(localStorage.getItem("cv-roadmap-gaps") || "[]");
+            } catch {
+              return [];
+            }
+          })(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

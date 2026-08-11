@@ -1,16 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/states";
 import { Sparkles, X } from "lucide-react";
 
+type Msg = { role: "user" | "assistant"; content: string };
+
 export function CopilotWidget() {
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [log, setLog] = useState<Array<{ role: "user" | "assistant"; content: string }>>([
+  const [log, setLog] = useState<Msg[]>([
     {
       role: "assistant",
       content: "Ask about career fit, skill gaps, opportunities, resume improvements, or what to do this week.",
@@ -18,12 +24,17 @@ export function CopilotWidget() {
   ]);
 
   useEffect(() => {
-    if (!open) return;
-  }, [open]);
+    const q = searchParams.get("copilot");
+    if (q) {
+      setOpen(true);
+      setMessage(q);
+    }
+  }, [searchParams]);
 
-  async function send() {
-    if (!message.trim() || busy) return;
-    const next = [...log, { role: "user" as const, content: message.trim() }];
+  async function send(textIn?: string) {
+    const text = (textIn ?? message).trim();
+    if (!text || busy) return;
+    const next = [...log, { role: "user" as const, content: text }];
     setLog(next);
     setMessage("");
     setBusy(true);
@@ -31,10 +42,16 @@ export function CopilotWidget() {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: next[next.length - 1].content }),
+        body: JSON.stringify({
+          message: text,
+          history: next.slice(0, -1).slice(-8),
+        }),
       });
       const data = await res.json();
-      setLog((prev) => [...prev, { role: "assistant", content: data.reply || data.error || "Unavailable right now." }]);
+      setLog((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply || data.error || "Unavailable right now." },
+      ]);
     } catch {
       setLog((prev) => [...prev, { role: "assistant", content: "Copilot is temporarily unavailable." }]);
     } finally {
@@ -55,24 +72,30 @@ export function CopilotWidget() {
       </button>
       {open ? (
         <div className="fixed inset-x-3 bottom-24 z-50 md:inset-auto md:bottom-20 md:right-4 md:w-[380px]">
-          <Card className="flex h-[420px] flex-col p-0 overflow-hidden shadow-md">
+          <Card className="flex h-[420px] flex-col overflow-hidden p-0 shadow-md">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">AI Career Copilot</p>
                 <p className="text-xs text-muted-foreground">Uses your profile context when signed in</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close copilot">
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Link href="/copilot" className="px-2 text-xs font-medium text-primary hover:underline">
+                  Full page
+                </Link>
+                <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close copilot">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+              {busy && log.length <= 1 ? <Skeleton className="h-14 w-full" /> : null}
               {log.map((m, i) => (
                 <div
                   key={`${m.role}-${i}`}
                   className={
                     m.role === "assistant"
-                      ? "rounded-xl bg-muted px-3 py-2 text-sm"
-                      : "ml-8 rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground"
+                      ? "whitespace-pre-wrap rounded-xl bg-muted px-3 py-2 text-sm"
+                      : "ml-8 whitespace-pre-wrap rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground"
                   }
                 >
                   {m.content}
@@ -84,13 +107,13 @@ export function CopilotWidget() {
               <Input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="What should I do this week?"
+                placeholder="What are my skill gaps?"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void send();
                 }}
                 aria-label="Copilot message"
               />
-              <Button onClick={() => void send()} disabled={busy}>
+              <Button onClick={() => void send()} disabled={busy || !message.trim()}>
                 Send
               </Button>
             </div>

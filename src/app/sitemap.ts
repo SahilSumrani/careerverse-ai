@@ -14,15 +14,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/auth/signup",
   ];
 
-  const { DUMMY_JOBS, isInternshipListing } = await import("@/data/jobs");
-  const detailPaths = DUMMY_JOBS.map((job) =>
-    isInternshipListing(job) ? `/internships/${job.id}` : `/jobs/${job.id}`,
-  );
+  const { DUMMY_JOBS, listingHref } = await import("@/data/jobs");
+  const detailPaths = DUMMY_JOBS.map((job) => listingHref(job));
 
   return [...staticPaths, ...detailPaths].map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),
     changeFrequency: path === "" ? "weekly" : "daily",
-    priority: path === "" ? 1 : path.includes("/jv-") ? 0.6 : 0.7,
+    priority: path === "" ? 1 : path.includes("/detail/") ? 0.6 : 0.7,
   }));
 }

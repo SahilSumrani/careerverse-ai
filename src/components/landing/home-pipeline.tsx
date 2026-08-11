@@ -23,7 +23,7 @@ const DEMO_EVENTS: Omit<LiveItem, "id" | "at" | "source">[] = [
   { name: "Kabir", role: "People Ops Intern", stage: "Applied", company: "CareerVerse Partner Network" },
   { name: "Ananya", role: "ML Engineer (New Grad)", stage: "Offer", company: "Lumen AI" },
   { name: "Dev", role: "Backend Engineer Intern", stage: "Screening", company: "Riverbank Systems" },
-  { name: "Priya", role: "UX Designer — Student Pathway", stage: "Interview", company: "SoftQA Studio" },
+  { name: "Priya", role: "UX Designer", stage: "Interview", company: "SoftQA Studio" },
   { name: "Arjun", role: "Campus Recruiting Associate", stage: "Applied", company: "BrightPath" },
   { name: "Sara", role: "Marketing Intern", stage: "Applied", company: "BrightPath Campus" },
   { name: "Ishaan", role: "Data Science Intern", stage: "Screening", company: "Orbit Finance" },
@@ -46,6 +46,8 @@ const GLOBE_MARKERS: GlobeMarker[] = [
   { lat: 35.69, lng: 139.69, label: "12 Final", delay: 1.0 },
   { lat: -33.87, lng: 151.21, label: "9 Hire", delay: 0.35 },
 ];
+
+const AVATAR_TONES = ["#dbe7ff", "#d9f5e7", "#ffe8d6", "#efe4ff", "#ffe0ea", "#e0f4ff"];
 
 function relativeTime(iso: string) {
   const diff = Math.max(0, Date.now() - new Date(iso).getTime());
@@ -72,11 +74,24 @@ function bumpStages(prev: StageStat[], stage: string): StageStat[] {
   });
 }
 
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function toneFor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash + name.charCodeAt(i) * (i + 1)) % AVATAR_TONES.length;
+  return AVATAR_TONES[hash];
+}
+
 export function HomePipeline() {
   const [feed, setFeed] = useState<LiveItem[]>([]);
   const [stages, setStages] = useState(BASE_STAGES);
   const [usingDemo, setUsingDemo] = useState(true);
-  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,17 +102,12 @@ export function HomePipeline() {
         if (cancelled || !res.ok) return;
         const items = (data.items || []) as LiveItem[];
         if (items.length) {
-          setFeed(items.slice(0, 8));
+          setFeed(items.slice(0, 5));
           setUsingDemo(Boolean(data.demo));
-          const counts: Record<string, number> = { Applied: 0, Screening: 0, Interview: 0, Offer: 0 };
-          for (const item of items) {
-            if (counts[item.stage] != null) counts[item.stage] += 1;
-          }
           if (!data.demo) {
             setStages((prev) =>
               prev.map((s) => ({
                 ...s,
-                count: Math.max(s.count, counts[s.title] ? s.count : s.count),
                 note:
                   s.title === "Applied"
                     ? "From live applications"
@@ -121,15 +131,15 @@ export function HomePipeline() {
 
   useEffect(() => {
     if (!usingDemo && feed.length) return;
-    const seed: LiveItem[] = DEMO_EVENTS.slice(0, 5).map((e, i) => ({
+    const seed: LiveItem[] = DEMO_EVENTS.slice(0, 4).map((e, i) => ({
       ...e,
       id: `seed-${i}`,
-      at: new Date(Date.now() - i * 38_000).toISOString(),
+      at: new Date(Date.now() - i * 52_000).toISOString(),
       source: "demo",
     }));
     setFeed(seed);
 
-    let i = 5;
+    let i = 4;
     const id = window.setInterval(() => {
       const next = DEMO_EVENTS[i % DEMO_EVENTS.length];
       i += 1;
@@ -139,18 +149,11 @@ export function HomePipeline() {
         at: new Date().toISOString(),
         source: "demo",
       };
-      setFeed((prev) => [item, ...prev].slice(0, 8));
+      setFeed((prev) => [item, ...prev].slice(0, 5));
       setStages((prev) => bumpStages(prev, next.stage));
-      setTick((t) => t + 1);
-    }, 3200);
+    }, 3800);
     return () => window.clearInterval(id);
   }, [usingDemo]);
-
-  const headline = useMemo(() => {
-    const top = feed[0];
-    if (!top) return "Applications updating live";
-    return `${top.name} · ${top.role}`;
-  }, [feed, tick]);
 
   const markers = useMemo(() => {
     return GLOBE_MARKERS.map((m, idx) => {
@@ -161,6 +164,8 @@ export function HomePipeline() {
       return m;
     });
   }, [stages]);
+
+  const latest = feed[0];
 
   return (
     <section className="cv-pipe">
@@ -180,29 +185,46 @@ export function HomePipeline() {
       <div className="cv-pipe-globe-wrap">
         <PipelineGlobe markers={markers} />
 
-        <div className="cv-pipe-live" aria-live="polite">
+        <aside className="cv-pipe-live" aria-live="polite">
           <div className="cv-pipe-live-head">
-            <span className="cv-pipe-live-dot" aria-hidden />
-            <strong>{usingDemo ? "Demo live feed" : "Live from applications"}</strong>
-            <em key={headline}>{headline}</em>
+            <div className="cv-pipe-live-title">
+              <span className="cv-pipe-live-dot" aria-hidden />
+              <div>
+                <strong>{usingDemo ? "Live demo feed" : "Live from applications"}</strong>
+                <p>
+                  {latest
+                    ? `${latest.name} · ${latest.stage}`
+                    : "Applications updating"}
+                </p>
+              </div>
+            </div>
           </div>
+
           <ul className="cv-pipe-feed">
-            {feed.map((item) => (
+            {feed.slice(0, 4).map((item) => (
               <li key={item.id} className="cv-pipe-feed-item">
-                <div>
+                <span
+                  className="cv-pipe-avatar"
+                  style={{ background: toneFor(item.name) }}
+                  aria-hidden
+                >
+                  {initials(item.name)}
+                </span>
+                <div className="cv-pipe-feed-copy">
                   <strong>
-                    {item.name} applied · {item.role}
+                    {item.name} <em>applied</em>
                   </strong>
-                  <span>
-                    {item.stage}
-                    {item.company ? ` · ${item.company}` : ""}
+                  <span className="cv-pipe-role">{item.role}</span>
+                  <span className="cv-pipe-meta">
+                    <span className={`cv-pipe-stage is-${item.stage.toLowerCase()}`}>{item.stage}</span>
+                    {item.company ? <span>· {item.company}</span> : null}
                   </span>
                 </div>
                 <time dateTime={item.at}>{relativeTime(item.at)}</time>
               </li>
             ))}
           </ul>
-        </div>
+        </aside>
 
         <div className="cv-pipe-overlay">
           {stages.map((s) => (

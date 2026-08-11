@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, IndianRupee, Briefcase, GraduationCap } from "lucide-react";
+import { MapPin, IndianRupee } from "lucide-react";
 import {
   getHomeInternships,
   getHomeJobs,
@@ -7,39 +7,51 @@ import {
   JOB_FILTER_CHIPS,
   LOOKING_FOR_CHIPS,
   listingHref,
+  isWorkFromHome,
   type DummyJob,
 } from "@/data/jobs";
 import { LookRail } from "@/components/landing/look-rail";
+import { LookFilterChips } from "@/components/landing/look-filter-chips";
 import "./home-looking-for.css";
 
 function ListingCard({ job, kind }: { job: DummyJob; kind: "job" | "internship" }) {
+  const wfh = isWorkFromHome(job);
+  const location = wfh ? "Work From Home" : job.location;
+
   return (
-    <Link href={listingHref(job)} className="cv-look-card" role="listitem">
-      <div className="cv-look-card-top">
-        <span className={`cv-look-badge ${kind === "internship" ? "is-intern" : ""}`}>
-          {kind === "internship" ? "Internship" : job.type}
+    <article className="cv-look-card" role="listitem">
+      <div className="cv-look-card-body">
+        {job.activelyHiring !== false ? (
+          <p className="cv-look-hiring">
+            <span aria-hidden />
+            Actively hiring
+          </p>
+        ) : null}
+        <h4>
+          <Link href={listingHref(job)}>{job.title}</Link>
+        </h4>
+        <p className="cv-look-company">{job.company}</p>
+        <ul className="cv-look-meta">
+          <li>
+            <MapPin size={14} aria-hidden />
+            {location}
+            {!wfh && job.workMode === "Hybrid" ? " (Hybrid)" : ""}
+          </li>
+          <li>
+            <IndianRupee size={14} aria-hidden />
+            {job.salary}
+          </li>
+        </ul>
+      </div>
+      <div className="cv-look-card-foot">
+        <span className={`cv-look-kind ${kind === "internship" ? "is-intern" : ""}`}>
+          {kind === "internship" ? "Internship" : "Job"}
         </span>
-        <span className="cv-look-mode">{job.workMode}</span>
+        <Link href={listingHref(job)} className="cv-look-details">
+          View details &gt;
+        </Link>
       </div>
-      <h4>{job.title}</h4>
-      <p className="cv-look-company">{job.company}</p>
-      <ul className="cv-look-meta">
-        <li>
-          <MapPin size={14} aria-hidden />
-          {job.location}
-        </li>
-        <li>
-          <IndianRupee size={14} aria-hidden />
-          {job.salary}
-        </li>
-      </ul>
-      <div className="cv-look-tags">
-        {job.tags.slice(0, 3).map((tag) => (
-          <span key={tag}>{tag}</span>
-        ))}
-      </div>
-      <span className="cv-look-details">View details →</span>
-    </Link>
+    </article>
   );
 }
 
@@ -52,7 +64,6 @@ export function HomeLookingFor() {
       <div className="cv-look-inner">
         <header className="cv-look-head">
           <h2 id="cv-look-heading">What are you looking for today?</h2>
-          <p>Internships, fresher jobs, and AI tools to get you hired—pick a path and start exploring.</p>
           <div className="cv-look-intent" role="list">
             {LOOKING_FOR_CHIPS.map((chip) => (
               <Link key={chip.href} href={chip.href} className="cv-look-intent-chip" role="listitem">
@@ -64,24 +75,12 @@ export function HomeLookingFor() {
 
         <div className="cv-look-block">
           <div className="cv-look-block-head">
-            <div>
-              <h3>
-                <Briefcase size={20} aria-hidden />
-                Fresher Jobs
-              </h3>
-              <p>Early-career roles with clear salary bands and work modes.</p>
-            </div>
+            <h3>Fresher Jobs</h3>
             <Link href="/jobs" className="cv-look-view-all">
-              View all jobs →
+              View all jobs
             </Link>
           </div>
-          <div className="cv-look-filters" aria-label="Job filters">
-            {JOB_FILTER_CHIPS.map((chip) => (
-              <Link key={chip} href={`/jobs?q=${encodeURIComponent(chip)}`} className="cv-look-filter">
-                {chip}
-              </Link>
-            ))}
-          </div>
+          <LookFilterChips chips={JOB_FILTER_CHIPS} basePath="/jobs" ariaLabel="Job filters" />
           <LookRail label="Fresher jobs">
             {jobs.map((job) => (
               <ListingCard key={job.id} job={job} kind="job" />
@@ -91,28 +90,16 @@ export function HomeLookingFor() {
 
         <div className="cv-look-block" id="internships">
           <div className="cv-look-block-head">
-            <div>
-              <h3>
-                <GraduationCap size={20} aria-hidden />
-                Internships
-              </h3>
-              <p>Paid and mentored internships for students—remote, hybrid, and on-site.</p>
-            </div>
+            <h3>Internships</h3>
             <Link href="/internships" className="cv-look-view-all">
-              View all internships →
+              View all internships
             </Link>
           </div>
-          <div className="cv-look-filters" aria-label="Internship filters">
-            {INTERNSHIP_FILTER_CHIPS.map((chip) => (
-              <Link
-                key={chip}
-                href={`/internships?q=${encodeURIComponent(chip)}`}
-                className="cv-look-filter"
-              >
-                {chip}
-              </Link>
-            ))}
-          </div>
+          <LookFilterChips
+            chips={INTERNSHIP_FILTER_CHIPS}
+            basePath="/internships"
+            ariaLabel="Internship filters"
+          />
           <LookRail label="Internships">
             {internships.map((job) => (
               <ListingCard key={job.id} job={job} kind="internship" />

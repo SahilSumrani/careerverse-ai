@@ -34,6 +34,11 @@ export function getFirebaseDb(): Firestore {
   return getFirestore(getFirebaseApp());
 }
 
+/** Client Storage helper (server uploads use firebase-admin). */
+export function getFirebaseStorageBucket() {
+  return process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "";
+}
+
 let analyticsPromise: Promise<Analytics | null> | null = null;
 
 /** Analytics is browser-only; never call during SSR. */

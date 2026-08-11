@@ -1,16 +1,15 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { PageHeader, EmptyState } from "@/components/ui/states";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
-import { parseJsonArray } from "@/lib/utils";
-import { PageHeader, EmptyState } from "@/components/ui/states";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { DUMMY_JOBS } from "@/data/jobs";
 
 export const metadata = {
   title: "Browse opportunities",
-  description: "Explore jobs, internships, apprenticeships, hackathons, and more with explainable AI matching.",
+  description: "Explore jobs and internships with explainable AI matching.",
 };
 
 export default async function OpportunitiesPage({
@@ -20,25 +19,18 @@ export default async function OpportunitiesPage({
 }) {
   const sp = await searchParams;
   const session = await auth();
-  const where = {
-    status: "PUBLISHED" as const,
-    ...(sp.type ? { type: sp.type as never } : {}),
-    ...(sp.q
-      ? {
-          OR: [
-            { title: { contains: sp.q } },
-            { description: { contains: sp.q } },
-            { organizationName: { contains: sp.q } },
-          ],
-        }
-      : {}),
-  };
-  const items = await prisma.opportunity.findMany({
-    where,
-    include: { skills: { include: { skill: true } } },
-    orderBy: [{ deadline: "asc" }, { createdAt: "desc" }],
-    take: 30,
+  const q = (sp.q || "").toLowerCase();
+  const items = DUMMY_JOBS.filter((job) => {
+    if (sp.type && !job.type.toLowerCase().includes(sp.type.toLowerCase())) return false;
+    if (!q) return true;
+    return (
+      job.title.toLowerCase().includes(q) ||
+      job.company.toLowerCase().includes(q) ||
+      job.blurb.toLowerCase().includes(q) ||
+      job.tags.some((t) => t.toLowerCase().includes(q))
+    );
   });
+
   const ctx = session?.user?.id ? await getCareerContext(session.user.id) : null;
   const rows = await Promise.all(
     items.map(async (item) => ({
@@ -48,11 +40,9 @@ export default async function OpportunitiesPage({
             ctx,
             opportunity: {
               title: item.title,
-              description: item.description,
-              skills: item.skills.map((s) => s.skill.name).length
-                ? item.skills.map((s) => s.skill.name)
-                : parseJsonArray(item.skillsJson),
-              eligibility: item.eligibility,
+              description: item.blurb,
+              skills: item.tags,
+              eligibility: null,
               type: item.type,
             },
           })
@@ -64,7 +54,7 @@ export default async function OpportunitiesPage({
     <div>
       <PageHeader
         title="Browse opportunities"
-        description="Unified jobs, internships, apprenticeships, hackathons, competitions, and scholarships. Demo listings are clearly marked."
+        description="Demo job listings with explainable AI matching. Full Firestore jobs collection can be added later."
       />
       <form className="mb-6 flex flex-wrap gap-2">
         <input
@@ -75,60 +65,44 @@ export default async function OpportunitiesPage({
         />
         <select name="type" defaultValue={sp.type || ""} className="h-11 rounded-2xl border border-border bg-card px-3 text-sm">
           <option value="">All types</option>
-          {["JOB", "INTERNSHIP", "APPRENTICESHIP", "HACKATHON", "COMPETITION", "SCHOLARSHIP", "EVENT"].map((t) => (
+          {["Full-time", "Internship", "Contract"].map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
         </select>
-        <button className="h-11 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground">Filter</button>
+        <button type="submit" className="h-11 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground">
+          Search
+        </button>
       </form>
 
       <div className="grid gap-3">
         {rows.map(({ item, match }) => (
-          <Card key={item.id} className="p-4 transition hover:-translate-y-0.5 hover:shadow-md">
+          <Card key={item.id} className="p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent text-sm font-bold text-primary">
-                  {(item.organizationName || "CV").slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <Link href={`/opportunities/${item.id}`} className="text-base font-semibold hover:text-primary">
-                    {item.title}
-                  </Link>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {item.organizationName} · {item.type} · {item.workMode || "Mode n/a"} · {item.location || "Location n/a"}
-                    {item.isDemo ? " · Demo data" : ""}
-                  </p>
+              <div>
+                <Link href={`/opportunities/${item.id}`} className="text-base font-semibold hover:text-primary">
+                  {item.title}
+                </Link>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {item.company} · {item.location} · {item.type} · Demo
+                </p>
+                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{item.blurb}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <Badge>{item.workMode}</Badge>
+                  {item.tags.slice(0, 3).map((t) => (
+                    <Badge key={t} tone="default">
+                      {t}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {match ? <Badge tone="info">{match.score}% match</Badge> : null}
-                <Badge>{item.type}</Badge>
-              </div>
+              {match ? <Badge tone="info">{match.score}% match</Badge> : null}
             </div>
-            {match ? (
-              <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
-                <p>
-                  <span className="font-medium text-foreground">Why:</span> {match.reasons[0]}
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">Strengths:</span> {match.strengths.slice(0, 3).join(", ")}
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">Gaps:</span> {match.gaps.slice(0, 3).join(", ") || "None flagged"}
-                </p>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground">Sign in and complete your profile for explainable match scores.</p>
-            )}
           </Card>
         ))}
         {!rows.length ? (
-          <EmptyState
-            title="No matching opportunities yet"
-            description="Try adjusting your filters or improving your profile."
-          />
+          <EmptyState title="No opportunities matched" description="Try a different search." />
         ) : null}
       </div>
     </div>

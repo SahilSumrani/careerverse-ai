@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Server routes use the Admin SDK (bypasses rules).
+    // Client SDK reads/writes should stay limited until more of the app is migrated.
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // writes go through Admin SDK / API routes
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

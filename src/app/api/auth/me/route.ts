@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById } from "@/lib/firestore-users";
 import { jsonError, jsonOk } from "@/lib/api";
 
 /** Session probe used after Google auth to route new vs returning users. */
@@ -7,15 +7,12 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return jsonError("Unauthorized", 401);
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { profile: true, resumes: { select: { id: true }, take: 1 } },
-  });
+  const user = await getUserById(session.user.id);
   if (!user) return jsonError("Unauthorized", 401);
 
-  const onboardingComplete = Boolean(user.profile?.onboardingComplete);
-  // New = no completed onboarding (and typically just created)
+  const onboardingComplete = Boolean(user.onboardingComplete);
   const isNewUser = !onboardingComplete;
+  const hasResume = Boolean(user.resume || (user.resumes && user.resumes.length > 0));
 
   return jsonOk({
     user: {
@@ -25,7 +22,7 @@ export async function GET() {
       image: user.image,
       onboardingComplete,
       isNewUser,
-      hasResume: user.resumes.length > 0,
+      hasResume,
       roles: session.user.roles,
     },
   });

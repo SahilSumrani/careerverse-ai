@@ -3,7 +3,7 @@ import { upsertUserFromFirebaseClaims } from "@/lib/firebase-user";
 import { jsonError, jsonOk } from "@/lib/api";
 
 /**
- * Preflight after Google popup: verify ID token + upsert Prisma user.
+ * Preflight after Google popup: verify ID token + upsert Firestore user.
  * Client then creates the NextAuth JWT session via signIn("firebase").
  */
 export async function POST(req: Request) {

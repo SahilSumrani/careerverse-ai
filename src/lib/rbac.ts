@@ -1,5 +1,7 @@
-import { RoleName } from "@prisma/client";
-import { prisma } from "@/lib/db";
+import { getUserById } from "@/lib/firestore-users";
+import { getAdminDb } from "@/lib/firebase-admin";
+import { USERS_COLLECTION } from "@/lib/firestore-users";
+import { ROLE_NAMES, type RoleName } from "@/lib/roles";
 
 export const PERMISSIONS = {
   ADMIN_ACCESS: "admin.access",
@@ -27,11 +29,8 @@ const ROLE_PERMISSIONS: Record<RoleName, PermissionKey[]> = {
 };
 
 export async function getUserRoles(userId: string): Promise<RoleName[]> {
-  const rows = await prisma.userRole.findMany({
-    where: { userId },
-    include: { role: true },
-  });
-  return rows.map((r) => r.role.name);
+  const user = await getUserById(userId);
+  return user?.roles ?? [];
 }
 
 export async function userHasRole(userId: string, roles: RoleName | RoleName[]) {
@@ -55,31 +54,16 @@ export async function requirePermission(userId: string, permission: PermissionKe
 }
 
 export async function assignRole(userId: string, roleName: RoleName) {
-  const role = await prisma.role.upsert({
-    where: { name: roleName },
-    update: {},
-    create: { name: roleName, description: `${roleName} role` },
-  });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId, roleId: role.id } },
-    update: {},
-    create: { userId, roleId: role.id },
-  });
+  const user = await getUserById(userId);
+  const roles = new Set(user?.roles ?? []);
+  roles.add(roleName);
+  await getAdminDb()
+    .collection(USERS_COLLECTION)
+    .doc(userId)
+    .set({ roles: Array.from(roles), updatedAt: new Date().toISOString() }, { merge: true });
 }
 
+/** No-op under Firestore — roles live on the user document. */
 export async function ensureDefaultRoles() {
-  for (const name of Object.values(RoleName)) {
-    await prisma.role.upsert({
-      where: { name },
-      update: {},
-      create: { name, description: `${name} role` },
-    });
-  }
-  for (const [key, description] of Object.entries(PERMISSIONS)) {
-    await prisma.permission.upsert({
-      where: { key: description },
-      update: { description: key },
-      create: { key: description, description: key },
-    });
-  }
+  void ROLE_NAMES;
 }

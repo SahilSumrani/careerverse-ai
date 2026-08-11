@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById } from "@/lib/firestore-users";
 import type { UserCareerContext } from "@/lib/ai/types";
-import { parseJsonArray } from "@/lib/utils";
 
 export { computeProfileCompleteness } from "@/lib/profile";
 
@@ -23,47 +22,40 @@ export async function requireSession() {
 }
 
 export async function getCareerContext(userId: string): Promise<UserCareerContext | null> {
-  const profile = await prisma.profile.findUnique({
-    where: { userId },
-    include: {
-      skills: { include: { skill: true } },
-      interests: { include: { interest: true } },
-      user: {
-        include: {
-          resumes: { orderBy: { createdAt: "desc" }, take: 1 },
-        },
-      },
-    },
-  });
-  if (!profile) return null;
+  const user = await getUserById(userId);
+  if (!user) return null;
   return {
-    name: profile.user.name,
-    education: profile.education,
-    degree: profile.degree,
-    college: profile.college,
-    graduationYear: profile.graduationYear,
-    skills: profile.skills.map((s) => s.skill.name),
-    interests: profile.interests.map((i) => i.interest.name),
-    careerGoals: profile.careerGoals,
-    experienceSummary: profile.experienceSummary,
-    preferredIndustries: parseJsonArray(profile.preferredIndustries),
-    preferredLocations: parseJsonArray(profile.preferredLocations),
-    workPreference: profile.workPreference,
-    careerStage: profile.careerStage,
-    profileCompleteness: profile.profileCompleteness,
-    resumeText: profile.user.resumes[0]?.extractedText ?? null,
+    name: user.name,
+    education: user.education ?? null,
+    degree: user.degree ?? null,
+    college: user.college ?? null,
+    graduationYear: user.graduationYear ?? null,
+    skills: user.skills,
+    interests: user.interests,
+    careerGoals: user.careerGoals ?? null,
+    experienceSummary: user.experienceSummary ?? null,
+    preferredIndustries: user.preferredIndustries,
+    preferredLocations: user.preferredLocations,
+    workPreference: user.workPreference ?? null,
+    careerStage: user.careerStage ?? null,
+    profileCompleteness: user.profileCompleteness,
+    resumeText: user.resume?.extractedText ?? user.resumes?.[0]?.extractedText ?? null,
   };
 }
 
+/** Soft analytics — Firestore write is best-effort; never blocks student flows. */
 export async function trackAnalytics(name: string, userId?: string, props?: Record<string, unknown>) {
   try {
-    await prisma.analyticsEvent.create({
-      data: {
+    const { hasFirebaseAdminCredentials, getAdminDb } = await import("@/lib/firebase-admin");
+    if (!hasFirebaseAdminCredentials()) return;
+    await getAdminDb()
+      .collection("analyticsEvents")
+      .add({
         name,
-        userId,
-        propsJson: props ? JSON.stringify(props) : null,
-      },
-    });
+        userId: userId ?? null,
+        props: props ?? null,
+        createdAt: new Date().toISOString(),
+      });
   } catch {
     // ignore
   }

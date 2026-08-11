@@ -1,13 +1,12 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db";
 import { verifyFirebaseIdToken } from "@/lib/firebase-id-token";
 import { upsertUserFromFirebaseClaims } from "@/lib/firebase-user";
+import { getUserByEmail, getUserById } from "@/lib/firestore-users";
 import { signInSchema } from "@/lib/validators";
-import type { RoleName } from "@prisma/client";
+import type { RoleName } from "@/lib/roles";
 
 declare module "next-auth" {
   interface Session {
@@ -46,13 +45,7 @@ const providers = [
       const parsed = signInSchema.safeParse(credentials);
       if (!parsed.success) return null;
       const email = parsed.data.email.toLowerCase();
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          roles: { include: { role: true } },
-          profile: true,
-        },
-      });
+      const user = await getUserByEmail(email);
       if (!user?.passwordHash || user.suspendedAt) return null;
       const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
       if (!valid) return null;
@@ -61,8 +54,8 @@ const providers = [
         email: user.email,
         name: user.name,
         image: user.image,
-        roles: user.roles.map((r) => r.role.name),
-        onboardingComplete: user.profile?.onboardingComplete ?? false,
+        roles: user.roles,
+        onboardingComplete: user.onboardingComplete,
       };
     },
   }),
@@ -106,7 +99,7 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  // JWT only — no Prisma adapter (Edge middleware stays Prisma-free)
   session: { strategy: "jwt" },
   pages: {
     signIn: "/auth/signin",
@@ -124,22 +117,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.onboardingComplete = session.onboardingComplete ?? token.onboardingComplete;
         token.name = session.name ?? token.name;
       }
-      // Refresh roles + onboarding from DB (first token, updates, or missing flag)
       if (
         token.id &&
         (user || trigger === "update" || !token.roles || token.onboardingComplete === undefined)
       ) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          include: {
-            roles: { include: { role: true } },
-            profile: true,
-          },
-        });
-        if (dbUser) {
-          token.roles = dbUser.roles.map((r) => r.role.name);
-          token.onboardingComplete = dbUser.profile?.onboardingComplete ?? false;
-          token.name = dbUser.name;
+        try {
+          const dbUser = await getUserById(token.id as string);
+          if (dbUser) {
+            token.roles = dbUser.roles;
+            token.onboardingComplete = dbUser.onboardingComplete;
+            token.name = dbUser.name;
+          }
+        } catch (error) {
+          console.error("Firestore session refresh failed", error);
         }
       }
       return token;

@@ -2,45 +2,29 @@
 
 Career operating system for students and early professionals: career intelligence, opportunity matching, application tracking, resume analysis, roadmaps, events, network, mentors, community, and an AI copilot.
 
-Demo listings, careers, events, and accounts are explicitly marked as **Demo** in the UI. No fabricated company logos or testimonials.
+Demo listings are explicitly marked as **Demo** in the UI.
 
 ## Stack
 
 - Next.js (App Router) + React + TypeScript
-- Prisma + SQLite (default) / configurable via `DATABASE_URL`
-- NextAuth (Auth.js) credentials (+ optional Google)
-- Tailwind CSS (teal/slate theme, Manrope + Fraunces)
+- Firebase Auth (Google) + Cloud Firestore (user/profile data)
+- Firebase Admin SDK on the server (token verify / Firestore writes)
+- NextAuth (Auth.js) JWT sessions (Firebase credentials bridge + optional email/password)
+- Tailwind CSS
 - Optional OpenAI-compatible AI provider with deterministic fallbacks
 
 ## Setup
 
 ```bash
 npm install
-cp .env.example .env
-# set AUTH_SECRET (e.g. openssl rand -base64 32)
-npx prisma migrate dev
-npx prisma db seed
+cp .env.example .env.local
+# set AUTH_SECRET and NEXT_PUBLIC_FIREBASE_* + Firebase Admin service account vars
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-If `prisma db seed` is not wired in your Prisma config, run the seed script with:
-
-```bash
-npx tsx prisma/seed.ts
-```
-
-## Demo accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Student | `demo.student@careerverse.local` | `DemoPass123!` |
-| Platform admin | `admin@careerverse.local` | `DemoPass123!` |
-| Mentor | `demo.mentor@careerverse.local` | `DemoPass123!` |
-| Speaker | `demo.speaker@careerverse.local` | `DemoPass123!` |
-
-Sign-in defaults to the student demo credentials for local exploration.
+Primary student path: **Google sign-in → onboarding → dashboard** (Firestore-backed).
 
 ## Environment variables
 
@@ -48,52 +32,34 @@ See `.env.example`. Important keys:
 
 | Variable | Purpose |
 |----------|---------|
-| `DATABASE_URL` | Prisma datasource (default `file:./dev.db`) |
 | `AUTH_SECRET` | NextAuth secret (required) |
-| `AUTH_URL` | App URL for auth callbacks (`http://localhost:3000`) |
-| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Optional Google OAuth |
-| `AI_PROVIDER` | e.g. `openai` |
-| `AI_API_KEY` | Provider API key (optional — app uses fallbacks without it) |
-| `AI_BASE_URL` | OpenAI-compatible base URL |
-| `AI_MODEL` | Model id (default `gpt-4o-mini`) |
-| `AI_MAX_TOKENS` | Max completion tokens |
-| `STORAGE_PROVIDER` | `local` for resume uploads |
-| `UPLOAD_DIR` | Local upload directory |
-| `MAX_UPLOAD_BYTES` | Upload size limit |
-| `NEXT_PUBLIC_APP_NAME` | Display name |
-| `NEXT_PUBLIC_APP_URL` | Canonical URL for sitemap/robots |
+| `AUTH_URL` / `NEXT_PUBLIC_APP_URL` | App URL for auth callbacks |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase web app config |
+| `FIREBASE_ADMIN_PROJECT_ID` | Admin SDK project id |
+| `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Service account for Firestore on server |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Optional NextAuth Google OAuth |
+| `AI_*` | Optional OpenAI-compatible provider |
+| `STORAGE_*` | Local resume fallback when Storage unavailable |
 
-## Key routes
+### Service account (Vercel)
 
-| Path | Description |
-|------|-------------|
-| `/dashboard` | Career OS home |
-| `/career` | Career intelligence |
-| `/applications` | Kanban / list application tracker |
-| `/resume` | Resume upload + analysis |
-| `/roadmap` | Personalized career roadmaps |
-| `/copilot` | Full-page AI chat |
-| `/opportunities` | Opportunity discovery |
-| `/events` | Events catalog + detail/register |
-| `/careers` | Career catalog |
-| `/community` | Posts, reactions, comments |
-| `/network` | People + connection requests |
-| `/mentors` | Mentor directory |
-| `/institutions` | Approval requests |
-| `/admin` | Admin overview (admin role) |
-| `/profile` | Current user profile |
+1. Firebase Console → Project settings → Service accounts → **Generate new private key**
+2. Set `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` (keep `\n` escapes)
+3. Set `FIREBASE_ADMIN_PROJECT_ID=careerverse-ai-3f969`
+4. Add your Vercel domain under Firebase Auth → Authorized domains
+
+`DATABASE_URL` / Prisma are **not** required.
 
 ## Scripts
 
-```bash
-npm run dev      # development server
-npm run build    # production build
-npm run start    # serve production build
-npm run lint     # ESLint
-```
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm test` | Unit tests |
 
 ## Notes
 
-- AI scores and match percentages are **estimates**, not guarantees of hiring or fit.
-- Resume analysis accepts PDF/DOCX via `POST /api/resume` (multipart).
-- SEO: `src/app/robots.ts` and `src/app/sitemap.ts` expose `/robots.txt` and `/sitemap.xml`.
+- Resume binaries: prefers Firebase Storage when Admin + bucket are configured; otherwise stores metadata in Firestore and writes files locally (ephemeral on Vercel).
+- Community, network, events, and application tracker return empty/graceful states until migrated to Firestore.

@@ -9,8 +9,6 @@ import type {
   RoadmapResult,
   UserCareerContext,
 } from "@/lib/ai/types";
-import { prisma } from "@/lib/db";
-
 const DISCLAIMER =
   "AI-generated estimate based on the information you provided—not an objective measure of your potential or hiring probability.";
 
@@ -309,11 +307,21 @@ async function trackUsage(
   userId?: string,
 ) {
   try {
-    await prisma.aiUsage.create({
-      data: { operation, model: model ?? undefined, tokensIn, tokensOut, success, userId },
-    });
+    const { hasFirebaseAdminCredentials, getAdminDb } = await import("@/lib/firebase-admin");
+    if (!hasFirebaseAdminCredentials()) return;
+    await getAdminDb()
+      .collection("aiUsage")
+      .add({
+        operation,
+        model: model ?? null,
+        tokensIn,
+        tokensOut,
+        success,
+        userId: userId ?? null,
+        createdAt: new Date().toISOString(),
+      });
   } catch {
-    // non-blocking
+    // non-blocking — Admin SDK optional at build / local without creds
   }
 }
 

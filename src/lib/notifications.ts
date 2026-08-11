@@ -1,5 +1,3 @@
-import { prisma } from "@/lib/db";
-
 export async function createNotification(input: {
   userId: string;
   type:
@@ -14,7 +12,18 @@ export async function createNotification(input: {
   body: string;
   href?: string;
 }) {
-  return prisma.notification.create({ data: input });
+  try {
+    const { hasFirebaseAdminCredentials, getAdminDb } = await import("@/lib/firebase-admin");
+    if (!hasFirebaseAdminCredentials()) return { id: "local", ...input };
+    const ref = await getAdminDb().collection("notifications").add({
+      ...input,
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    return { id: ref.id, ...input };
+  } catch {
+    return { id: "local", ...input };
+  }
 }
 
 export async function audit(input: {
@@ -24,13 +33,20 @@ export async function audit(input: {
   targetId?: string;
   meta?: Record<string, unknown>;
 }) {
-  return prisma.auditLog.create({
-    data: {
-      actorId: input.actorId,
-      action: input.action,
-      targetType: input.targetType,
-      targetId: input.targetId,
-      metaJson: input.meta ? JSON.stringify(input.meta) : null,
-    },
-  });
+  try {
+    const { hasFirebaseAdminCredentials, getAdminDb } = await import("@/lib/firebase-admin");
+    if (!hasFirebaseAdminCredentials()) return;
+    await getAdminDb()
+      .collection("auditLogs")
+      .add({
+        actorId: input.actorId ?? null,
+        action: input.action,
+        targetType: input.targetType ?? null,
+        targetId: input.targetId ?? null,
+        meta: input.meta ?? null,
+        createdAt: new Date().toISOString(),
+      });
+  } catch {
+    // non-blocking
+  }
 }

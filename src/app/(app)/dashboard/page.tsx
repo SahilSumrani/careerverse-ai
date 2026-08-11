@@ -8,90 +8,42 @@ import {
   Users,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { getUserById, listDirectoryUsers } from "@/lib/firestore-users";
 import { EmptyState } from "@/components/ui/states";
 import { Card, CardDescription, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress, Avatar } from "@/components/ui/avatar";
 import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
-import { parseJsonArray } from "@/lib/utils";
-
-function statusTone(status: string): "success" | "info" | "violet" | "warning" | "default" {
-  if (status === "APPLIED" || status === "OFFER") return status === "OFFER" ? "warning" : "success";
-  if (status === "INTERVIEW") return "info";
-  if (status === "ASSESSMENT" || status === "PREPARING") return "violet";
-  return "default";
-}
+import { DUMMY_JOBS } from "@/data/jobs";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) return null;
 
   const firstName = session.user.name?.split(" ")[0] || "there";
-
-  const [profile, applications, events, notifications, appCounts] = await Promise.all([
-    prisma.profile.findUnique({
-      where: { userId: session.user.id },
-      include: { skills: { include: { skill: true } }, interests: { include: { interest: true } } },
-    }),
-    prisma.application.findMany({
-      where: { userId: session.user.id },
-      include: { opportunity: true },
-      orderBy: { updatedAt: "desc" },
-      take: 6,
-    }),
-    prisma.event.findMany({
-      where: { status: { in: ["PUBLISHED", "LIVE"] }, date: { gte: new Date() } },
-      orderBy: { date: "asc" },
-      take: 3,
-    }),
-    prisma.notification.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-    }),
-    prisma.application.groupBy({
-      by: ["status"],
-      where: { userId: session.user.id },
-      _count: { _all: true },
-    }),
-  ]);
-
-  const countBy = Object.fromEntries(appCounts.map((c) => [c.status, c._count._all]));
-  const analysis = profile?.careerAnalysisJson ? JSON.parse(profile.careerAnalysisJson) : null;
+  const user = await getUserById(session.user.id);
+  const people = await listDirectoryUsers(session.user.id, 4).catch(() => []);
+  const analysis = user?.careerAnalysisJson ? JSON.parse(user.careerAnalysisJson) : null;
   const ctx = await getCareerContext(session.user.id);
-  const opps = await prisma.opportunity.findMany({
-    where: { status: "PUBLISHED" },
-    include: { skills: { include: { skill: true } } },
-    take: 4,
-    orderBy: { createdAt: "desc" },
-  });
-  const matched = ctx
-    ? await Promise.all(
-        opps.map(async (o) => ({
-          o,
-          match: await aiService.jobMatching({
+
+  const matched = await Promise.all(
+    DUMMY_JOBS.slice(0, 4).map(async (job) => ({
+      job,
+      match: ctx
+        ? await aiService.jobMatching({
             ctx,
             opportunity: {
-              title: o.title,
-              description: o.description,
-              skills: o.skills.map((s) => s.skill.name).length
-                ? o.skills.map((s) => s.skill.name)
-                : parseJsonArray(o.skillsJson),
-              eligibility: o.eligibility,
-              type: o.type,
+              title: job.title,
+              description: job.blurb,
+              skills: job.tags,
+              eligibility: null,
+              type: job.type,
             },
-          }),
-        })),
-      )
-    : opps.map((o) => ({ o, match: null }));
-
-  const people = await prisma.user.findMany({
-    where: { id: { not: session.user.id }, profile: { isNot: null }, suspendedAt: null },
-    include: { profile: true },
-    take: 4,
-  });
+          })
+        : null,
+    })),
+  );
 
   return (
     <div className="slide-up space-y-6">
@@ -105,10 +57,10 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/opportunities/browse"
+            href="/jobs"
             className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm"
           >
-            Explore opportunities
+            Explore jobs
             <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link
@@ -123,13 +75,13 @@ export default async function DashboardPage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Applications"
-          value={applications.length ? Object.values(countBy).reduce((a, b) => a + b, 0) : 0}
-          hint="Tracked in CareerVerse"
+          value={0}
+          hint="Tracker coming soon on Firestore"
           icon={<ClipboardList className="h-4 w-4" />}
         />
         <StatCard
           label="Interviews"
-          value={countBy.INTERVIEW || 0}
+          value={0}
           hint="Active interview stage"
           icon={<Users className="h-4 w-4" />}
         />
@@ -142,8 +94,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Upcoming events"
-          value={events.length}
-          hint="Next sessions on your radar"
+          value={0}
+          hint="Events migrate next"
           icon={<Calendar className="h-4 w-4" />}
         />
       </div>
@@ -203,29 +155,32 @@ export default async function DashboardPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold">Opportunities for you</h2>
-              <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
+              <Link href="/jobs" className="text-sm font-medium text-primary">
                 See all
               </Link>
             </div>
             <div className="grid gap-3">
-              {matched.map(({ o, match }) => (
-                <Card key={o.id} className="p-4 transition hover:-translate-y-0.5 hover:shadow-md">
+              {matched.map(({ job, match }) => (
+                <Card key={job.id} className="p-4 transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex gap-3">
                       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent text-primary">
                         <Briefcase className="h-5 w-5" />
                       </div>
                       <div>
-                        <Link href={`/opportunities/${o.id}`} className="font-semibold hover:text-primary">
-                          {o.title}
+                        <Link href="/jobs" className="font-semibold hover:text-primary">
+                          {job.title}
                         </Link>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {o.organizationName || "Organization"} · {o.location || "Location n/a"} · {o.type}
-                          {o.isDemo ? " · Demo" : ""}
+                          {job.company} · {job.location} · {job.type}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          <Badge>{o.workMode || "Flexible"}</Badge>
-                          {o.deadline ? <Badge tone="default">Due {new Date(o.deadline).toLocaleDateString()}</Badge> : null}
+                          <Badge>{job.workMode}</Badge>
+                          {job.tags.slice(0, 2).map((t) => (
+                            <Badge key={t} tone="default">
+                              {t}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -241,20 +196,11 @@ export default async function DashboardPage() {
                         </>
                       ) : null}
                     </p>
-                  ) : null}
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">{job.blurb}</p>
+                  )}
                 </Card>
               ))}
-              {!matched.length ? (
-                <EmptyState
-                  title="No matching opportunities yet"
-                  description="Try adjusting filters or improving your profile."
-                  action={
-                    <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
-                      Explore Opportunities
-                    </Link>
-                  }
-                />
-              ) : null}
             </div>
           </section>
 
@@ -265,38 +211,15 @@ export default async function DashboardPage() {
                 Open tracker
               </Link>
             </div>
-            {applications.length ? (
-              <div className="grid gap-3 md:grid-cols-2">
-                {applications.map((a) => (
-                  <Card key={a.id} className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">{a.opportunity.title}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {a.opportunity.organizationName || "Organization"}
-                          {a.opportunity.isDemo ? " · Demo" : ""}
-                        </p>
-                      </div>
-                      <Badge tone={statusTone(a.status)}>{a.status}</Badge>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      <Badge>{a.opportunity.type}</Badge>
-                      {a.matchScore != null ? <Badge tone="accent">{a.matchScore}% match</Badge> : null}
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                title="No applications"
-                description="Start tracking your career opportunities."
-                action={
-                  <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
-                    Explore Opportunities
-                  </Link>
-                }
-              />
-            )}
+            <EmptyState
+              title="No applications yet"
+              description="Application tracking will use Firestore next — explore jobs to get started."
+              action={
+                <Link href="/jobs" className="text-sm font-medium text-primary">
+                  Explore jobs
+                </Link>
+              }
+            />
           </section>
         </div>
 
@@ -304,10 +227,10 @@ export default async function DashboardPage() {
           <Card className="p-5">
             <CardHeader className="mb-2">
               <CardTitle>Profile strength</CardTitle>
-              <CardDescription>Career Profile — {profile?.profileCompleteness ?? 0}% complete</CardDescription>
+              <CardDescription>Career Profile — {user?.profileCompleteness ?? 0}% complete</CardDescription>
             </CardHeader>
-            <p className="font-display text-4xl tracking-tight">{profile?.profileCompleteness ?? 0}%</p>
-            <Progress value={profile?.profileCompleteness ?? 0} className="mt-4 h-2.5" />
+            <p className="font-display text-4xl tracking-tight">{user?.profileCompleteness ?? 0}%</p>
+            <Progress value={user?.profileCompleteness ?? 0} className="mt-4 h-2.5" />
             <p className="mt-3 text-xs text-muted-foreground">
               Add resume, skills, and clearer goals to improve matches.
             </p>
@@ -323,20 +246,9 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Upcoming events</CardTitle>
             </CardHeader>
-            {events.length ? (
-              <ul className="space-y-3">
-                {events.map((e) => (
-                  <li key={e.id} className="rounded-2xl bg-muted/70 p-3">
-                    <Link href={`/events/${e.id}`} className="text-sm font-semibold hover:text-primary">
-                      {e.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted-foreground">{new Date(e.date).toLocaleString()}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No upcoming events published yet.</p>
-            )}
+            <p className="text-sm text-muted-foreground">
+              Events are not on Firestore yet — check back soon.
+            </p>
           </Card>
 
           <Card>
@@ -352,7 +264,7 @@ export default async function DashboardPage() {
                       <Avatar name={p.name} className="h-9 w-9" />
                       <div>
                         <p className="text-sm font-medium">{p.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{p.profile?.headline || "Member"}</p>
+                        <p className="text-[11px] text-muted-foreground">{p.headline || "Member"}</p>
                       </div>
                     </div>
                     <Link href="/network" className="text-xs font-semibold text-primary">
@@ -378,18 +290,7 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Activity</CardTitle>
             </CardHeader>
-            {notifications.length ? (
-              <ul className="space-y-3 text-sm">
-                {notifications.map((n) => (
-                  <li key={n.id} className="rounded-2xl border border-border/80 px-3 py-2">
-                    <p className="font-medium">{n.title}</p>
-                    <p className="text-xs text-muted-foreground">{n.body}</p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">You’re all caught up.</p>
-            )}
+            <p className="text-sm text-muted-foreground">You’re all caught up.</p>
           </Card>
         </aside>
       </div>

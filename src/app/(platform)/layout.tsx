@@ -5,7 +5,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { CopilotWidget } from "@/components/career/copilot-widget";
 
-/** DB/auth-backed routes — never prerender at build (Vercel may lack DATABASE_URL). */
+/** Auth/Firestore-backed routes — never prerender at build. */
 export const dynamic = "force-dynamic";
 
 async function signOutAction() {

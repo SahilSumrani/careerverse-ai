@@ -5,6 +5,7 @@ import type {
   CareerMatch,
   InterviewPrepResult,
   OpportunityMatchResult,
+  ParsedResumeProfile,
   ResumeAnalysisResult,
   RoadmapResult,
   UserCareerContext,
@@ -201,6 +202,227 @@ function deterministicJobMatch(
   };
 }
 
+const SKILL_LEXICON = [
+  "python",
+  "javascript",
+  "typescript",
+  "react",
+  "node",
+  "sql",
+  "java",
+  "c++",
+  "go",
+  "rust",
+  "aws",
+  "azure",
+  "gcp",
+  "docker",
+  "kubernetes",
+  "figma",
+  "excel",
+  "tableau",
+  "power bi",
+  "machine learning",
+  "deep learning",
+  "data analysis",
+  "analytics",
+  "communication",
+  "leadership",
+  "product management",
+  "project management",
+  "git",
+  "next.js",
+  "html",
+  "css",
+  "mongodb",
+  "postgresql",
+  "firebase",
+  "marketing",
+  "sales",
+  "research",
+  "writing",
+];
+
+const REQUIRED_ONBOARDING_FIELDS = [
+  "name",
+  "education",
+  "degree",
+  "college",
+  "skills",
+  "careerGoals",
+] as const;
+
+function sectionSlice(text: string, headings: string[], maxLen = 1200): string {
+  const lower = text.toLowerCase();
+  for (const h of headings) {
+    const idx = lower.indexOf(h);
+    if (idx < 0) continue;
+    const after = text.slice(idx, idx + maxLen);
+    const next = after.search(/\n\s*(experience|education|skills|projects|certifications|summary|objective|interests)\b/i);
+    return (next > 40 ? after.slice(0, next) : after).trim();
+  }
+  return "";
+}
+
+function heuristicParseResumeProfile(resumeText: string): ParsedResumeProfile {
+  const text = resumeText.replace(/\r/g, "").slice(0, 20000);
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const lower = text.toLowerCase();
+
+  let name: string | null = null;
+  for (const line of lines.slice(0, 8)) {
+    if (/@|http|www\.|linkedin|github|phone|\d{10}/i.test(line)) continue;
+    if (/^(resume|curriculum|cv)\b/i.test(line)) continue;
+    if (line.length >= 3 && line.length <= 60 && /^[A-Za-z][A-Za-z .'-]+$/.test(line)) {
+      name = line.replace(/\s+/g, " ").trim();
+      break;
+    }
+  }
+
+  const linkedin = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/in\/[A-Za-z0-9_-]+/i)?.[0] ?? null;
+  const github = text.match(/https?:\/\/(?:www\.)?github\.com\/[A-Za-z0-9_-]+/i)?.[0] ?? null;
+  const portfolio =
+    text.match(/https?:\/\/(?:www\.)?(?!linkedin\.com|github\.com)[a-z0-9.-]+\.[a-z]{2,}(?:\/\S*)?/i)?.[0] ?? null;
+
+  let education: string | null = null;
+  if (/\b(ph\.?d|doctorate)\b/i.test(text)) education = "Doctorate";
+  else if (/\b(m\.?tech|m\.?s\.?|mba|master'?s|m\.?sc)\b/i.test(text)) education = "Master's";
+  else if (/\b(b\.?tech|b\.?e\.?|b\.?s\.?|bachelor'?s|b\.?sc|b\.?a\.?)\b/i.test(text)) education = "Bachelor's";
+  else if (/\b(diploma|associate)\b/i.test(text)) education = "Diploma";
+  else if (/\b(high school|secondary|class\s*12|hsc)\b/i.test(text)) education = "High School";
+
+  const degreeMatch = text.match(
+    /\b((?:B\.?Tech|B\.?E\.?|B\.?S\.?|B\.?Sc|B\.?A\.?|M\.?Tech|M\.?S\.?|M\.?Sc|MBA|Ph\.?D)[^,\n]{0,60})/i,
+  );
+  const degree = degreeMatch?.[1]?.trim().slice(0, 120) ?? null;
+
+  const collegeMatch = text.match(
+    /\b([A-Z][A-Za-z &.'-]{2,80}(?:University|College|Institute|IIT|NIT|IIIT|School of [A-Za-z ]+))\b/,
+  );
+  const college = collegeMatch?.[1]?.trim().slice(0, 160) ?? null;
+
+  const yearMatches = [...text.matchAll(/\b(19|20)\d{2}\b/g)].map((m) => Number(m[0]));
+  const graduationYear =
+    yearMatches.filter((y) => y >= 1980 && y <= 2040).sort((a, b) => b - a)[0] ?? null;
+
+  const skillsFromLexicon = SKILL_LEXICON.filter((s) => lower.includes(s));
+  const skillsSection = sectionSlice(text, ["skills", "technical skills", "core competencies"]);
+  const skillsFromSection = skillsSection
+    ? skillsSection
+        .split(/[,|\n•·]/)
+        .map((s) => s.replace(/^[\d.\-)\s]+/, "").trim())
+        .filter((s) => s.length >= 2 && s.length <= 40)
+        .slice(0, 25)
+    : [];
+  const skills = Array.from(new Set([...skillsFromSection, ...skillsFromLexicon.map((s) => s.replace(/\b\w/g, (c) => c.toUpperCase()))])).slice(
+    0,
+    30,
+  );
+
+  const experienceBlock =
+    sectionSlice(text, ["experience", "work experience", "internship", "employment"], 1600) ||
+    sectionSlice(text, ["projects"], 1000);
+  const experienceSummary = experienceBlock
+    ? experienceBlock.replace(/\s+/g, " ").trim().slice(0, 900)
+    : null;
+
+  const summaryBlock = sectionSlice(text, ["objective", "summary", "career objective", "profile"], 800);
+  const careerGoals = summaryBlock
+    ? summaryBlock.replace(/\s+/g, " ").trim().slice(0, 600)
+    : null;
+
+  const interests: string[] = [];
+  const interestBlock = sectionSlice(text, ["interests", "hobbies"], 400);
+  if (interestBlock) {
+    interests.push(
+      ...interestBlock
+        .split(/[,|\n•]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 2 && s.length <= 40)
+        .slice(0, 10),
+    );
+  }
+
+  const preferredIndustries: string[] = [];
+  for (const ind of ["SaaS", "Fintech", "Healthcare", "EdTech", "E-commerce", "Consulting", "AI"]) {
+    if (lower.includes(ind.toLowerCase())) preferredIndustries.push(ind);
+  }
+
+  const preferredLocations: string[] = [];
+  for (const loc of ["Remote", "Bengaluru", "Bangalore", "Hyderabad", "Mumbai", "Delhi", "Pune", "Chennai"]) {
+    if (lower.includes(loc.toLowerCase())) preferredLocations.push(loc === "Bangalore" ? "Bengaluru" : loc);
+  }
+
+  const draft: Omit<ParsedResumeProfile, "filledFields" | "missingFields" | "source"> = {
+    name,
+    education,
+    degree,
+    college,
+    graduationYear,
+    skills,
+    interests: Array.from(new Set(interests)),
+    careerGoals,
+    experienceSummary,
+    preferredIndustries: Array.from(new Set(preferredIndustries)),
+    preferredLocations: Array.from(new Set(preferredLocations)),
+    linkedinUrl: linkedin,
+    githubUrl: github,
+    portfolioUrl: portfolio,
+  };
+
+  return finalizeParsedProfile(draft, "heuristic");
+}
+
+function finalizeParsedProfile(
+  draft: Omit<ParsedResumeProfile, "filledFields" | "missingFields" | "source">,
+  source: "ai" | "heuristic",
+): ParsedResumeProfile {
+  const filledFields: string[] = [];
+  const missingFields: string[] = [];
+
+  const checks: Array<[string, boolean]> = [
+    ["name", Boolean(draft.name && draft.name.trim().length > 1)],
+    ["education", Boolean(draft.education)],
+    ["degree", Boolean(draft.degree)],
+    ["college", Boolean(draft.college)],
+    ["graduationYear", draft.graduationYear != null],
+    ["skills", (draft.skills?.length ?? 0) > 0],
+    ["interests", (draft.interests?.length ?? 0) > 0],
+    ["careerGoals", Boolean(draft.careerGoals && draft.careerGoals.trim().length >= 10)],
+    ["experienceSummary", Boolean(draft.experienceSummary)],
+  ];
+
+  for (const [key, ok] of checks) {
+    if (ok) filledFields.push(key);
+    else if ((REQUIRED_ONBOARDING_FIELDS as readonly string[]).includes(key) || key === "interests" || key === "experienceSummary" || key === "graduationYear") {
+      missingFields.push(key);
+    }
+  }
+
+  return {
+    name: draft.name ?? null,
+    education: draft.education ?? null,
+    degree: draft.degree ?? null,
+    college: draft.college ?? null,
+    graduationYear: draft.graduationYear ?? null,
+    skills: draft.skills ?? [],
+    interests: draft.interests ?? [],
+    careerGoals: draft.careerGoals ?? null,
+    experienceSummary: draft.experienceSummary ?? null,
+    preferredIndustries: draft.preferredIndustries ?? [],
+    preferredLocations: draft.preferredLocations ?? [],
+    linkedinUrl: draft.linkedinUrl ?? null,
+    githubUrl: draft.githubUrl ?? null,
+    portfolioUrl: draft.portfolioUrl ?? null,
+    filledFields,
+    missingFields,
+    source,
+  };
+}
+
 function deterministicResumeAnalysis(resumeText: string, targetRole?: string): ResumeAnalysisResult {
   const text = resumeText.slice(0, 12000);
   const lower = text.toLowerCase();
@@ -374,6 +596,107 @@ class CareerVerseAIService implements AIService {
     const parsed = safeParse(raw, fallback);
     parsed.disclaimer = fallback.disclaimer;
     return parsed;
+  }
+
+  async parseResumeProfile(input: { resumeText: string }): Promise<ParsedResumeProfile> {
+    const fallback = heuristicParseResumeProfile(input.resumeText || "");
+    if (!input.resumeText?.trim()) {
+      return finalizeParsedProfile(
+        {
+          name: null,
+          education: null,
+          degree: null,
+          college: null,
+          graduationYear: null,
+          skills: [],
+          interests: [],
+          careerGoals: null,
+          experienceSummary: null,
+          preferredIndustries: [],
+          preferredLocations: [],
+          linkedinUrl: null,
+          githubUrl: null,
+          portfolioUrl: null,
+        },
+        "heuristic",
+      );
+    }
+
+    const raw = await callOpenAICompatible(
+      "You are CareerVerse onboarding parser. Extract only facts present in the resume. Never invent degrees, employers, or skills. Return JSON matching the schema. Use null for unknown scalars and [] for unknown arrays.",
+      JSON.stringify({
+        task: "parseResumeProfile",
+        resumeText: input.resumeText.slice(0, 12000),
+        schemaHint: {
+          name: fallback.name,
+          education: fallback.education,
+          degree: fallback.degree,
+          college: fallback.college,
+          graduationYear: fallback.graduationYear,
+          skills: fallback.skills,
+          interests: fallback.interests,
+          careerGoals: fallback.careerGoals,
+          experienceSummary: fallback.experienceSummary,
+          preferredIndustries: fallback.preferredIndustries,
+          preferredLocations: fallback.preferredLocations,
+          linkedinUrl: fallback.linkedinUrl,
+          githubUrl: fallback.githubUrl,
+          portfolioUrl: fallback.portfolioUrl,
+        },
+      }),
+    );
+
+    if (!raw) return fallback;
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<ParsedResumeProfile>;
+      const merged = {
+        name: typeof parsed.name === "string" && parsed.name.trim() ? parsed.name.trim() : fallback.name,
+        education: typeof parsed.education === "string" && parsed.education.trim() ? parsed.education.trim() : fallback.education,
+        degree: typeof parsed.degree === "string" && parsed.degree.trim() ? parsed.degree.trim() : fallback.degree,
+        college: typeof parsed.college === "string" && parsed.college.trim() ? parsed.college.trim() : fallback.college,
+        graduationYear:
+          typeof parsed.graduationYear === "number" && parsed.graduationYear >= 1980 && parsed.graduationYear <= 2040
+            ? parsed.graduationYear
+            : fallback.graduationYear,
+        skills: Array.isArray(parsed.skills) && parsed.skills.length ? parsed.skills.map(String).slice(0, 40) : fallback.skills,
+        interests:
+          Array.isArray(parsed.interests) && parsed.interests.length
+            ? parsed.interests.map(String).slice(0, 20)
+            : fallback.interests,
+        careerGoals:
+          typeof parsed.careerGoals === "string" && parsed.careerGoals.trim().length >= 10
+            ? parsed.careerGoals.trim().slice(0, 2000)
+            : fallback.careerGoals,
+        experienceSummary:
+          typeof parsed.experienceSummary === "string" && parsed.experienceSummary.trim()
+            ? parsed.experienceSummary.trim().slice(0, 2000)
+            : fallback.experienceSummary,
+        preferredIndustries:
+          Array.isArray(parsed.preferredIndustries) && parsed.preferredIndustries.length
+            ? parsed.preferredIndustries.map(String).slice(0, 15)
+            : fallback.preferredIndustries,
+        preferredLocations:
+          Array.isArray(parsed.preferredLocations) && parsed.preferredLocations.length
+            ? parsed.preferredLocations.map(String).slice(0, 15)
+            : fallback.preferredLocations,
+        linkedinUrl:
+          typeof parsed.linkedinUrl === "string" && parsed.linkedinUrl.startsWith("http")
+            ? parsed.linkedinUrl
+            : fallback.linkedinUrl,
+        githubUrl:
+          typeof parsed.githubUrl === "string" && parsed.githubUrl.startsWith("http")
+            ? parsed.githubUrl
+            : fallback.githubUrl,
+        portfolioUrl:
+          typeof parsed.portfolioUrl === "string" && parsed.portfolioUrl.startsWith("http")
+            ? parsed.portfolioUrl
+            : fallback.portfolioUrl,
+      };
+      return finalizeParsedProfile(merged, "ai");
+    } catch {
+      return fallback;
+    }
   }
 
   async jobMatching(input: {

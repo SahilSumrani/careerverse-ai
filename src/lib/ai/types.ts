@@ -49,6 +49,27 @@ export type ResumeAnalysisResult = {
   recommendations: string[];
 };
 
+/** Fields extracted from resume text for onboarding auto-fill. */
+export type ParsedResumeProfile = {
+  name?: string | null;
+  education?: string | null;
+  degree?: string | null;
+  college?: string | null;
+  graduationYear?: number | null;
+  skills: string[];
+  interests: string[];
+  careerGoals?: string | null;
+  experienceSummary?: string | null;
+  preferredIndustries: string[];
+  preferredLocations: string[];
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
+  portfolioUrl?: string | null;
+  filledFields: string[];
+  missingFields: string[];
+  source: "ai" | "heuristic";
+};
+
 export type InterviewPrepResult = {
   likelyQuestions: string[];
   behavioralQuestions: string[];
@@ -93,6 +114,7 @@ export interface AIService {
     targetRole?: string;
     ctx?: UserCareerContext;
   }): Promise<ResumeAnalysisResult>;
+  parseResumeProfile(input: { resumeText: string }): Promise<ParsedResumeProfile>;
   jobMatching(input: {
     ctx: UserCareerContext;
     opportunity: {

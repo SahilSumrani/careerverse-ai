@@ -230,6 +230,110 @@
   font-size: 0.875rem;
 }
 
+.cv-onboard-toast {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  top: 0.75rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: min(36rem, calc(100vw - 1.5rem));
+  padding: 0.75rem 1rem;
+  border-radius: 0.85rem;
+  background: #101828;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  box-shadow: 0 12px 32px rgba(16, 24, 40, 0.28);
+  animation: cv-toast-in 0.28s ease;
+}
+
+.cv-onboard-toast svg {
+  flex: none;
+  margin-top: 0.1rem;
+  color: #9db7ff;
+}
+
+@keyframes cv-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.cv-onboard-notice {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-top: 0.35rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.cv-onboard-notice svg {
+  flex: none;
+  margin-top: 0.1rem;
+}
+
+.cv-onboard-notice strong {
+  display: block;
+  font-weight: 650;
+  margin-bottom: 0.2rem;
+}
+
+.cv-onboard-notice p,
+.cv-onboard-notice ul {
+  margin: 0;
+  color: inherit;
+  opacity: 0.9;
+}
+
+.cv-onboard-notice ul {
+  padding-left: 1.1rem;
+}
+
+.cv-onboard-notice.is-ok {
+  background: #eef8f1;
+  color: #067647;
+  border: 1px solid #abe0c0;
+}
+
+.cv-onboard-notice.is-warn {
+  background: #fffaeb;
+  color: #b54708;
+  border: 1px solid #fedf89;
+}
+
+.cv-onboard-hint {
+  margin: 0 !important;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.65rem;
+  background: #f5f8ff;
+  color: #364152 !important;
+  font-size: 0.8rem !important;
+}
+
+.cv-onboard-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.cv-onboard-check input {
+  margin-top: 0.15rem;
+}
+
 .cv-onboard-nav {
   display: flex;
   justify-content: space-between;
@@ -263,6 +367,74 @@
 .cv-onboard-result-head p {
   margin: 0;
   font-weight: 650;
+}
+
+/* Mobile / small phones: tighter rail + readable step titles */
+@media (max-width: 480px) {
+  .cv-onboard {
+    padding: 0.5rem;
+  }
+
+  .cv-onboard-rail {
+    padding: 0.85rem 0.75rem 0.7rem;
+    border-radius: 0.95rem;
+  }
+
+  .cv-onboard-rail h1 {
+    font-size: 1.1rem;
+  }
+
+  .cv-onboard-steps li {
+    min-width: 2.4rem;
+  }
+
+  .cv-onboard-steps strong {
+    font-size: 0.58rem;
+    max-width: 3.4rem;
+  }
+
+  .cv-onboard-card {
+    padding: 0.95rem 0.85rem;
+    border-radius: 1rem;
+  }
+
+  .cv-onboard-upload {
+    padding: 1.35rem 0.75rem;
+    min-height: 7.25rem;
+  }
+
+  .cv-onboard-nav {
+    flex-direction: column-reverse;
+  }
+
+  .cv-onboard-nav > * {
+    width: 100%;
+  }
+
+  .cv-onboard-toast {
+    top: auto;
+    bottom: 0.75rem;
+  }
+}
+
+/* Mid tablets: keep stacked layout but show lead copy */
+@media (min-width: 640px) and (max-width: 899px) {
+  .cv-onboard {
+    padding: 1rem;
+  }
+
+  .cv-onboard-lead {
+    display: block;
+  }
+
+  .cv-onboard-steps li {
+    min-width: 3.5rem;
+  }
+
+  .cv-onboard-steps strong {
+    font-size: 0.7rem;
+    max-width: 5rem;
+  }
 }
 
 /* Large screens: polished two-column (sidebar + card) */

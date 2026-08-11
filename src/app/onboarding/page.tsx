@@ -3,20 +3,65 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Upload, FileText, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import "./onboarding.css";
 
 const STEPS = [
+  { id: "resume", title: "Resume", desc: "Upload PDF/DOCX — we auto-fill what we can" },
   { id: "basics", title: "About you", desc: "Name and how you use CareerVerse" },
-  { id: "resume", title: "Resume", desc: "Upload a PDF or DOCX for parsing" },
   { id: "background", title: "Background", desc: "Education and experience" },
   { id: "skills", title: "Skills", desc: "Skills, interests, and strengths" },
   { id: "goals", title: "Goals", desc: "Career goals and preferences" },
   { id: "finish", title: "Generate", desc: "Create your explainable profile" },
 ];
+
+const FIELD_LABELS: Record<string, string> = {
+  name: "Full name",
+  education: "Education level",
+  degree: "Degree",
+  college: "College / university",
+  graduationYear: "Graduation year",
+  skills: "Skills",
+  interests: "Interests",
+  careerGoals: "Career goals",
+  experienceSummary: "Experience summary",
+};
+
+type FormState = {
+  name: string;
+  roleIntent: string;
+  education: string;
+  degree: string;
+  college: string;
+  graduationYear: number;
+  skills: string;
+  interests: string;
+  careerGoals: string;
+  experienceSummary: string;
+  preferredIndustries: string;
+  preferredLocations: string;
+  workPreference: string;
+  careerStage: string;
+  linkedinUrl: string;
+  portfolioUrl: string;
+  githubUrl: string;
+};
+
+function computeMissing(form: FormState, hasResume: boolean): string[] {
+  const missing: string[] = [];
+  if (!hasResume) missing.push("resume");
+  if (form.name.trim().length < 2) missing.push("name");
+  if (!form.education.trim()) missing.push("education");
+  if (!form.degree.trim()) missing.push("degree");
+  if (!form.college.trim()) missing.push("college");
+  if (!form.skills.trim()) missing.push("skills");
+  if (!form.interests.trim()) missing.push("interests");
+  if (form.careerGoals.trim().length < 10) missing.push("careerGoals");
+  return missing;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -24,8 +69,12 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
   const [resumeName, setResumeName] = useState("");
   const [resumeUploading, setResumeUploading] = useState(false);
+  const [autofilled, setAutofilled] = useState<string[]>([]);
+  const [parseMissing, setParseMissing] = useState<string[]>([]);
+  const [allowGenerateWithWarnings, setAllowGenerateWithWarnings] = useState(false);
   const [analysis, setAnalysis] = useState<{
     careerScore: number;
     strengths: string[];
@@ -35,7 +84,7 @@ export default function OnboardingPage() {
     disclaimer: string;
   } | null>(null);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     name: "",
     roleIntent: "STUDENT",
     education: "Bachelor's",
@@ -69,11 +118,22 @@ export default function OnboardingPage() {
     }
   }, [status, session, router, form.name]);
 
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(""), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const progress = useMemo(() => Math.round(((step + 1) / STEPS.length) * 100), [step]);
+  const missingNow = useMemo(() => computeMissing(form, Boolean(resumeName)), [form, resumeName]);
+  const hardMissing = missingNow.filter((k) =>
+    ["name", "skills", "careerGoals", "education", "degree", "college"].includes(k),
+  );
 
   async function uploadResume(file: File) {
     setResumeUploading(true);
     setError("");
+    setToast("");
     const body = new FormData();
     body.append("file", file);
     const res = await fetch("/api/resume", { method: "POST", body });
@@ -84,6 +144,93 @@ export default function OnboardingPage() {
       return;
     }
     setResumeName(data.resume?.fileName || file.name);
+
+    const profile = data.parsedProfile as
+      | {
+          name?: string | null;
+          education?: string | null;
+          degree?: string | null;
+          college?: string | null;
+          graduationYear?: number | null;
+          skills?: string[];
+          interests?: string[];
+          careerGoals?: string | null;
+          experienceSummary?: string | null;
+          preferredIndustries?: string[];
+          preferredLocations?: string[];
+          linkedinUrl?: string | null;
+          githubUrl?: string | null;
+          portfolioUrl?: string | null;
+          filledFields?: string[];
+          missingFields?: string[];
+          source?: string;
+        }
+      | undefined;
+
+    if (profile) {
+      const filled: string[] = [];
+      setForm((prev) => {
+        const next = { ...prev };
+        if (profile.name && !prev.name.trim()) {
+          next.name = profile.name;
+          filled.push("name");
+        }
+        if (profile.education) {
+          next.education = profile.education;
+          filled.push("education");
+        }
+        if (profile.degree) {
+          next.degree = profile.degree;
+          filled.push("degree");
+        }
+        if (profile.college) {
+          next.college = profile.college;
+          filled.push("college");
+        }
+        if (profile.graduationYear) {
+          next.graduationYear = profile.graduationYear;
+          filled.push("graduationYear");
+        }
+        if (profile.skills?.length) {
+          next.skills = profile.skills.join(", ");
+          filled.push("skills");
+        }
+        if (profile.interests?.length) {
+          next.interests = profile.interests.join(", ");
+          filled.push("interests");
+        }
+        if (profile.careerGoals) {
+          next.careerGoals = profile.careerGoals;
+          filled.push("careerGoals");
+        }
+        if (profile.experienceSummary) {
+          next.experienceSummary = profile.experienceSummary;
+          filled.push("experienceSummary");
+        }
+        if (profile.preferredIndustries?.length) {
+          next.preferredIndustries = profile.preferredIndustries.join(", ");
+          filled.push("preferredIndustries");
+        }
+        if (profile.preferredLocations?.length) {
+          next.preferredLocations = profile.preferredLocations.join(", ");
+          filled.push("preferredLocations");
+        }
+        if (profile.linkedinUrl) next.linkedinUrl = profile.linkedinUrl;
+        if (profile.githubUrl) next.githubUrl = profile.githubUrl;
+        if (profile.portfolioUrl) next.portfolioUrl = profile.portfolioUrl;
+        return next;
+      });
+      setAutofilled(Array.from(new Set(filled)));
+      setParseMissing(profile.missingFields || []);
+      const src = profile.source === "ai" ? "AI" : "heuristic";
+      if (filled.length) {
+        setToast(`Resume parsed (${src}): auto-filled ${filled.length} field${filled.length === 1 ? "" : "s"}. Review before generating.`);
+      } else {
+        setToast("Resume uploaded. We couldn’t extract much — please complete the next steps.");
+      }
+    } else {
+      setToast("Resume uploaded. Continue to review your profile details.");
+    }
   }
 
   async function generate() {
@@ -113,11 +260,16 @@ export default function OnboardingPage() {
   }
 
   function canContinue() {
-    if (step === 0) return form.name.trim().length > 1;
-    if (step === 1) return Boolean(resumeName); // resume required for new users
+    if (step === 0) return Boolean(resumeName); // resume first & required for students/job seekers
+    if (step === 1) return form.name.trim().length > 1;
     if (step === 3) return form.skills.trim().length > 0;
     if (step === 4) return form.careerGoals.trim().length > 0;
     return true;
+  }
+
+  function canGenerate() {
+    if (hardMissing.length === 0) return true;
+    return allowGenerateWithWarnings && form.name.trim().length > 1 && form.skills.trim().length > 0;
   }
 
   if (status === "loading") {
@@ -132,6 +284,13 @@ export default function OnboardingPage() {
 
   return (
     <div className="cv-onboard">
+      {toast ? (
+        <div className="cv-onboard-toast" role="status">
+          <Sparkles className="h-4 w-4" />
+          <span>{toast}</span>
+        </div>
+      ) : null}
+
       <div className="cv-onboard-shell">
         <aside className="cv-onboard-rail">
           <p className="cv-onboard-brand">
@@ -139,8 +298,7 @@ export default function OnboardingPage() {
           </p>
           <h1>Set up your profile</h1>
           <p className="cv-onboard-lead">
-            A short flow so we can score fit fairly—name, resume, skills, and goals. Existing users skip this after Google
-            sign-in.
+            Start with your resume—we extract what we can, then you review skills and goals for fair, explainable matches.
           </p>
           <ol className="cv-onboard-steps">
             {STEPS.map((s, i) => (
@@ -165,6 +323,68 @@ export default function OnboardingPage() {
 
           <div className="cv-onboard-card">
             {step === 0 && (
+              <div className="cv-onboard-fields">
+                <h2>Upload your resume</h2>
+                <p>
+                  PDF or DOCX first. CareerVerse parses text and auto-fills education, skills, and goals where it finds
+                  evidence—never invents qualifications.
+                </p>
+                <label className={`cv-onboard-upload${resumeName ? " is-ready" : ""}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf"
+                    hidden
+                    disabled={resumeUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadResume(file);
+                    }}
+                  />
+                  {resumeName ? (
+                    <CheckCircle2 className="h-8 w-8 text-[#225aea]" />
+                  ) : (
+                    <Upload className="h-8 w-8 text-[#667085]" />
+                  )}
+                  <strong>
+                    {resumeUploading
+                      ? "Uploading & analyzing…"
+                      : resumeName
+                        ? "Resume uploaded"
+                        : "Drop resume here or browse"}
+                  </strong>
+                  <span>{resumeName || "PDF / DOCX up to 5MB"}</span>
+                </label>
+                {resumeName ? (
+                  <p className="cv-onboard-file">
+                    <FileText className="h-4 w-4" /> {resumeName}
+                  </p>
+                ) : null}
+                {autofilled.length > 0 ? (
+                  <div className="cv-onboard-notice is-ok">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <div>
+                      <strong>Auto-filled from resume</strong>
+                      <p>{autofilled.map((f) => FIELD_LABELS[f] || f).join(", ")}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {parseMissing.length > 0 && resumeName ? (
+                  <div className="cv-onboard-notice is-warn">
+                    <AlertTriangle className="h-4 w-4" />
+                    <div>
+                      <strong>Still needed — review upcoming steps</strong>
+                      <ul>
+                        {parseMissing.map((f) => (
+                          <li key={f}>{FIELD_LABELS[f] || f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {step === 1 && (
               <div className="cv-onboard-fields">
                 <h2>About you</h2>
                 <p>We’ll use this across your dashboard and match scores.</p>
@@ -191,36 +411,12 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {step === 1 && (
-              <div className="cv-onboard-fields">
-                <h2>Upload your resume</h2>
-                <p>PDF or DOCX. We extract text to power explainable scoring—never invent qualifications.</p>
-                <label className={`cv-onboard-upload${resumeName ? " is-ready" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,application/pdf"
-                    hidden
-                    disabled={resumeUploading}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void uploadResume(file);
-                    }}
-                  />
-                  {resumeName ? <CheckCircle2 className="h-8 w-8 text-[#225aea]" /> : <Upload className="h-8 w-8 text-[#667085]" />}
-                  <strong>{resumeUploading ? "Uploading & analyzing…" : resumeName ? "Resume uploaded" : "Drop resume here or browse"}</strong>
-                  <span>{resumeName || "PDF / DOCX up to 5MB"}</span>
-                </label>
-                {resumeName ? (
-                  <p className="cv-onboard-file">
-                    <FileText className="h-4 w-4" /> {resumeName}
-                  </p>
-                ) : null}
-              </div>
-            )}
-
             {step === 2 && (
               <div className="cv-onboard-fields">
                 <h2>Education & experience</h2>
+                {autofilled.some((f) => ["education", "degree", "college", "experienceSummary"].includes(f)) ? (
+                  <p className="cv-onboard-hint">Pre-filled from your resume — edit anything that looks off.</p>
+                ) : null}
                 <Label>Education level</Label>
                 <Input value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
                 <Label>Degree</Label>
@@ -245,6 +441,9 @@ export default function OnboardingPage() {
             {step === 3 && (
               <div className="cv-onboard-fields">
                 <h2>Skills & interests</h2>
+                {autofilled.includes("skills") ? (
+                  <p className="cv-onboard-hint">Skills detected from your resume — add or remove as needed.</p>
+                ) : null}
                 <Label>Skills (comma-separated)</Label>
                 <Textarea
                   value={form.skills}
@@ -312,6 +511,37 @@ export default function OnboardingPage() {
                   We’ll create strengths, suitable paths, skill gaps, and next actions from your inputs—without fabricating
                   qualifications.
                 </p>
+
+                {hardMissing.length > 0 ? (
+                  <div className="cv-onboard-notice is-warn">
+                    <AlertTriangle className="h-4 w-4" />
+                    <div>
+                      <strong>Missing required details</strong>
+                      <ul>
+                        {hardMissing.map((f) => (
+                          <li key={f}>{FIELD_LABELS[f] || f}</li>
+                        ))}
+                      </ul>
+                      <label className="cv-onboard-check">
+                        <input
+                          type="checkbox"
+                          checked={allowGenerateWithWarnings}
+                          onChange={(e) => setAllowGenerateWithWarnings(e.target.checked)}
+                        />
+                        Continue anyway with warnings (name + skills still required)
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="cv-onboard-notice is-ok">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <div>
+                      <strong>Profile looks ready</strong>
+                      <p>All required fields are present. Generate when you’re happy with the review.</p>
+                    </div>
+                  </div>
+                )}
+
                 {analysis ? (
                   <div className="cv-onboard-result">
                     <div className="cv-onboard-result-head">
@@ -336,7 +566,7 @@ export default function OnboardingPage() {
                     <Button onClick={() => router.push("/dashboard")}>Go to dashboard</Button>
                   </div>
                 ) : (
-                  <Button onClick={() => void generate()} disabled={busy}>
+                  <Button onClick={() => void generate()} disabled={busy || !canGenerate()}>
                     {busy ? "Analyzing your career profile…" : "Generate My Career Profile"}
                   </Button>
                 )}

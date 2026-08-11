@@ -4,6 +4,8 @@ import {
   Briefcase,
   Calendar,
   ClipboardList,
+  FileText,
+  Map,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -22,28 +24,104 @@ export default async function DashboardPage() {
   if (!session?.user?.id) return null;
 
   const firstName = session.user.name?.split(" ")[0] || "there";
-  const user = await getUserById(session.user.id);
+  const roles = session.user.roles ?? ["STUDENT"];
+  const isHr = roles.includes("HR");
+  const isMentor = roles.includes("MENTOR");
+  const isStudentFacing = !isHr && !isMentor;
+
+  const user = await getUserById(session.user.id).catch(() => null);
   const people = await listDirectoryUsers(session.user.id, 4).catch(() => []);
   const analysis = user?.careerAnalysisJson ? JSON.parse(user.careerAnalysisJson) : null;
-  const ctx = await getCareerContext(session.user.id);
+  const ctx = await getCareerContext(session.user.id).catch(() => null);
+  const resume = user?.resume || user?.resumes?.[0] || null;
+  const resumeScore = resume?.analyses?.[0]?.score;
 
-  const matched = await Promise.all(
-    DUMMY_JOBS.slice(0, 4).map(async (job) => ({
-      job,
-      match: ctx
-        ? await aiService.jobMatching({
-            ctx,
-            opportunity: {
-              title: job.title,
-              description: job.blurb,
-              skills: job.tags,
-              eligibility: null,
-              type: job.type,
-            },
-          })
-        : null,
-    })),
-  );
+  const matched = isStudentFacing
+    ? await Promise.all(
+        DUMMY_JOBS.slice(0, 4).map(async (job) => ({
+          job,
+          match: ctx
+            ? await aiService.jobMatching({
+                ctx,
+                opportunity: {
+                  title: job.title,
+                  description: job.blurb,
+                  skills: job.tags,
+                  eligibility: null,
+                  type: job.type,
+                },
+              })
+            : null,
+        })),
+      )
+    : [];
+
+  if (isHr) {
+    return (
+      <div className="slide-up space-y-6">
+        <div>
+          <p className="text-sm font-medium text-primary">Recruiter workspace</p>
+          <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Welcome, {firstName}</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Post roles, review applicants, and keep hiring pipelines organized. Student matching tools stay available for
+            demos.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard label="Open roles" value={0} hint="Opportunity posting coming soon" icon={<Briefcase className="h-4 w-4" />} />
+          <StatCard label="Applicants" value={0} hint="Firestore applicant inbox" icon={<Users className="h-4 w-4" />} />
+          <StatCard label="Interviews" value={0} hint="Schedule tracking" icon={<Calendar className="h-4 w-4" />} highlight />
+        </div>
+        <Card className="p-5">
+          <CardHeader>
+            <CardTitle>Hiring shell</CardTitle>
+            <CardDescription>Your HR dashboard is ready—connect opportunity workflows next.</CardDescription>
+          </CardHeader>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/jobs" className="text-sm font-semibold text-primary">
+              Browse sample jobs →
+            </Link>
+            <Link href="/network" className="text-sm font-semibold text-primary">
+              Find talent →
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isMentor) {
+    return (
+      <div className="slide-up space-y-6">
+        <div>
+          <p className="text-sm font-medium text-primary">Mentor workspace</p>
+          <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Hi, {firstName}</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Guide learners with career roadmaps and feedback. Session booking lands on Firestore next.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard label="Mentees" value={0} hint="Assignments coming soon" icon={<Users className="h-4 w-4" />} />
+          <StatCard label="Sessions" value={0} hint="No sessions scheduled" icon={<Calendar className="h-4 w-4" />} />
+          <StatCard label="Roadmaps shared" value={0} hint="Share from Roadmap" icon={<Map className="h-4 w-4" />} highlight />
+        </div>
+        <Card className="p-5">
+          <CardHeader>
+            <CardTitle>Mentor shell</CardTitle>
+            <CardDescription>Use roadmap and network tools while mentoring features roll out.</CardDescription>
+          </CardHeader>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/roadmap" className="text-sm font-semibold text-primary">
+              Open roadmaps →
+            </Link>
+            <Link href="/mentors" className="text-sm font-semibold text-primary">
+              Mentor directory →
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="slide-up space-y-6">
@@ -64,44 +142,98 @@ export default async function DashboardPage() {
             <ArrowUpRight className="h-4 w-4" />
           </Link>
           <Link
-            href="/career"
+            href="/roadmap"
             className="inline-flex h-11 items-center rounded-2xl border border-border bg-card px-5 text-sm font-semibold"
           >
-            Open intelligence
+            Career roadmap
           </Link>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Applications"
-          value={0}
-          hint="Tracker coming soon on Firestore"
-          icon={<ClipboardList className="h-4 w-4" />}
+          label="Profile"
+          value={`${user?.profileCompleteness ?? 0}%`}
+          hint={user?.onboardingComplete ? "Onboarding complete" : "Finish onboarding"}
+          icon={<Sparkles className="h-4 w-4" />}
         />
         <StatCard
-          label="Interviews"
-          value={0}
-          hint="Active interview stage"
-          icon={<Users className="h-4 w-4" />}
+          label="Resume"
+          value={resume ? "Ready" : "Missing"}
+          hint={resume ? resume.fileName : "Upload to improve matches"}
+          icon={<FileText className="h-4 w-4" />}
         />
         <StatCard
           label="Career score"
-          value={analysis?.careerScore ?? "—"}
+          value={analysis?.careerScore ?? resumeScore ?? "—"}
           hint="AI-generated estimate"
           icon={<Sparkles className="h-4 w-4" />}
           highlight
         />
         <StatCard
-          label="Upcoming events"
+          label="Applications"
           value={0}
-          hint="Events migrate next"
-          icon={<Calendar className="h-4 w-4" />}
+          hint="Start from Jobs → tracker"
+          icon={<ClipboardList className="h-4 w-4" />}
         />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link
+          href="/jobs"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+        >
+          Jobs & matches
+        </Link>
+        <Link
+          href="/applications"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+        >
+          Applications tracker
+        </Link>
+        <Link
+          href="/roadmap"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
+        >
+          Skill roadmap
+        </Link>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-5">
+          <Card className="p-5">
+            <CardHeader className="mb-3">
+              <CardTitle>Your profile</CardTitle>
+              <CardDescription>
+                {user?.degree || user?.education || "Student"}
+                {user?.college ? ` · ${user.college}` : ""}
+                {user?.graduationYear ? ` · ${user.graduationYear}` : ""}
+              </CardDescription>
+            </CardHeader>
+            {user?.careerGoals ? (
+              <p className="text-sm text-muted-foreground line-clamp-3">{user.careerGoals}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Add career goals to sharpen matches.</p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {(user?.skills || []).slice(0, 8).map((s) => (
+                <Badge key={s}>{s}</Badge>
+              ))}
+              {!user?.skills?.length ? <Badge tone="default">No skills yet</Badge> : null}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm">
+              <Link href="/profile" className="font-semibold text-primary">
+                View profile →
+              </Link>
+              <Link href="/resume" className="font-semibold text-primary">
+                Resume tools →
+              </Link>
+              <Link href="/career" className="font-semibold text-primary">
+                Career intelligence →
+              </Link>
+            </div>
+          </Card>
+
           <Card className="overflow-hidden p-0">
             <div className="hero-soft border-b border-border px-5 py-5 md:px-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -135,10 +267,10 @@ export default async function DashboardPage() {
                 <EmptyState
                   className="mt-4 border-0 bg-card/80"
                   title="No career analysis yet"
-                  description="Generate intelligence to see matches and skill gaps."
+                  description="Finish onboarding or open Career Intelligence to generate paths and skill gaps."
                   action={
-                    <Link href="/career" className="text-sm font-medium text-primary">
-                      Generate analysis
+                    <Link href={user?.onboardingComplete ? "/career" : "/onboarding"} className="text-sm font-medium text-primary">
+                      {user?.onboardingComplete ? "Generate analysis" : "Complete onboarding"}
                     </Link>
                   }
                 />
@@ -213,7 +345,7 @@ export default async function DashboardPage() {
             </div>
             <EmptyState
               title="No applications yet"
-              description="Application tracking will use Firestore next — explore jobs to get started."
+              description="Save roles from Jobs and track status in Applications when you’re ready."
               action={
                 <Link href="/jobs" className="text-sm font-medium text-primary">
                   Explore jobs
@@ -226,6 +358,40 @@ export default async function DashboardPage() {
         <aside className="space-y-4">
           <Card className="p-5">
             <CardHeader className="mb-2">
+              <CardTitle>Resume status</CardTitle>
+              <CardDescription>
+                {resume ? `Uploaded ${new Date(resume.uploadedAt).toLocaleDateString()}` : "No resume on file"}
+              </CardDescription>
+            </CardHeader>
+            {resume ? (
+              <>
+                <p className="text-sm font-medium truncate">{resume.fileName}</p>
+                {resumeScore != null ? (
+                  <p className="mt-2 text-xs text-muted-foreground">Latest analysis score: {resumeScore}</p>
+                ) : null}
+                {resume.storageUrl?.startsWith("gs://") || resume.storagePath?.startsWith("resumes/") ? (
+                  <Badge tone="info" className="mt-3">
+                    Firebase Storage
+                  </Badge>
+                ) : (
+                  <Badge tone="default" className="mt-3">
+                    Metadata in Firestore
+                  </Badge>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">Upload a PDF/DOCX to unlock stronger matches.</p>
+            )}
+            <Link
+              href="/resume"
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
+            >
+              {resume ? "Manage resume" : "Upload resume"}
+            </Link>
+          </Card>
+
+          <Card className="p-5">
+            <CardHeader className="mb-2">
               <CardTitle>Profile strength</CardTitle>
               <CardDescription>Career Profile — {user?.profileCompleteness ?? 0}% complete</CardDescription>
             </CardHeader>
@@ -235,20 +401,11 @@ export default async function DashboardPage() {
               Add resume, skills, and clearer goals to improve matches.
             </p>
             <Link
-              href="/onboarding"
-              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
+              href={user?.onboardingComplete ? "/profile" : "/onboarding"}
+              className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl border border-border text-sm font-semibold"
             >
-              Edit profile
+              {user?.onboardingComplete ? "Edit profile" : "Finish onboarding"}
             </Link>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming events</CardTitle>
-            </CardHeader>
-            <p className="text-sm text-muted-foreground">
-              Events are not on Firestore yet — check back soon.
-            </p>
           </Card>
 
           <Card>
@@ -284,13 +441,6 @@ export default async function DashboardPage() {
                 }
               />
             )}
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity</CardTitle>
-            </CardHeader>
-            <p className="text-sm text-muted-foreground">You’re all caught up.</p>
           </Card>
         </aside>
       </div>

@@ -131,8 +131,8 @@ export default function ApplicationsPage() {
           title="No applications yet"
           description="Save opportunities to track prep, applications, interviews, and offers in one place."
           action={
-            <Link href="/opportunities/browse">
-              <Button>Explore Opportunities</Button>
+            <Link href="/jobs">
+              <Button>Explore jobs</Button>
             </Link>
           }
         />
@@ -142,7 +142,7 @@ export default function ApplicationsPage() {
             <Card key={item.id} className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <Link href={`/opportunities/${item.opportunity.id}`} className="font-semibold hover:text-primary">
+                  <Link href="/jobs" className="font-semibold hover:text-primary">
                     {item.opportunity.title}
                   </Link>
                   <p className="mt-1 text-xs text-muted-foreground">

@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { aiService } from "@/lib/ai/service";
 
 describe("AI service fallbacks", () => {
+  beforeEach(() => {
+    delete process.env.AI_API_KEY;
+  });
+
   it("returns explainable career analysis without inventing credentials", async () => {
     const result = await aiService.careerAnalysis({
       name: "Demo Student",

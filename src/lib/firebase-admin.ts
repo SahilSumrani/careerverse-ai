@@ -75,6 +75,14 @@ function buildCredential() {
   return { projectId: projectId || undefined };
 }
 
+function resolveStorageBucket() {
+  return (
+    process.env.FIREBASE_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+    ""
+  );
+}
+
 export function getFirebaseAdminApp(): App {
   const existing = getApps()[0];
   if (existing) return existing;
@@ -91,7 +99,12 @@ export function getFirebaseAdminApp(): App {
     );
   }
 
-  return initializeApp(buildCredential());
+  const cred = buildCredential();
+  const storageBucket = resolveStorageBucket();
+  return initializeApp({
+    ...cred,
+    ...(storageBucket ? { storageBucket } : {}),
+  });
 }
 
 export function getAdminDb(): Firestore {

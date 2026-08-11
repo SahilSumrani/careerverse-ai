@@ -120,7 +120,14 @@
   overflow-x: auto;
   padding-bottom: 0.85rem;
   margin-bottom: 0.35rem;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cv-look-filters::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .cv-look-filter {
@@ -139,15 +146,81 @@
   color: #225aea;
 }
 
+.cv-look-rail-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
 .cv-look-rail {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(260px, 300px);
   gap: 1rem;
   overflow-x: auto;
-  padding-bottom: 0.35rem;
+  padding-bottom: 0.1rem;
   scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cv-look-rail::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.cv-look-rail-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.2rem 0.1rem 0;
+}
+
+.cv-look-rail-arrow {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #e4e7ec;
+  background: #fff;
+  color: #344054;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+.cv-look-rail-arrow:hover:not(:disabled) {
+  border-color: #225aea;
+  color: #225aea;
+  background: #f5f8ff;
+}
+
+.cv-look-rail-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.cv-look-rail-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: #eef2f8;
+  overflow: hidden;
+}
+
+.cv-look-rail-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #225aea;
+  transition: width 0.18s ease-out;
 }
 
 .cv-look-card {
@@ -251,6 +324,13 @@
   font-size: 0.72rem;
   font-weight: 600;
   color: #344054;
+}
+
+.cv-look-details {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #225aea;
 }
 
 @media (max-width: 768px) {

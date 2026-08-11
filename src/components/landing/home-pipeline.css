@@ -204,6 +204,121 @@
   gap: 0.75rem;
 }
 
+.cv-pipe-live {
+  position: relative;
+  z-index: 6;
+  max-width: 420px;
+  margin: -4.5rem 1.25rem 1.25rem auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e8eef8;
+  border-radius: 1rem;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.1);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.cv-pipe-live-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.55rem;
+  row-gap: 0.15rem;
+  align-items: center;
+  padding: 0.85rem 1rem 0.7rem;
+  border-bottom: 1px solid #eef2f8;
+}
+
+.cv-pipe-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #12b76a;
+  box-shadow: 0 0 0 0 rgba(18, 183, 106, 0.55);
+  animation: cvPipePulse 1.8s ease-out infinite;
+  grid-row: 1 / span 2;
+}
+
+@keyframes cvPipePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(18, 183, 106, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(18, 183, 106, 0);
+  }
+  to {
+    box-shadow: 0 0 0 0 rgba(18, 183, 106, 0);
+  }
+}
+
+.cv-pipe-live-head strong {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0b1220;
+  letter-spacing: -0.01em;
+}
+
+.cv-pipe-live-head em {
+  grid-column: 2;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #667085;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: cvPipeFadeIn 0.35s ease;
+}
+
+@keyframes cvPipeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cv-pipe-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+.cv-pipe-feed-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  animation: cvPipeFadeIn 0.4s ease;
+}
+
+.cv-pipe-feed-item strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: #0b1220;
+  line-height: 1.35;
+}
+
+.cv-pipe-feed-item span {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+  color: #667085;
+}
+
+.cv-pipe-feed-item time {
+  flex: none;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #98a2b3;
+  white-space: nowrap;
+}
+
 .cv-pipe-stat {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid #e8eef8;
@@ -229,6 +344,7 @@
   font-size: 1.4rem;
   font-weight: 600;
   color: #0b1220;
+  animation: cvPipeFadeIn 0.35s ease;
 }
 
 .cv-pipe-stat em {
@@ -250,6 +366,11 @@
 
   .cv-globe-frame {
     aspect-ratio: 16 / 10;
+  }
+
+  .cv-pipe-live {
+    max-width: none;
+    margin: 0.5rem 1rem 1rem;
   }
 
   .cv-pipe-overlay {
@@ -289,5 +410,9 @@
 
   .cv-globe-frame {
     aspect-ratio: 1 / 1;
+  }
+
+  .cv-pipe-feed {
+    max-height: 180px;
   }
 }

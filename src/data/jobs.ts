@@ -146,12 +146,24 @@ export const DUMMY_JOBS: DummyJob[] = [
   },
 ];
 
+export function isInternshipListing(job: DummyJob) {
+  return job.type === "Internship" || job.type === "Apprenticeship";
+}
+
+export function listingHref(job: Pick<DummyJob, "id" | "type">) {
+  return isInternshipListing(job as DummyJob) ? `/internships/${job.id}` : `/jobs/${job.id}`;
+}
+
+export function getJobById(id: string) {
+  return DUMMY_JOBS.find((j) => j.id === id) ?? null;
+}
+
 export function getHomeJobs(limit = 8) {
-  return DUMMY_JOBS.filter((j) => j.type !== "Internship").slice(0, limit);
+  return DUMMY_JOBS.filter((j) => !isInternshipListing(j)).slice(0, limit);
 }
 
 export function getHomeInternships(limit = 8) {
-  return DUMMY_JOBS.filter((j) => j.type === "Internship" || j.type === "Apprenticeship").slice(0, limit);
+  return DUMMY_JOBS.filter((j) => isInternshipListing(j)).slice(0, limit);
 }
 
 export const LOOKING_FOR_CHIPS = [

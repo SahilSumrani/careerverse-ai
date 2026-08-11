@@ -6,13 +6,15 @@ import {
   INTERNSHIP_FILTER_CHIPS,
   JOB_FILTER_CHIPS,
   LOOKING_FOR_CHIPS,
+  listingHref,
   type DummyJob,
 } from "@/data/jobs";
+import { LookRail } from "@/components/landing/look-rail";
 import "./home-looking-for.css";
 
 function ListingCard({ job, kind }: { job: DummyJob; kind: "job" | "internship" }) {
   return (
-    <Link href={kind === "internship" ? "/internships" : "/jobs"} className="cv-look-card">
+    <Link href={listingHref(job)} className="cv-look-card" role="listitem">
       <div className="cv-look-card-top">
         <span className={`cv-look-badge ${kind === "internship" ? "is-intern" : ""}`}>
           {kind === "internship" ? "Internship" : job.type}
@@ -36,6 +38,7 @@ function ListingCard({ job, kind }: { job: DummyJob; kind: "job" | "internship" 
           <span key={tag}>{tag}</span>
         ))}
       </div>
+      <span className="cv-look-details">View details →</span>
     </Link>
   );
 }
@@ -79,11 +82,11 @@ export function HomeLookingFor() {
               </Link>
             ))}
           </div>
-          <div className="cv-look-rail">
+          <LookRail label="Fresher jobs">
             {jobs.map((job) => (
               <ListingCard key={job.id} job={job} kind="job" />
             ))}
-          </div>
+          </LookRail>
         </div>
 
         <div className="cv-look-block" id="internships">
@@ -110,11 +113,11 @@ export function HomeLookingFor() {
               </Link>
             ))}
           </div>
-          <div className="cv-look-rail">
+          <LookRail label="Internships">
             {internships.map((job) => (
               <ListingCard key={job.id} job={job} kind="internship" />
             ))}
-          </div>
+          </LookRail>
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function JobsMarketingPage() {
   const jobs = getHomeJobs(40);
-  const fallback = jobs.length ? jobs : DUMMY_JOBS.filter((j) => j.type !== "Internship");
+  const fallback = jobs.length ? jobs : DUMMY_JOBS.filter((j) => j.type !== "Internship" && j.type !== "Apprenticeship");
 
   return (
     <ListingsBoard

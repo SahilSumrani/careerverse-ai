@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MapPin, IndianRupee, Building2, Clock3 } from "lucide-react";
-import type { DummyJob } from "@/data/jobs";
+import { listingHref, type DummyJob } from "@/data/jobs";
 import "./listings-board.css";
 
 type Props = {
@@ -125,7 +125,7 @@ export function ListingsBoard({
                   <Link href="/auth/signup" className="cv-board-apply">
                     Apply now
                   </Link>
-                  <Link href="/auth/signin" className="cv-board-view">
+                  <Link href={listingHref(job)} className="cv-board-view">
                     View details
                   </Link>
                 </div>

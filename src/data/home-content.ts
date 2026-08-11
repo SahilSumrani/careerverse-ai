@@ -9,6 +9,7 @@ export type CandidateCard = {
   tint: string;
 };
 
+/** @deprecated Prefer COMPANY_MARQUEE for hero tunnel */
 export const CANDIDATE_MARQUEE: CandidateCard[] = [
   { id: "1", name: "Aisha Khan", role: "Senior React Engineer", score: 94, status: "Interview", trend: "+12%", initials: "AK", tint: "#225aea" },
   { id: "2", name: "Rohan Mehta", role: "Staff Backend", score: 91, status: "Screening", trend: "+8%", initials: "RM", tint: "#0ea5e9" },
@@ -22,6 +23,48 @@ export const CANDIDATE_MARQUEE: CandidateCard[] = [
   { id: "10", name: "Ethan Cole", role: "Security Engineer", score: 92, status: "Offer", trend: "+18%", initials: "EC", tint: "#14b8a6" },
   { id: "11", name: "Neha Gupta", role: "Product Manager", score: 86, status: "Screening", trend: "+5%", initials: "NG", tint: "#3b82f6" },
   { id: "12", name: "Diego Santos", role: "Platform Engineer", score: 95, status: "Interview", trend: "+14%", initials: "DS", tint: "#a855f7" },
+];
+
+export type CompanyMarqueeCard = {
+  id: string;
+  company: string;
+  role: string;
+  kind: "Internship" | "Job" | "Apprenticeship" | "Contract";
+  badge: string;
+  initials: string;
+  tint: string;
+  logoUrl?: string;
+};
+
+const COMPANY_TINTS = [
+  "#225aea",
+  "#0ea5e9",
+  "#0284c7",
+  "#2563eb",
+  "#1d4ed8",
+  "#0369a1",
+  "#3b82f6",
+  "#0f766e",
+  "#0891b2",
+  "#1e40af",
+  "#164e63",
+  "#1e3a8a",
+];
+
+/** Hiring-company cards for the Dropship-style hero tunnel (from DUMMY_JOBS). */
+export const COMPANY_MARQUEE: CompanyMarqueeCard[] = [
+  { id: "jv-1", company: "Northstar Labs", role: "Junior Frontend Engineer", kind: "Job", badge: "Hiring", initials: "NL", tint: COMPANY_TINTS[0] },
+  { id: "jv-2", company: "BrightPath", role: "Campus Recruiting Associate", kind: "Job", badge: "Hiring", initials: "BP", tint: COMPANY_TINTS[1] },
+  { id: "jv-3", company: "Harbor Collective", role: "Software Engineering Intern", kind: "Internship", badge: "Open", initials: "HC", tint: COMPANY_TINTS[2] },
+  { id: "jv-4", company: "Cascade Health", role: "Talent Sourcer", kind: "Contract", badge: "Hiring", initials: "CH", tint: COMPANY_TINTS[3] },
+  { id: "jv-5", company: "Orbit Finance", role: "Data Analyst — Early Career", kind: "Job", badge: "Hiring", initials: "OF", tint: COMPANY_TINTS[4] },
+  { id: "jv-6", company: "CareerVerse Partners", role: "People Ops Intern", kind: "Internship", badge: "Open", initials: "CP", tint: COMPANY_TINTS[5] },
+  { id: "jv-7", company: "Lumen AI", role: "ML Engineer (New Grad)", kind: "Job", badge: "Hiring", initials: "LA", tint: COMPANY_TINTS[6] },
+  { id: "jv-8", company: "SoftQA Studio", role: "UX Designer Pathway", kind: "Apprenticeship", badge: "Open", initials: "SQ", tint: COMPANY_TINTS[7] },
+  { id: "jv-9", company: "Riverbank Systems", role: "Backend Engineer Intern", kind: "Internship", badge: "Open", initials: "RS", tint: COMPANY_TINTS[8] },
+  { id: "jv-10", company: "BrightPath Campus", role: "Marketing Intern", kind: "Internship", badge: "Open", initials: "BC", tint: COMPANY_TINTS[9] },
+  { id: "jv-11", company: "SoftQA Studio", role: "UI/UX Design Intern", kind: "Internship", badge: "Hiring", initials: "SQ", tint: COMPANY_TINTS[10] },
+  { id: "jv-12", company: "Orbit Finance", role: "Data Science Intern", kind: "Internship", badge: "Open", initials: "OF", tint: COMPANY_TINTS[11] },
 ];
 
 export const HOME_TOOLS = [

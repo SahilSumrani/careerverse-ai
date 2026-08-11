@@ -3,43 +3,50 @@
 import { useCallback, useEffect, useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CANDIDATE_MARQUEE } from "@/data/home-content";
+import { COMPANY_MARQUEE, type CompanyMarqueeCard } from "@/data/home-content";
 import { DS } from "@/data/dropship-assets";
 import { CV_HERO_ICONS } from "@/data/cv-icons";
 import "./home-hero.css";
 
 /**
- * Dropship hero (odyn `wt()`):
+ * Dropship-style product tunnel adapted for CareerVerse:
  * - 3 curved rows (bowl / straight / arch)
  * - two panels per track (seamless -50% loop)
- * - skeleton clip-path: left ghost → right filled across center beam
- * - center icon click → playbackRate 1→20 (0.5s) → hold → ease to 1
+ * - company cards pass behind CV hub along vertical beam
+ * - left = skeleton, right = filled (clip-path across center)
+ * - near-hub scale/fade so cards feel like they enter the node
  */
 
 type Curve = "bowl" | "straight" | "arch";
 
-function MarqueeCard({
-  item,
-  thumb,
-}: {
-  item: (typeof CANDIDATE_MARQUEE)[number];
-  thumb: string;
-}) {
+function CompanyLogo({ item }: { item: CompanyMarqueeCard }) {
+  if (item.logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={item.logoUrl} alt="" className="cv-marquee-img" width={54} height={54} />
+    );
+  }
+  return (
+    <span className="cv-marquee-logo" style={{ background: `${item.tint}18`, color: item.tint }}>
+      {item.initials}
+    </span>
+  );
+}
+
+function MarqueeCard({ item }: { item: CompanyMarqueeCard }) {
   return (
     <div className="cv-marquee-item" data-cv-marquee-item="">
       <div className="cv-marquee-img-wrap">
-        <Image src={thumb} alt="" width={54} height={54} className="cv-marquee-img" unoptimized />
+        <CompanyLogo item={item} />
       </div>
       <div className="cv-marquee-text">
-        <p className="cv-marquee-name">{item.name}</p>
+        <p className="cv-marquee-name">{item.company}</p>
         <p className="cv-marquee-meta">{item.role}</p>
       </div>
       <div className="cv-marquee-line" />
       <div className="cv-marquee-text is-right">
-        <p className="cv-marquee-score">{item.score}%</p>
-        <p className="cv-marquee-meta is-brand">
-          {item.status} {item.trend}
-        </p>
+        <p className="cv-marquee-score">{item.kind}</p>
+        <p className="cv-marquee-meta is-brand">{item.badge}</p>
       </div>
 
       <div className="cv-marquee-skeleton" aria-hidden>
@@ -64,18 +71,14 @@ function MarqueePanel({
   items,
   offset,
 }: {
-  items: typeof CANDIDATE_MARQUEE;
+  items: CompanyMarqueeCard[];
   offset: number;
 }) {
   return (
     <div className="cv-hero-marquee-panel">
       <div className="cv-hero-marquee-list">
         {items.map((item, i) => (
-          <MarqueeCard
-            key={`${offset}-${item.id}-${i}`}
-            item={item}
-            thumb={DS.thumbs[(i + offset) % DS.thumbs.length]}
-          />
+          <MarqueeCard key={`${offset}-${item.id}-${i}`} item={item} />
         ))}
       </div>
     </div>
@@ -88,7 +91,7 @@ function MarqueeRow({
   reversed,
   curve,
 }: {
-  items: typeof CANDIDATE_MARQUEE;
+  items: CompanyMarqueeCard[];
   offset: number;
   reversed?: boolean;
   curve: Curve;
@@ -117,10 +120,9 @@ export function HomeHero() {
   const burstingRef = useRef(false);
   const animCacheRef = useRef<Animation[]>([]);
 
-  // Dropship: ~9 items / row for space-around across 100cqw
-  const rowA = CANDIDATE_MARQUEE.slice(0, 9);
-  const rowB = [...CANDIDATE_MARQUEE.slice(3, 9), ...CANDIDATE_MARQUEE.slice(0, 3)];
-  const rowC = [...CANDIDATE_MARQUEE.slice(6), ...CANDIDATE_MARQUEE.slice(0, 6)];
+  const rowA = COMPANY_MARQUEE.slice(0, 9);
+  const rowB = [...COMPANY_MARQUEE.slice(3, 9), ...COMPANY_MARQUEE.slice(0, 3)];
+  const rowC = [...COMPANY_MARQUEE.slice(6), ...COMPANY_MARQUEE.slice(0, 6)];
 
   const refreshAnims = useCallback(() => {
     const root = visualRef.current;
@@ -132,12 +134,15 @@ export function HomeHero() {
     return anims;
   }, []);
 
-  const setRate = useCallback((rate: number) => {
-    const anims = animCacheRef.current.length ? animCacheRef.current : refreshAnims();
-    anims.forEach((anim) => {
-      anim.playbackRate = rate;
-    });
-  }, [refreshAnims]);
+  const setRate = useCallback(
+    (rate: number) => {
+      const anims = animCacheRef.current.length ? animCacheRef.current : refreshAnims();
+      anims.forEach((anim) => {
+        anim.playbackRate = rate;
+      });
+    },
+    [refreshAnims],
+  );
 
   useEffect(() => {
     const root = visualRef.current;
@@ -147,7 +152,6 @@ export function HomeHero() {
     let intersecting = true;
     let rafId = 0;
 
-    // Dropship odyn padding trick (120px desktop / ~52px mobile)
     const applyPad = () => {
       const pad = window.innerWidth <= 767 ? 52 : 120;
       root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
@@ -176,8 +180,9 @@ export function HomeHero() {
       if (intersecting) {
         const box = root.getBoundingClientRect();
         const mid = box.left + box.width / 2;
-        // Slightly larger radius than Dropship → gentler curve in viewport (less center pile-up)
         const radius = window.innerWidth <= 767 ? 2200 : 4200;
+        // Distance over which cards shrink into / emerge from the CV hub
+        const tunnelReach = window.innerWidth <= 767 ? 110 : 150;
 
         root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
           const curve = (layout.dataset.curve || "straight") as Curve;
@@ -186,32 +191,33 @@ export function HomeHero() {
             const track = item.closest<HTMLElement>("[data-cv-marquee-track]");
             if (!track) return;
 
-            /**
-             * Measure X from track rect + offsetLeft (offsetParent is the
-             * transformed track). Never use item.getBoundingClientRect() for dx —
-             * item rotate/translateY pollutes the AABB and collapses cards.
-             */
             const trackRect = track.getBoundingClientRect();
             const layoutW = item.offsetWidth || 1;
             const centerX = trackRect.left + item.offsetLeft + layoutW / 2;
             const dx = centerX - mid;
             const skel = item.querySelector<HTMLElement>(".cv-marquee-skeleton");
 
+            // Through-hub tunnel: scale + opacity dip at center (cards enter CV, exit other side)
+            const proximity = Math.min(1, Math.abs(dx) / tunnelReach);
+            const throughScale = 0.55 + 0.45 * proximity;
+            const throughOpacity = 0.28 + 0.72 * proximity;
+
+            let y = 0;
+            let rot = 0;
             if (curve !== "straight") {
               const clamped = Math.min(Math.abs(dx), radius);
               const hyp = Math.sqrt(Math.max(1, radius * radius - clamped * clamped));
-              const rise = hyp - radius; // <= 0
+              const rise = hyp - radius;
               const angle = (Math.atan2(clamped, hyp) * 180) / Math.PI;
               const sign = dx === 0 ? 0 : Math.sign(dx);
-              const y = curve === "bowl" ? rise : -rise;
-              const rot = curve === "bowl" ? -sign * angle : sign * angle;
-              item.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg)`;
-            } else {
-              item.style.transform = "translate3d(0,0,0)";
+              y = curve === "bowl" ? rise : -rise;
+              rot = curve === "bowl" ? -sign * angle : sign * angle;
             }
 
+            item.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg) scale(${throughScale})`;
+            item.style.opacity = String(throughOpacity);
+
             if (skel) {
-              // Same coordinate system as dx (layout, not transformed AABB)
               const right = trackRect.left + item.offsetLeft + layoutW;
               const x = Math.max(0, Math.min(1, (right - mid) / layoutW));
               skel.style.clipPath = `inset(0 ${Math.round(x * layoutW)}px 0 0 round 12px)`;
@@ -245,7 +251,6 @@ export function HomeHero() {
     icon.style.transform = "translate(-50%, -50%) scale(1)";
   }, []);
 
-  /** Dropship: ramp rate 1→20 (power4.out, 0.5s), delay 0.4s, ease to 1 (power2.out, 1s) */
   const onIconClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -263,7 +268,6 @@ export function HomeHero() {
 
       refreshAnims();
 
-      // Safety: never leave bursting locked if rAF chain drops
       const unlock = window.setTimeout(() => {
         burstingRef.current = false;
         setRate(1);
@@ -324,11 +328,11 @@ export function HomeHero() {
           CareerVerse AI 2.0 is live!
         </div>
         <h1>
-          Discover <span className="cv-hero-highlight">the right candidates</span> to hire
+          Discover <span className="cv-hero-highlight">companies hiring</span> for you
         </h1>
         <p className="cv-hero-sub">
-          Parse resumes, score talent with explainable AI, run voice interviews, and keep your hiring
-          flow moving—all in CareerVerse AI.
+          Browse fresher jobs and internships, match with explainable AI, and track applications—all in
+          CareerVerse AI.
         </p>
         <div className="cv-hero-ctas">
           <Link href="/auth/signup" className="cv-btn-wrap">
@@ -342,7 +346,9 @@ export function HomeHero() {
 
       <div className="cv-hero-stage">
         <div className="cv-hero-visual" data-hero-marquee="" ref={visualRef}>
-          <div className="cv-hero-gradient" aria-hidden />
+          <div className="cv-hero-gradient" aria-hidden>
+            <span className="cv-hero-beam-core" />
+          </div>
 
           <MarqueeRow items={rowA} offset={0} curve="bowl" />
           <MarqueeRow items={rowB} offset={4} reversed curve="straight" />
@@ -353,7 +359,7 @@ export function HomeHero() {
             className="cv-hero-icon"
             data-hero-icon=""
             ref={iconRef}
-            aria-label="Speed up candidate stream"
+            aria-label="Speed up company stream"
             onMouseEnter={onIconEnter}
             onMouseLeave={onIconLeave}
             onClick={onIconClick}

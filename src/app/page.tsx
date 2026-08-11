@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { HomeHero } from "@/components/landing/home-hero";
 import { HomeLookingFor } from "@/components/landing/home-looking-for";
+import { HomeResumeCta } from "@/components/landing/home-resume-cta";
 import { HomeTools } from "@/components/landing/home-tools";
 import { HomeFeatureStrip } from "@/components/landing/home-feature-strip";
 import { HomeAiSearch } from "@/components/landing/home-ai-search";
@@ -19,6 +20,7 @@ export default function LandingPage() {
         <HomeHero />
         <HomeTools />
         <HomeLookingFor />
+        <HomeResumeCta />
         <HomeFeatureStrip />
         <HomeAiSearch />
         <HomePerks />

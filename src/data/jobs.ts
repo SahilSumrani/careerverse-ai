@@ -190,7 +190,7 @@ export const DUMMY_JOBS: DummyJob[] = [
     type: "Internship",
     workMode: "Remote",
     salary: "₹10–15k / mo",
-    tags: ["Marketing", "Content", "Students"],
+    tags: ["Marketing", "Content", "Students", "Part-time"],
     blurb: "Run campus campaigns and social content for early-career hiring seasons.",
     duration: "2 Months",
     startDate: "Immediately",

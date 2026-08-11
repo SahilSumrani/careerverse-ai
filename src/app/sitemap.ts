@@ -17,7 +17,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { DUMMY_JOBS, listingHref } = await import("@/data/jobs");
   const detailPaths = DUMMY_JOBS.map((job) => listingHref(job));
 
-  return [...staticPaths, ...detailPaths].map((path) => ({
+  const filterPaths = [
+    "/internships/work-from-home",
+    "/internships/internship-in-bangalore",
+    "/internships/marketing-internship",
+    "/jobs/work-from-home",
+    "/jobs/jobs-in-bangalore",
+    "/jobs/engineering-jobs",
+  ];
+
+  return [...staticPaths, ...filterPaths, ...detailPaths].map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),
     changeFrequency: path === "" ? "weekly" : "daily",

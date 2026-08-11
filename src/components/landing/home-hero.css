@@ -21,66 +21,6 @@
   padding: 0 var(--cv-space-md, 20px);
 }
 
-.cv-hero-icon-arc {
-  list-style: none;
-  margin: 0 auto 1.25rem;
-  padding: 0.5rem 0 0.75rem;
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  gap: clamp(0.35rem, 1.2vw, 0.7rem);
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.cv-hero-icon-arc::-webkit-scrollbar {
-  display: none;
-}
-
-.cv-hero-icon-arc li {
-  flex: none;
-  transform: translateY(calc(sin((var(--i) - (var(--n) - 1) / 2) * 0.42) * -14px));
-}
-
-.cv-hero-icon-tile {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.9rem;
-  background: var(--bg, #eef3ff);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
-}
-
-.cv-hero-icon-tile img {
-  width: 1.85rem;
-  height: 1.85rem;
-}
-
-@media (max-width: 768px) {
-  .cv-hero-icon-arc {
-    justify-content: flex-start;
-    padding-inline: 0.25rem;
-  }
-
-  .cv-hero-icon-arc li {
-    transform: none;
-  }
-
-  .cv-hero-icon-tile {
-    width: 2.55rem;
-    height: 2.55rem;
-    border-radius: 0.75rem;
-  }
-
-  .cv-hero-icon-tile img {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-}
-
 .cv-hero-copy h1 {
   margin: var(--cv-space-md, 20px) 0 0;
   font-family: var(--font-heading);
@@ -140,12 +80,12 @@
   pointer-events: auto;
 }
 
-/* Dropship .hero_gradient — vertical brand scanner beam through CV hub */
+/* Vertical brand beam through CV hub (Dropship uses soft blur; we keep a readable core) */
 .cv-hero-gradient {
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 5;
+  z-index: 4;
   width: 4.5rem;
   height: 118%;
   transform: translate(-50%, -50%);
@@ -207,15 +147,14 @@
   }
 }
 
+/* Dropship: all tracks use reverse → cards flow left→right (skeleton → clear) */
 .cv-hero-marquee-track {
   display: flex;
   flex: none;
   animation: cv-hero-marquee 35s linear infinite;
-  will-change: transform;
-}
-
-.cv-hero-marquee-track.is-reversed {
   animation-direction: reverse;
+  will-change: transform;
+  overflow: visible;
 }
 
 /* Dropship .hero_marquee_panel — two panels = seamless -50% loop */
@@ -228,14 +167,14 @@
 .cv-hero-marquee-list {
   display: flex;
   flex: none;
-  gap: 2rem;
+  gap: 1.6rem;
   min-width: 100cqw;
-  padding-right: 2rem;
+  padding-right: 1.6rem;
   justify-content: space-around;
   overflow: visible;
 }
 
-/* Dropship .hero_icon-wrap — above marquees; large hit for click burst */
+/* Dropship .hero_icon-wrap — above marquees; white halo covers cards entering hub */
 .cv-hero-icon {
   position: absolute;
   left: 50%;
@@ -253,14 +192,14 @@
     linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)),
     linear-gradient(90deg, #5f8cff, #225aea);
   box-shadow:
-    0 0 0 10px rgba(255, 255, 255, 0.95),
+    0 0 0 14px rgba(255, 255, 255, 0.98),
+    0 0 0 22px rgba(255, 255, 255, 0.55),
     0 18px 40px rgba(34, 90, 234, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: auto;
-  /* Cover cards crossing the hub so they appear to enter CV */
   isolation: isolate;
 }
 
@@ -299,9 +238,10 @@
   border-radius: 0.75rem;
   background: #fff;
   box-shadow: 0 0 24px #0000000d;
-  will-change: transform, opacity;
+  will-change: transform;
   transform-origin: center center;
   pointer-events: none;
+  backface-visibility: hidden;
 }
 
 /* Dropship skeleton overlay — clipped from right as card crosses center */
@@ -567,6 +507,11 @@
 
   .cv-hero-marquee-list {
     gap: 1rem;
+    padding-right: 1rem;
+  }
+
+  .cv-hero-marquee-track {
+    animation-duration: 28s;
   }
 
   .cv-marquee-item {
@@ -614,23 +559,6 @@
     font-size: 12px;
     line-height: 1.45;
     max-width: 100%;
-  }
-
-  .cv-hero-icon-arc {
-    gap: 0.3rem;
-    margin-bottom: 0.85rem;
-    padding-inline: 0;
-  }
-
-  .cv-hero-icon-tile {
-    width: 2.15rem;
-    height: 2.15rem;
-    border-radius: 0.65rem;
-  }
-
-  .cv-hero-icon-tile img {
-    width: 1.25rem;
-    height: 1.25rem;
   }
 
   .cv-hero-icon {

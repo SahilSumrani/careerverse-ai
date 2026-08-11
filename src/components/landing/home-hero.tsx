@@ -1,20 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type CSSProperties } from "react";
-import Image from "next/image";
+import { useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { COMPANY_MARQUEE, type CompanyMarqueeCard } from "@/data/home-content";
 import { DS } from "@/data/dropship-assets";
-import { CV_HERO_ICONS } from "@/data/cv-icons";
 import "./home-hero.css";
 
 /**
- * Dropship-style product tunnel adapted for CareerVerse:
+ * Dropship odyn `wt()` hero tunnel, adapted for CareerVerse:
  * - 3 curved rows (bowl / straight / arch)
- * - two panels per track (seamless -50% loop)
+ * - two panels per track (seamless -50% loop), all L→R like Dropship
  * - company cards pass behind CV hub along vertical beam
- * - left = skeleton, right = filled (clip-path across center)
- * - near-hub scale/fade so cards feel like they enter the node
+ * - left = skeleton, right = filled (clip-path wipe across center)
+ * - soft scale into hub so cards feel like they enter the CV node
  */
 
 type Curve = "bowl" | "straight" | "arch";
@@ -88,17 +86,15 @@ function MarqueePanel({
 function MarqueeRow({
   items,
   offset,
-  reversed,
   curve,
 }: {
   items: CompanyMarqueeCard[];
   offset: number;
-  reversed?: boolean;
   curve: Curve;
 }) {
   return (
     <div className="cv-hero-marquee-layout" data-curve={curve}>
-      <div className={`cv-hero-marquee-track${reversed ? " is-reversed" : ""}`} data-cv-marquee-track="">
+      <div className="cv-hero-marquee-track" data-cv-marquee-track="">
         <MarqueePanel items={items} offset={offset} />
         <MarqueePanel items={items} offset={offset + 3} />
       </div>
@@ -149,9 +145,10 @@ export function HomeHero() {
     if (!root) return;
 
     let alive = true;
-    let intersecting = true;
+    let intersecting = false;
     let rafId = 0;
 
+    // Dropship odyn-bundle.css: 120px pad so bowl/arch can rise without clipping
     const applyPad = () => {
       const pad = window.innerWidth <= 767 ? 52 : 120;
       root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
@@ -174,39 +171,37 @@ export function HomeHero() {
     );
     io.observe(root);
 
+    /**
+     * Mirrors Dropship odyn `wt()` ticker:
+     * - curve y/rotation from distance to vertical center beam
+     * - skeleton clip wipe: left faded, right clear
+     * - plus soft scale into CV hub (cards pass "through" the node)
+     */
     const tick = () => {
       if (!alive) return;
 
       if (intersecting) {
         const box = root.getBoundingClientRect();
         const mid = box.left + box.width / 2;
-        const radius = window.innerWidth <= 767 ? 2200 : 4200;
-        // Distance over which cards shrink into / emerge from the CV hub
-        const tunnelReach = window.innerWidth <= 767 ? 110 : 150;
+        // Dropship: mobile 1800 / desktop 3000
+        const radius = window.innerWidth <= 767 ? 1800 : 3000;
+        // Soft “enter hub” zone ≈ CV badge radius
+        const hubReach = window.innerWidth <= 767 ? 56 : 72;
 
         root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
           const curve = (layout.dataset.curve || "straight") as Curve;
 
           layout.querySelectorAll<HTMLElement>("[data-cv-marquee-item]").forEach((item) => {
-            const track = item.closest<HTMLElement>("[data-cv-marquee-track]");
-            if (!track) return;
-
-            const trackRect = track.getBoundingClientRect();
-            const layoutW = item.offsetWidth || 1;
-            const centerX = trackRect.left + item.offsetLeft + layoutW / 2;
-            const dx = centerX - mid;
+            // Critical: visual rect after CSS marquee transform (not offsetLeft)
+            const rect = item.getBoundingClientRect();
+            const dx = rect.left + rect.width / 2 - mid;
             const skel = item.querySelector<HTMLElement>(".cv-marquee-skeleton");
-
-            // Through-hub tunnel: scale + opacity dip at center (cards enter CV, exit other side)
-            const proximity = Math.min(1, Math.abs(dx) / tunnelReach);
-            const throughScale = 0.55 + 0.45 * proximity;
-            const throughOpacity = 0.28 + 0.72 * proximity;
 
             let y = 0;
             let rot = 0;
             if (curve !== "straight") {
               const clamped = Math.min(Math.abs(dx), radius);
-              const hyp = Math.sqrt(Math.max(1, radius * radius - clamped * clamped));
+              const hyp = Math.sqrt(Math.max(0, radius * radius - clamped * clamped));
               const rise = hyp - radius;
               const angle = (Math.atan2(clamped, hyp) * 180) / Math.PI;
               const sign = dx === 0 ? 0 : Math.sign(dx);
@@ -214,13 +209,17 @@ export function HomeHero() {
               rot = curve === "bowl" ? -sign * angle : sign * angle;
             }
 
+            // Scale down into the CV hub, recover on the far side
+            const hubT = Math.min(1, Math.abs(dx) / hubReach);
+            const throughScale = 0.72 + 0.28 * (hubT * hubT);
+
             item.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg) scale(${throughScale})`;
-            item.style.opacity = String(throughOpacity);
 
             if (skel) {
-              const right = trackRect.left + item.offsetLeft + layoutW;
-              const x = Math.max(0, Math.min(1, (right - mid) / layoutW));
-              skel.style.clipPath = `inset(0 ${Math.round(x * layoutW)}px 0 0 round 12px)`;
+              // Dropship: clip skeleton from the right as card crosses mid
+              const x = Math.max(0, Math.min(1, (rect.right - mid) / rect.width));
+              const clipPx = Math.round(x * item.offsetWidth);
+              skel.style.clipPath = `inset(0 ${clipPx}px 0 0 round 12px)`;
             }
           });
         });
@@ -305,24 +304,6 @@ export function HomeHero() {
   return (
     <section className="cv-hero">
       <div className="cv-hero-copy">
-        <ul className="cv-hero-icon-arc" aria-label="CareerVerse capabilities">
-          {CV_HERO_ICONS.map((icon, i) => (
-            <li
-              key={icon.label}
-              style={
-                {
-                  "--i": i,
-                  "--n": CV_HERO_ICONS.length,
-                  "--bg": icon.color,
-                } as CSSProperties
-              }
-            >
-              <span className="cv-hero-icon-tile">
-                <Image src={icon.src} alt="" width={36} height={36} unoptimized />
-              </span>
-            </li>
-          ))}
-        </ul>
         <div className="cv-eyebrow">
           <span className="cv-eyebrow-mark">CV</span>
           CareerVerse AI 2.0 is live!
@@ -351,7 +332,7 @@ export function HomeHero() {
           </div>
 
           <MarqueeRow items={rowA} offset={0} curve="bowl" />
-          <MarqueeRow items={rowB} offset={4} reversed curve="straight" />
+          <MarqueeRow items={rowB} offset={4} curve="straight" />
           <MarqueeRow items={rowC} offset={8} curve="arch" />
 
           <button

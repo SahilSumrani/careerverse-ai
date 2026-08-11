@@ -9,7 +9,7 @@ import { getStorage, type Storage } from "firebase-admin/storage";
  * 1) Service account JSON fields:
  *    FIREBASE_ADMIN_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID)
  *    FIREBASE_CLIENT_EMAIL
- *    FIREBASE_PRIVATE_KEY  (escape newlines as \n in env)
+ *    FIREBASE_PRIVATE_KEY  (JSON private_key; literal \n OK; quotes optional)
  * 2) Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS / GCP runtime)
  */
 function resolveProjectId() {
@@ -21,13 +21,46 @@ function resolveProjectId() {
   );
 }
 
+/**
+ * Normalize FIREBASE_PRIVATE_KEY from Vercel/local env into a PEM string.
+ * Env UIs often store the JSON `private_key` with literal `\n` and/or wrapping quotes.
+ */
+function normalizeFirebasePrivateKey(raw: string): string {
+  let key = raw.trim();
+
+  // Strip one layer of wrapping double quotes (common when pasting JSON string values)
+  if (key.startsWith('"') && key.endsWith('"')) {
+    key = key.slice(1, -1).trim();
+  }
+
+  // Convert escaped newlines (and Windows \\r\\n) to real line breaks
+  key = key.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n");
+  // Normalize any real CRLF sequences to LF
+  key = key.replace(/\r\n/g, "\n");
+
+  const hasPemHeaders =
+    key.includes("-----BEGIN PRIVATE KEY-----") &&
+    key.includes("-----END PRIVATE KEY-----");
+
+  if (!hasPemHeaders) {
+    throw new Error(
+      "FIREBASE_PRIVATE_KEY is invalid: missing PEM BEGIN/END PRIVATE KEY headers. " +
+        "Copy the full `private_key` value from your Firebase service account JSON " +
+        "(including -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----, " +
+        "with \\n escaped newlines). Paste into Vercel as-is; surrounding quotes are optional.",
+    );
+  }
+
+  return key;
+}
+
 function buildCredential() {
   const projectId = resolveProjectId();
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY;
 
   if (clientEmail && privateKeyRaw) {
-    const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
+    const privateKey = normalizeFirebasePrivateKey(privateKeyRaw);
     return {
       credential: cert({
         projectId: projectId || undefined,

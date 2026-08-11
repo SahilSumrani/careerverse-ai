@@ -12,7 +12,7 @@ import "./home-hero.css";
  * - two panels per track (seamless -50% loop), all L→R like Dropship
  * - company cards pass behind CV hub along vertical beam
  * - left = skeleton, right = filled (clip-path wipe across center)
- * - soft scale into hub so cards feel like they enter the CV node
+ * - soft scale into CV hub so cards flow through the node
  */
 
 type Curve = "bowl" | "straight" | "arch";
@@ -173,9 +173,9 @@ export function HomeHero() {
 
     /**
      * Mirrors Dropship odyn `wt()` ticker:
-     * - curve y/rotation from distance to vertical center beam
-     * - skeleton clip wipe: left faded, right clear
-     * - plus soft scale into CV hub (cards pass "through" the node)
+     * - bowl / straight / arch y+rotation from distance to center beam
+     * - skeleton clip wipe (left faded → right clear) as cards cross mid
+     * - soft scale into CV hub so cards read as flowing through the node
      */
     const tick = () => {
       if (!alive) return;
@@ -183,16 +183,16 @@ export function HomeHero() {
       if (intersecting) {
         const box = root.getBoundingClientRect();
         const mid = box.left + box.width / 2;
-        // Dropship: mobile 1800 / desktop 3000
+        // Dropship odyn: mobile 1800 / desktop 3000
         const radius = window.innerWidth <= 767 ? 1800 : 3000;
-        // Soft “enter hub” zone ≈ CV badge radius
-        const hubReach = window.innerWidth <= 767 ? 56 : 72;
+        // Reach of the “enter hub” squash (≈ badge + white halo)
+        const hubReach = window.innerWidth <= 767 ? 72 : 96;
 
         root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
           const curve = (layout.dataset.curve || "straight") as Curve;
 
           layout.querySelectorAll<HTMLElement>("[data-cv-marquee-item]").forEach((item) => {
-            // Critical: visual rect after CSS marquee transform (not offsetLeft)
+            // Visual rect after CSS marquee transform (never mix with offsetLeft)
             const rect = item.getBoundingClientRect();
             const dx = rect.left + rect.width / 2 - mid;
             const skel = item.querySelector<HTMLElement>(".cv-marquee-skeleton");
@@ -209,15 +209,16 @@ export function HomeHero() {
               rot = curve === "bowl" ? -sign * angle : sign * angle;
             }
 
-            // Scale down into the CV hub, recover on the far side
-            const hubT = Math.min(1, Math.abs(dx) / hubReach);
-            const throughScale = 0.72 + 0.28 * (hubT * hubT);
+            // Ease into / out of the CV hub (smoothstep)
+            const u = Math.min(1, Math.abs(dx) / hubReach);
+            const hubT = u * u * (3 - 2 * u);
+            const throughScale = 0.76 + 0.24 * hubT;
 
             item.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg) scale(${throughScale})`;
 
             if (skel) {
               // Dropship: clip skeleton from the right as card crosses mid
-              const x = Math.max(0, Math.min(1, (rect.right - mid) / rect.width));
+              const x = Math.max(0, Math.min(1, (rect.right - mid) / Math.max(rect.width, 1)));
               const clipPx = Math.round(x * item.offsetWidth);
               skel.style.clipPath = `inset(0 ${clipPx}px 0 0 round 12px)`;
             }

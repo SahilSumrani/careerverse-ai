@@ -5,9 +5,154 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { HOME_TOOLS } from "@/data/home-content";
-import { DS } from "@/data/dropship-assets";
 import { CV_ICONS } from "@/data/cv-icons";
 import "./home-tools.css";
+
+const PREVIEW_META: Record<
+  string,
+  { eyebrow: string; metric: string; metricLabel: string; rows: { label: string; value: string; tone?: "good" | "warn" | "mute" }[] }
+> = {
+  voice: {
+    eyebrow: "Interview room",
+    metric: "86",
+    metricLabel: "Comm. score",
+    rows: [
+      { label: "Structure", value: "Strong", tone: "good" },
+      { label: "Depth", value: "Good", tone: "good" },
+      { label: "Role fit", value: "Review", tone: "warn" },
+    ],
+  },
+  resume: {
+    eyebrow: "Resume parse",
+    metric: "12",
+    metricLabel: "Skills mapped",
+    rows: [
+      { label: "Experience", value: "4 yrs", tone: "mute" },
+      { label: "Alignment", value: "91%", tone: "good" },
+      { label: "Gaps", value: "2 flagged", tone: "warn" },
+    ],
+  },
+  roles: {
+    eyebrow: "Role bank",
+    metric: "8",
+    metricLabel: "Active kits",
+    rows: [
+      { label: "ML Engineer", value: "Weighted", tone: "good" },
+      { label: "Product Design", value: "Draft", tone: "mute" },
+      { label: "Backend", value: "Live", tone: "good" },
+    ],
+  },
+  analytics: {
+    eyebrow: "Hiring funnel",
+    metric: "34%",
+    metricLabel: "Interview rate",
+    rows: [
+      { label: "Applied", value: "248", tone: "mute" },
+      { label: "Screened", value: "112", tone: "mute" },
+      { label: "Offers", value: "9", tone: "good" },
+    ],
+  },
+  scoring: {
+    eyebrow: "Match score",
+    metric: "94%",
+    metricLabel: "Explainable",
+    rows: [
+      { label: "Skills", value: "+28", tone: "good" },
+      { label: "Tenure", value: "+12", tone: "good" },
+      { label: "Gaps", value: "−6", tone: "warn" },
+    ],
+  },
+  scheduler: {
+    eyebrow: "Panel calendar",
+    metric: "5",
+    metricLabel: "Slots this week",
+    rows: [
+      { label: "Tue 2:00p", value: "Booked", tone: "good" },
+      { label: "Wed 11:00a", value: "Open", tone: "mute" },
+      { label: "Thu 4:30p", value: "Hold", tone: "warn" },
+    ],
+  },
+  hubspot: {
+    eyebrow: "CRM sync",
+    metric: "OK",
+    metricLabel: "Last sync",
+    rows: [
+      { label: "Contacts", value: "142", tone: "mute" },
+      { label: "Stages", value: "Mapped", tone: "good" },
+      { label: "Errors", value: "0", tone: "good" },
+    ],
+  },
+  discord: {
+    eyebrow: "Team alerts",
+    metric: "3",
+    metricLabel: "Unread pings",
+    rows: [
+      { label: "#hiring", value: "Score 92+", tone: "good" },
+      { label: "#design", value: "New apply", tone: "mute" },
+      { label: "#eng", value: "Decision", tone: "warn" },
+    ],
+  },
+  magic: {
+    eyebrow: "AI search",
+    metric: "24",
+    metricLabel: "In shortlist",
+    rows: [
+      { label: "Query", value: "React + SQL", tone: "mute" },
+      { label: "Location", value: "Remote", tone: "mute" },
+      { label: "Min score", value: "85%", tone: "good" },
+    ],
+  },
+  talent: {
+    eyebrow: "Talent library",
+    metric: "1.2k",
+    metricLabel: "Warm profiles",
+    rows: [
+      { label: "Silver medals", value: "86", tone: "good" },
+      { label: "Tagged", value: "340", tone: "mute" },
+      { label: "Re-engage", value: "12 due", tone: "warn" },
+    ],
+  },
+};
+
+function ToolPreview({ toolId, title }: { toolId: string; title: string }) {
+  const meta = PREVIEW_META[toolId] ?? PREVIEW_META.roles;
+
+  return (
+    <div className="cv-tabs-preview" aria-hidden>
+      <div className="cv-tabs-preview-chrome">
+        <span className="cv-tabs-preview-dot" />
+        <span className="cv-tabs-preview-dot" />
+        <span className="cv-tabs-preview-dot" />
+        <span className="cv-tabs-preview-brand">CareerVerse AI</span>
+      </div>
+      <div className="cv-tabs-preview-body">
+        <div className="cv-tabs-preview-top">
+          <div>
+            <p className="cv-tabs-preview-eyebrow">{meta.eyebrow}</p>
+            <p className="cv-tabs-preview-title">{title}</p>
+          </div>
+          <div className="cv-tabs-preview-metric">
+            <strong>{meta.metric}</strong>
+            <span>{meta.metricLabel}</span>
+          </div>
+        </div>
+        <ul className="cv-tabs-preview-rows">
+          {meta.rows.map((row) => (
+            <li key={row.label}>
+              <span>{row.label}</span>
+              <em data-tone={row.tone ?? "mute"}>{row.value}</em>
+            </li>
+          ))}
+        </ul>
+        <div className="cv-tabs-preview-bars">
+          <span style={{ width: "78%" }} />
+          <span style={{ width: "62%" }} />
+          <span style={{ width: "88%" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function HomeTools() {
   const [active, setActive] = useState(0);
@@ -23,7 +168,6 @@ export function HomeTools() {
 
   const tool = HOME_TOOLS[active];
   const iconSrc = CV_ICONS[active % CV_ICONS.length];
-  const tabImg = DS.toolTabs[active % DS.toolTabs.length];
 
   return (
     <section className="cv-tabs">
@@ -80,15 +224,7 @@ export function HomeTools() {
           </div>
           <div className="cv-tabs-side">
             <div className="cv-tabs-shot">
-              <Image
-                src={tabImg}
-                alt=""
-                width={640}
-                height={420}
-                className="cv-tabs-shot-img"
-                unoptimized
-                priority={active === 0}
-              />
+              <ToolPreview toolId={tool.id} title={tool.title} />
             </div>
           </div>
           <div className="cv-tabs-footer" style={{ gridColumn: "1 / -1" }}>

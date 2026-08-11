@@ -1,12 +1,14 @@
 /* Dropship .section.is-hero — copy → 3 horizontal marquees + icon + Hero Wave */
 .cv-hero {
   position: relative;
-  /* Extra top space so hero copy sits lower under the sticky header */
-  padding: 10rem 0 4.5rem;
+  /* Extra top space so hero copy sits below the sticky header */
+  padding: 8.5rem 0 3.5rem;
   /* Do not clip the headline — overflow-x:clip + negative tracking cuts glyphs */
   overflow: visible;
   background: #fff;
+  /* Stay under sticky header (z-50); products band is a sibling below */
   z-index: 1;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -67,14 +69,14 @@
   margin-top: var(--cv-space-md, 20px);
 }
 
-/* Dropship .hero_marquee-wrap — no fake min-height; wave bleeds into tools */
+/* Company tunnel stage — contained so beams/waves don't climb into the nav */
 .cv-hero-stage {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 100rem;
   margin: 2rem auto 0;
-  padding: 3rem 0;
+  padding: 3rem 0 2.5rem;
   overflow-x: clip;
   overflow-y: visible;
 }
@@ -91,14 +93,15 @@
   pointer-events: auto;
 }
 
-/* Vertical brand beam through CV hub (Dropship uses soft blur; we keep a readable core) */
+/* Vertical brand beam through CV hub — capped inside the stage */
 .cv-hero-gradient {
   position: absolute;
   left: 50%;
   top: 50%;
   z-index: 4;
   width: 4.5rem;
-  height: 118%;
+  height: 100%;
+  max-height: 100%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   background-image: linear-gradient(
@@ -422,15 +425,15 @@
   flex: none;
 }
 
-/* Dropship .hero_fade-block — soft blue floor that bleeds into tools */
+/* Soft blue floor under the tunnel — kept inside hero, no pull into products */
 .cv-hero-fade-block {
   position: absolute;
   left: 50%;
   top: 0;
   z-index: 2;
   width: 100vw;
-  height: 36rem;
-  transform: translate(-50%, 151%);
+  height: 18rem;
+  transform: translate(-50%, 95%);
   background-image: linear-gradient(#ddecfc, #fff);
   pointer-events: none;
 }
@@ -487,8 +490,8 @@
   }
 
   .cv-hero-fade-block {
-    height: 28rem;
-    transform: translate(-50%, 120%);
+    height: 14rem;
+    transform: translate(-50%, 90%);
   }
 }
 
@@ -587,6 +590,6 @@
   }
 
   .cv-hero-fade-block {
-    height: 22rem;
+    height: 12rem;
   }
 }

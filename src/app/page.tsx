@@ -17,8 +17,8 @@ export default function LandingPage() {
       <SiteHeader />
       <main>
         <HomeHero />
-        <HomeLookingFor />
         <HomeTools />
+        <HomeLookingFor />
         <HomeFeatureStrip />
         <HomeAiSearch />
         <HomePerks />

@@ -2,14 +2,14 @@
 .cv-hero {
   position: relative;
   /* Extra top space so hero copy sits lower under the sticky header */
-  padding: 10rem 0 3.5rem;
-  overflow: hidden;
+  padding: 10rem 0 7rem;
+  overflow-x: clip;
+  overflow-y: visible;
   background: #fff;
   z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  isolation: isolate;
 }
 
 .cv-hero-copy {
@@ -117,15 +117,15 @@
   margin-top: var(--cv-space-md, 20px);
 }
 
-/* Marquee stage — clip wave/fade so blue does not streak into Looking-for below */
+/* Dropship .hero_marquee-wrap — no fake min-height; wave bleeds into tools */
 .cv-hero-stage {
   position: relative;
   z-index: 1;
   width: 100%;
   max-width: 100rem;
   margin: 2rem auto 0;
-  padding: 2.25rem 0 1.5rem;
-  overflow: hidden;
+  padding: 3rem 0;
+  overflow: visible;
 }
 
 /* Dropship .hero_marquee_component */
@@ -399,57 +399,51 @@
   flex: none;
 }
 
-/* Soft blue wash behind marquees only — clipped by .cv-hero-stage, no solid triangle bleed */
+/* Dropship .hero_fade */
 .cv-hero-fade {
   position: absolute;
   left: 50%;
-  top: 8%;
-  bottom: 0;
+  top: 0;
   z-index: 1;
-  width: min(100%, 72rem);
-  max-width: 100%;
-  height: auto;
+  width: 90rem;
+  max-width: none;
+  height: 100%;
   transform: translateX(-50%);
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
   color: #ddecfc;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 55%, transparent 100%);
+  overflow: visible;
 }
 
+/* Dropship .hero_fade_img */
 .cv-hero-wave-img {
   display: block;
-  width: 100%;
-  max-width: 56rem;
-  height: auto;
-  max-height: 18rem;
+  width: 118rem;
+  max-width: none;
+  height: 54.4rem;
   object-fit: contain;
   object-position: 50% 100%;
   flex: none;
-  opacity: 0.55;
 }
 
-/* Short white floor at the bottom of the stage — never a blue wedge into Looking-for */
+/* Dropship .hero_fade-block — soft blue floor that bleeds into tools */
 .cv-hero-fade-block {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  top: 0;
   z-index: 2;
-  width: 100%;
-  height: 4.5rem;
-  transform: none;
-  background-image: linear-gradient(180deg, transparent, #fff 70%);
+  width: 100vw;
+  height: 36rem;
+  transform: translate(-50%, 151%);
+  background-image: linear-gradient(#ddecfc, #fff);
   pointer-events: none;
 }
 
 @media (max-width: 768px) {
   .cv-hero {
-    padding: 7.5rem 0 2.75rem;
+    padding: 7.5rem 0 4rem;
   }
 
   .cv-hero-copy h1 {
@@ -493,12 +487,13 @@
   }
 
   .cv-hero-wave-img {
-    max-width: 100%;
-    max-height: 12rem;
+    width: 70rem;
+    height: 36rem;
   }
 
   .cv-hero-fade-block {
-    height: 3.25rem;
+    height: 28rem;
+    transform: translate(-50%, 120%);
   }
 }
 
@@ -563,7 +558,7 @@
 
 @media (max-width: 380px) {
   .cv-hero {
-    padding: 5.75rem 0 2.25rem;
+    padding: 5.75rem 0 2.5rem;
   }
 
   .cv-hero-copy h1 {
@@ -607,10 +602,11 @@
   }
 
   .cv-hero-wave-img {
-    max-height: 9rem;
+    width: 48rem;
+    height: 28rem;
   }
 
   .cv-hero-fade-block {
-    height: 2.75rem;
+    height: 22rem;
   }
 }

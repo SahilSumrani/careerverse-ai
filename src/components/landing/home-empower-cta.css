@@ -58,15 +58,16 @@
   min-height: 48px;
   padding: 0.75rem 1.4rem;
   border-radius: 12px;
-  background: #fff;
-  color: #225aea;
+  background: #fff !important;
+  color: #225aea !important;
   font-weight: 700;
   font-size: 0.95rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
 
 .cv-empower-primary:hover {
-  background: #f8fafc;
+  background: #f8fafc !important;
+  color: #1d4ed8 !important;
 }
 
 .cv-empower-secondary {
@@ -77,7 +78,7 @@
   padding: 0.75rem 1.2rem;
   border-radius: 12px;
   border: 1.5px solid rgba(255, 255, 255, 0.55);
-  color: #fff;
+  color: #fff !important;
   font-weight: 650;
   font-size: 0.92rem;
   background: rgba(255, 255, 255, 0.08);
@@ -85,6 +86,7 @@
 
 .cv-empower-secondary:hover {
   background: rgba(255, 255, 255, 0.16);
+  color: #fff !important;
 }
 
 .cv-empower-stats {

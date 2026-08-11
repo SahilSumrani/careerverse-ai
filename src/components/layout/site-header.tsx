@@ -10,7 +10,6 @@ const nav = [
   { href: "/internships", label: "Internships" },
   { href: "/jobs", label: "Jobs" },
   { href: "/events", label: "Events" },
-  { href: "/opportunities", label: "Opportunities" },
 ];
 
 export function SiteHeader() {

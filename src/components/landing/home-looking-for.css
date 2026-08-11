@@ -1,4 +1,7 @@
 .cv-look {
+  position: relative;
+  z-index: 5;
+  isolation: isolate;
   background: #f7f9fc;
   padding: 4.5rem 1.25rem 3.5rem;
 }

@@ -54,9 +54,6 @@ export function SiteFooter() {
                 <Link href="/events">Events</Link>
               </li>
               <li>
-                <Link href="/opportunities">Opportunities</Link>
-              </li>
-              <li>
                 <Link href="/network">Talent Library</Link>
               </li>
             </ul>

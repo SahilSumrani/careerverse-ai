@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { AlertTriangle, CheckCircle2, FileText, Sparkles, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  computeMonths,
+  createExperienceEntry,
+  deriveExperienceSummary,
+  toMonthInputValue,
+  toStoredExperience,
+  type ExperienceFormEntry,
+} from "@/lib/experiences";
 import "./onboarding.css";
 
 const STEPS = [
@@ -28,7 +36,23 @@ const FIELD_LABELS: Record<string, string> = {
   interests: "Interests",
   careerGoals: "Career goals",
   experienceSummary: "Experience summary",
+  experiences: "Experience",
 };
+
+const DEFAULT_INTEREST_SUGGESTIONS = [
+  "AI",
+  "Design",
+  "Startups",
+  "Product",
+  "Data",
+  "Open Source",
+  "Fintech",
+  "EdTech",
+  "Research",
+  "Leadership",
+  "Marketing",
+  "DevOps",
+];
 
 type FormState = {
   name: string;
@@ -37,9 +61,10 @@ type FormState = {
   degree: string;
   college: string;
   graduationYear: number;
-  skills: string;
-  interests: string;
+  skills: string[];
+  interests: string[];
   careerGoals: string;
+  experiences: ExperienceFormEntry[];
   experienceSummary: string;
   preferredIndustries: string;
   preferredLocations: string;
@@ -57,10 +82,22 @@ function computeMissing(form: FormState, hasResume: boolean): string[] {
   if (!form.education.trim()) missing.push("education");
   if (!form.degree.trim()) missing.push("degree");
   if (!form.college.trim()) missing.push("college");
-  if (!form.skills.trim()) missing.push("skills");
-  if (!form.interests.trim()) missing.push("interests");
+  if (!form.skills.length) missing.push("skills");
+  if (!form.interests.length) missing.push("interests");
   if (form.careerGoals.trim().length < 10) missing.push("careerGoals");
   return missing;
+}
+
+function normalizeToken(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function addUniqueToken(list: string[], raw: string, max = 40): string[] {
+  const token = normalizeToken(raw);
+  if (!token || token.length < 2) return list;
+  if (list.some((s) => s.toLowerCase() === token.toLowerCase())) return list;
+  if (list.length >= max) return list;
+  return [...list, token];
 }
 
 export default function OnboardingPage() {
@@ -75,6 +112,10 @@ export default function OnboardingPage() {
   const [autofilled, setAutofilled] = useState<string[]>([]);
   const [parseMissing, setParseMissing] = useState<string[]>([]);
   const [allowGenerateWithWarnings, setAllowGenerateWithWarnings] = useState(false);
+  const [skillDraft, setSkillDraft] = useState("");
+  const [interestDraft, setInterestDraft] = useState("");
+  const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
+  const [resumeInterestHints, setResumeInterestHints] = useState<string[]>([]);
   const [analysis, setAnalysis] = useState<{
     careerScore: number;
     strengths: string[];
@@ -91,9 +132,10 @@ export default function OnboardingPage() {
     degree: "",
     college: "",
     graduationYear: new Date().getFullYear(),
-    skills: "",
-    interests: "",
+    skills: [],
+    interests: [],
     careerGoals: "",
+    experiences: [],
     experienceSummary: "",
     preferredIndustries: "",
     preferredLocations: "",
@@ -130,6 +172,99 @@ export default function OnboardingPage() {
     ["name", "skills", "careerGoals", "education", "degree", "college"].includes(k),
   );
 
+  const recommendedInterests = useMemo(() => {
+    const selected = new Set(form.interests.map((i) => i.toLowerCase()));
+    const pool = [...resumeInterestHints, ...DEFAULT_INTEREST_SUGGESTIONS];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const item of pool) {
+      const key = item.toLowerCase();
+      if (selected.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+      if (out.length >= 12) break;
+    }
+    return out;
+  }, [form.interests, resumeInterestHints]);
+
+  const skillSuggestions = useMemo(() => {
+    const selected = new Set(form.skills.map((s) => s.toLowerCase()));
+    return suggestedSkills.filter((s) => !selected.has(s.toLowerCase())).slice(0, 10);
+  }, [form.skills, suggestedSkills]);
+
+  function updateExperience(id: string, patch: Partial<ExperienceFormEntry>) {
+    setForm((prev) => ({
+      ...prev,
+      experiences: prev.experiences.map((entry) => {
+        if (entry.id !== id) return entry;
+        const next = { ...entry, ...patch };
+        if ("start" in patch || "end" in patch) {
+          const computed = computeMonths(next.start, next.end || "Present");
+          if (computed != null) next.months = computed;
+        }
+        return next;
+      }),
+    }));
+  }
+
+  function addExperience() {
+    setForm((prev) => ({
+      ...prev,
+      experiences: [...prev.experiences, createExperienceEntry()],
+    }));
+  }
+
+  function removeExperience(id: string) {
+    setForm((prev) => ({
+      ...prev,
+      experiences: prev.experiences.filter((e) => e.id !== id),
+    }));
+  }
+
+  function commitSkill(raw?: string) {
+    const value = raw ?? skillDraft;
+    setForm((prev) => ({ ...prev, skills: addUniqueToken(prev.skills, value) }));
+    setSkillDraft("");
+  }
+
+  function removeSkill(skill: string) {
+    setForm((prev) => ({
+      ...prev,
+      skills: prev.skills.filter((s) => s.toLowerCase() !== skill.toLowerCase()),
+    }));
+  }
+
+  function onSkillKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commitSkill();
+    } else if (e.key === "Backspace" && !skillDraft && form.skills.length) {
+      removeSkill(form.skills[form.skills.length - 1]);
+    }
+  }
+
+  function commitInterest(raw?: string) {
+    const value = raw ?? interestDraft;
+    setForm((prev) => ({ ...prev, interests: addUniqueToken(prev.interests, value, 20) }));
+    setInterestDraft("");
+  }
+
+  function removeInterest(interest: string) {
+    setForm((prev) => ({
+      ...prev,
+      interests: prev.interests.filter((i) => i.toLowerCase() !== interest.toLowerCase()),
+    }));
+  }
+
+  function onInterestKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      commitInterest();
+    } else if (e.key === "Backspace" && !interestDraft && form.interests.length) {
+      removeInterest(form.interests[form.interests.length - 1]);
+    }
+  }
+
   async function uploadResume(file: File) {
     setResumeUploading(true);
     setError("");
@@ -156,6 +291,13 @@ export default function OnboardingPage() {
           interests?: string[];
           careerGoals?: string | null;
           experienceSummary?: string | null;
+          experiences?: Array<{
+            company?: string;
+            months?: number | null;
+            start?: string;
+            end?: string;
+            responsibilities?: string;
+          }>;
           preferredIndustries?: string[];
           preferredLocations?: string[];
           linkedinUrl?: string | null;
@@ -169,6 +311,8 @@ export default function OnboardingPage() {
 
     if (profile) {
       const filled: string[] = [];
+      let nextSuggestedSkills: string[] = [];
+      let nextInterestHints: string[] = [];
       setForm((prev) => {
         const next = { ...prev };
         if (profile.name && !prev.name.trim()) {
@@ -192,12 +336,14 @@ export default function OnboardingPage() {
           filled.push("graduationYear");
         }
         if (profile.skills?.length) {
-          next.skills = profile.skills.join(", ");
+          next.skills = profile.skills.map((s) => normalizeToken(s)).filter(Boolean);
           filled.push("skills");
+          nextSuggestedSkills = next.skills;
         }
         if (profile.interests?.length) {
-          next.interests = profile.interests.join(", ");
+          next.interests = profile.interests.map((s) => normalizeToken(s)).filter(Boolean);
           filled.push("interests");
+          nextInterestHints = next.interests;
         }
         if (profile.careerGoals) {
           next.careerGoals = profile.careerGoals;
@@ -206,6 +352,24 @@ export default function OnboardingPage() {
         if (profile.experienceSummary) {
           next.experienceSummary = profile.experienceSummary;
           filled.push("experienceSummary");
+        }
+        // Map structured experience blocks only — never invent from summary prose
+        if (profile.experiences?.length) {
+          const mapped = profile.experiences
+            .filter((e) => e?.company?.trim())
+            .map((e) =>
+              createExperienceEntry({
+                company: e.company!.trim(),
+                months: e.months ?? null,
+                start: e.start ?? "",
+                end: e.end ?? "",
+                responsibilities: e.responsibilities ?? "",
+              }),
+            );
+          if (mapped.length) {
+            next.experiences = mapped;
+            filled.push("experiences");
+          }
         }
         if (profile.preferredIndustries?.length) {
           next.preferredIndustries = profile.preferredIndustries.join(", ");
@@ -220,11 +384,15 @@ export default function OnboardingPage() {
         if (profile.portfolioUrl) next.portfolioUrl = profile.portfolioUrl;
         return next;
       });
+      if (nextSuggestedSkills.length) setSuggestedSkills(nextSuggestedSkills);
+      if (nextInterestHints.length) setResumeInterestHints(nextInterestHints);
       setAutofilled(Array.from(new Set(filled)));
       setParseMissing(profile.missingFields || []);
       const src = profile.source === "ai" ? "AI" : "heuristic";
       if (filled.length) {
-        setToast(`Resume parsed (${src}): auto-filled ${filled.length} field${filled.length === 1 ? "" : "s"}. Review before generating.`);
+        setToast(
+          `Resume parsed (${src}): auto-filled ${filled.length} field${filled.length === 1 ? "" : "s"}. Review before generating.`,
+        );
       } else {
         setToast("Resume uploaded. We couldn’t extract much — please complete the next steps.");
       }
@@ -236,13 +404,29 @@ export default function OnboardingPage() {
   async function generate() {
     setBusy(true);
     setError("");
+    const storedExperiences = form.experiences
+      .map(toStoredExperience)
+      .filter((e) => e.company);
+    const derivedSummary =
+      deriveExperienceSummary(storedExperiences) || form.experienceSummary.trim() || "";
     const payload = {
-      ...form,
+      name: form.name,
+      education: form.education,
+      degree: form.degree,
+      college: form.college,
       graduationYear: Number(form.graduationYear),
-      skills: form.skills.split(",").map((s) => s.trim()).filter(Boolean),
-      interests: form.interests.split(",").map((s) => s.trim()).filter(Boolean),
+      skills: form.skills,
+      interests: form.interests,
+      careerGoals: form.careerGoals,
+      experiences: storedExperiences,
+      experienceSummary: derivedSummary,
       preferredIndustries: form.preferredIndustries.split(",").map((s) => s.trim()).filter(Boolean),
       preferredLocations: form.preferredLocations.split(",").map((s) => s.trim()).filter(Boolean),
+      workPreference: form.workPreference,
+      careerStage: form.careerStage,
+      linkedinUrl: form.linkedinUrl,
+      portfolioUrl: form.portfolioUrl,
+      githubUrl: form.githubUrl,
     };
     const res = await fetch("/api/profile/onboarding", {
       method: "POST",
@@ -260,16 +444,16 @@ export default function OnboardingPage() {
   }
 
   function canContinue() {
-    if (step === 0) return Boolean(resumeName); // resume first & required for students/job seekers
+    if (step === 0) return Boolean(resumeName);
     if (step === 1) return form.name.trim().length > 1;
-    if (step === 3) return form.skills.trim().length > 0;
+    if (step === 3) return form.skills.length > 0;
     if (step === 4) return form.careerGoals.trim().length > 0;
     return true;
   }
 
   function canGenerate() {
     if (hardMissing.length === 0) return true;
-    return allowGenerateWithWarnings && form.name.trim().length > 1 && form.skills.trim().length > 0;
+    return allowGenerateWithWarnings && form.name.trim().length > 1 && form.skills.length > 0;
   }
 
   if (status === "loading") {
@@ -414,27 +598,129 @@ export default function OnboardingPage() {
             {step === 2 && (
               <div className="cv-onboard-fields">
                 <h2>Education & experience</h2>
-                {autofilled.some((f) => ["education", "degree", "college", "experienceSummary"].includes(f)) ? (
+                {autofilled.some((f) =>
+                  ["education", "degree", "college", "experienceSummary", "experiences"].includes(f),
+                ) ? (
                   <p className="cv-onboard-hint">Pre-filled from your resume — edit anything that looks off.</p>
                 ) : null}
-                <Label>Education level</Label>
-                <Input value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+                <div className="cv-onboard-grid-2">
+                  <div>
+                    <Label>Education level</Label>
+                    <Input value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Graduation year</Label>
+                    <Input
+                      type="number"
+                      value={form.graduationYear}
+                      onChange={(e) => setForm({ ...form, graduationYear: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
                 <Label>Degree</Label>
                 <Input value={form.degree} onChange={(e) => setForm({ ...form, degree: e.target.value })} />
                 <Label>College / university</Label>
                 <Input value={form.college} onChange={(e) => setForm({ ...form, college: e.target.value })} />
-                <Label>Graduation year</Label>
-                <Input
-                  type="number"
-                  value={form.graduationYear}
-                  onChange={(e) => setForm({ ...form, graduationYear: Number(e.target.value) })}
-                />
-                <Label>Experience summary (optional)</Label>
-                <Textarea
-                  value={form.experienceSummary}
-                  onChange={(e) => setForm({ ...form, experienceSummary: e.target.value })}
-                  placeholder="Internships, projects, or roles worth highlighting"
-                />
+
+                <div className="cv-onboard-section-head">
+                  <div>
+                    <Label>Experience</Label>
+                    <p className="cv-onboard-subhint">Add roles or internships. Optional — leave empty if you’re just starting.</p>
+                  </div>
+                  <Button type="button" variant="outline" onClick={addExperience}>
+                    <Plus className="h-4 w-4" />
+                    Add experience
+                  </Button>
+                </div>
+
+                {form.experiences.length === 0 ? (
+                  <div className="cv-onboard-empty">
+                    No experiences yet. Click <strong>Add experience</strong> to include internships, jobs, or freelance work.
+                  </div>
+                ) : (
+                  <div className="cv-onboard-exp-list">
+                    {form.experiences.map((entry, index) => {
+                      const present = /^present$/i.test(entry.end.trim());
+                      return (
+                        <article key={entry.id} className="cv-onboard-exp-card">
+                          <div className="cv-onboard-exp-card-head">
+                            <strong>Experience {index + 1}</strong>
+                            <button
+                              type="button"
+                              className="cv-onboard-icon-btn"
+                              aria-label="Delete experience"
+                              onClick={() => removeExperience(entry.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <Label>Company name</Label>
+                          <Input
+                            value={entry.company}
+                            onChange={(e) => updateExperience(entry.id, { company: e.target.value })}
+                            placeholder="Acme Corp"
+                          />
+                          <div className="cv-onboard-grid-2">
+                            <div>
+                              <Label>Start</Label>
+                              <Input
+                                type="month"
+                                value={toMonthInputValue(entry.start)}
+                                onChange={(e) => updateExperience(entry.id, { start: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>End</Label>
+                              <div className="cv-onboard-end-row">
+                                <Input
+                                  type="month"
+                                  disabled={present}
+                                  value={present ? "" : toMonthInputValue(entry.end)}
+                                  onChange={(e) => updateExperience(entry.id, { end: e.target.value })}
+                                />
+                                <label className="cv-onboard-present">
+                                  <input
+                                    type="checkbox"
+                                    checked={present}
+                                    onChange={(e) =>
+                                      updateExperience(entry.id, {
+                                        end: e.target.checked ? "Present" : "",
+                                      })
+                                    }
+                                  />
+                                  Present
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                          <Label>Duration (months)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={600}
+                            value={entry.months ?? ""}
+                            onChange={(e) =>
+                              updateExperience(entry.id, {
+                                months: e.target.value === "" ? null : Number(e.target.value),
+                              })
+                            }
+                            placeholder={
+                              entry.start
+                                ? String(computeMonths(entry.start, entry.end || "Present") ?? "")
+                                : "Auto from dates"
+                            }
+                          />
+                          <Label>Responsibilities</Label>
+                          <Textarea
+                            value={entry.responsibilities}
+                            onChange={(e) => updateExperience(entry.id, { responsibilities: e.target.value })}
+                            placeholder={"• Built dashboards\n• Collaborated with design"}
+                          />
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -444,18 +730,98 @@ export default function OnboardingPage() {
                 {autofilled.includes("skills") ? (
                   <p className="cv-onboard-hint">Skills detected from your resume — add or remove as needed.</p>
                 ) : null}
-                <Label>Skills (comma-separated)</Label>
-                <Textarea
-                  value={form.skills}
-                  onChange={(e) => setForm({ ...form, skills: e.target.value })}
-                  placeholder="communication, python, product management"
-                />
-                <Label>Interests (comma-separated)</Label>
-                <Textarea
-                  value={form.interests}
-                  onChange={(e) => setForm({ ...form, interests: e.target.value })}
-                  placeholder="AI, Design, Startups"
-                />
+
+                <Label>Skills</Label>
+                <div className="cv-onboard-chip-field">
+                  <div className="cv-onboard-chips">
+                    {form.skills.map((skill) => (
+                      <button
+                        key={skill}
+                        type="button"
+                        className="cv-onboard-chip is-selected"
+                        onClick={() => removeSkill(skill)}
+                      >
+                        {skill}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                    <input
+                      className="cv-onboard-chip-input"
+                      value={skillDraft}
+                      onChange={(e) => setSkillDraft(e.target.value)}
+                      onKeyDown={onSkillKeyDown}
+                      onBlur={() => {
+                        if (skillDraft.trim()) commitSkill();
+                      }}
+                      placeholder={form.skills.length ? "Add skill" : "Type a skill and press Enter"}
+                      aria-label="Add skill"
+                    />
+                  </div>
+                </div>
+                {skillSuggestions.length > 0 ? (
+                  <div className="cv-onboard-suggest-row">
+                    <span>From resume</span>
+                    <div className="cv-onboard-chips">
+                      {skillSuggestions.map((skill) => (
+                        <button
+                          key={skill}
+                          type="button"
+                          className="cv-onboard-chip is-suggest"
+                          onClick={() => commitSkill(skill)}
+                        >
+                          <Plus className="h-3 w-3" />
+                          {skill}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <Label>Interests</Label>
+                {recommendedInterests.length > 0 ? (
+                  <div className="cv-onboard-suggest-row">
+                    <span>Recommended</span>
+                    <div className="cv-onboard-chips">
+                      {recommendedInterests.map((interest) => (
+                        <button
+                          key={interest}
+                          type="button"
+                          className="cv-onboard-chip is-suggest"
+                          onClick={() => commitInterest(interest)}
+                        >
+                          <Plus className="h-3 w-3" />
+                          {interest}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <div className="cv-onboard-chip-field">
+                  <div className="cv-onboard-chips">
+                    {form.interests.map((interest) => (
+                      <button
+                        key={interest}
+                        type="button"
+                        className="cv-onboard-chip is-selected is-interest"
+                        onClick={() => removeInterest(interest)}
+                      >
+                        {interest}
+                        <X className="h-3 w-3" />
+                      </button>
+                    ))}
+                    <input
+                      className="cv-onboard-chip-input"
+                      value={interestDraft}
+                      onChange={(e) => setInterestDraft(e.target.value)}
+                      onKeyDown={onInterestKeyDown}
+                      onBlur={() => {
+                        if (interestDraft.trim()) commitInterest();
+                      }}
+                      placeholder={form.interests.length ? "Add interest" : "Type an interest and press Enter"}
+                      aria-label="Add interest"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -480,25 +846,37 @@ export default function OnboardingPage() {
                   onChange={(e) => setForm({ ...form, preferredLocations: e.target.value })}
                   placeholder="Remote, Bengaluru"
                 />
-                <Label>Work preference</Label>
-                <Select value={form.workPreference} onChange={(e) => setForm({ ...form, workPreference: e.target.value })}>
-                  <option value="FULL_TIME">Full-time</option>
-                  <option value="INTERNSHIP">Internship</option>
-                  <option value="PART_TIME">Part-time</option>
-                  <option value="FREELANCE">Freelance</option>
-                  <option value="CONTRACT">Contract</option>
-                  <option value="FLEXIBLE">Flexible</option>
-                </Select>
-                <Label>Career stage</Label>
-                <Select value={form.careerStage} onChange={(e) => setForm({ ...form, careerStage: e.target.value })}>
-                  <option value="STUDENT">Student</option>
-                  <option value="FRESHER">Fresher</option>
-                  <option value="EARLY_CAREER">Early career</option>
-                  <option value="MID_CAREER">Mid career</option>
-                  <option value="SENIOR">Senior</option>
-                  <option value="CAREER_SWITCH">Career switch</option>
-                  <option value="LEADERSHIP">Leadership</option>
-                </Select>
+                <div className="cv-onboard-grid-2">
+                  <div>
+                    <Label>Work preference</Label>
+                    <Select
+                      value={form.workPreference}
+                      onChange={(e) => setForm({ ...form, workPreference: e.target.value })}
+                    >
+                      <option value="FULL_TIME">Full-time</option>
+                      <option value="INTERNSHIP">Internship</option>
+                      <option value="PART_TIME">Part-time</option>
+                      <option value="FREELANCE">Freelance</option>
+                      <option value="CONTRACT">Contract</option>
+                      <option value="FLEXIBLE">Flexible</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Career stage</Label>
+                    <Select
+                      value={form.careerStage}
+                      onChange={(e) => setForm({ ...form, careerStage: e.target.value })}
+                    >
+                      <option value="STUDENT">Student</option>
+                      <option value="FRESHER">Fresher</option>
+                      <option value="EARLY_CAREER">Early career</option>
+                      <option value="MID_CAREER">Mid career</option>
+                      <option value="SENIOR">Senior</option>
+                      <option value="CAREER_SWITCH">Career switch</option>
+                      <option value="LEADERSHIP">Leadership</option>
+                    </Select>
+                  </div>
+                </div>
                 <Label>LinkedIn (optional)</Label>
                 <Input value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })} />
               </div>

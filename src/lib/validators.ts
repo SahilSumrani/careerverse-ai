@@ -22,6 +22,19 @@ export const onboardingSchema = z.object({
   interests: z.array(z.string().min(1)).min(1).max(20),
   careerGoals: z.string().min(10).max(2000),
   experienceSummary: z.string().max(2000).optional().or(z.literal("")),
+  experiences: z
+    .array(
+      z.object({
+        company: z.string().min(1).max(120),
+        months: z.number().int().min(0).max(600).nullable().optional(),
+        start: z.string().max(40).optional().or(z.literal("")),
+        end: z.string().max(40).optional().or(z.literal("")),
+        responsibilities: z.string().max(2000).optional().or(z.literal("")),
+      }),
+    )
+    .max(20)
+    .optional()
+    .default([]),
   preferredIndustries: z.array(z.string()).max(15).default([]),
   preferredLocations: z.array(z.string()).max(15).default([]),
   workPreference: z

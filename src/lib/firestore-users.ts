@@ -1,6 +1,7 @@
 import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { nanoid } from "nanoid";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { sanitizeExperiences, type ExperienceEntry } from "@/lib/experiences";
 import type { RoleName } from "@/lib/roles";
 import { isRoleName } from "@/lib/roles";
 
@@ -41,6 +42,8 @@ export type CareerVerseUser = {
   college?: string | null;
   graduationYear?: number | null;
   experienceSummary?: string | null;
+  /** Structured experiences JSON array on the user profile. */
+  experiences: ExperienceEntry[];
   careerGoals?: string | null;
   skills: string[];
   interests: string[];
@@ -104,6 +107,7 @@ export function mapUserDoc(id: string, data: DocumentData | undefined): CareerVe
     college: (data.college as string | null) ?? null,
     graduationYear: data.graduationYear == null ? null : Number(data.graduationYear),
     experienceSummary: (data.experienceSummary as string | null) ?? null,
+    experiences: sanitizeExperiences(data.experiences),
     careerGoals: (data.careerGoals as string | null) ?? null,
     skills: asStringArray(data.skills),
     interests: asStringArray(data.interests),
@@ -162,6 +166,7 @@ export async function createEmailPasswordUser(input: {
     profileCompleteness: 10,
     skills: [] as string[],
     interests: [] as string[],
+    experiences: [] as ExperienceEntry[],
     preferredIndustries: [] as string[],
     preferredLocations: [] as string[],
     resume: null,
@@ -182,6 +187,7 @@ export type OnboardingUpdate = {
   graduationYear: number;
   careerGoals: string;
   experienceSummary?: string | null;
+  experiences?: ExperienceEntry[];
   preferredIndustries: string[];
   preferredLocations: string[];
   workPreference?: string | null;
@@ -210,6 +216,7 @@ export async function completeOnboarding(uid: string, update: OnboardingUpdate):
         graduationYear: update.graduationYear,
         careerGoals: update.careerGoals,
         experienceSummary: update.experienceSummary || null,
+        experiences: sanitizeExperiences(update.experiences ?? []),
         preferredIndustries: update.preferredIndustries,
         preferredLocations: update.preferredLocations,
         workPreference: update.workPreference || null,

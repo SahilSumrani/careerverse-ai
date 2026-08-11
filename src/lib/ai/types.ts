@@ -49,6 +49,15 @@ export type ResumeAnalysisResult = {
   recommendations: string[];
 };
 
+/** Structured experience row extracted from a resume when parseable. */
+export type ParsedExperience = {
+  company: string;
+  months: number | null;
+  start: string;
+  end: string;
+  responsibilities: string;
+};
+
 /** Fields extracted from resume text for onboarding auto-fill. */
 export type ParsedResumeProfile = {
   name?: string | null;
@@ -60,6 +69,8 @@ export type ParsedResumeProfile = {
   interests: string[];
   careerGoals?: string | null;
   experienceSummary?: string | null;
+  /** Structured experiences when resume blocks map cleanly; else []. Never invented. */
+  experiences?: ParsedExperience[];
   preferredIndustries: string[];
   preferredLocations: string[];
   linkedinUrl?: string | null;

@@ -1,4 +1,5 @@
 import { clamp } from "@/lib/utils";
+import { parseExperienceEntries, sanitizeExperiences } from "@/lib/experiences";
 import type {
   AIService,
   CareerAnalysisResult,
@@ -563,6 +564,8 @@ function sanitizeParsedDraft(draft: ParsedDraft): ParsedDraft {
     .filter((i) => i.length >= 2 && i.length <= 40 && !isSkillSectionLabel(i) && !PROSE_NOISE.test(i))
     .slice(0, 12);
 
+  const experiences = sanitizeExperiences(draft.experiences);
+
   return {
     ...draft,
     name: draft.name && draft.name.trim().length > 1 && draft.name.trim().length <= 80 ? draft.name.trim() : null,
@@ -573,6 +576,7 @@ function sanitizeParsedDraft(draft: ParsedDraft): ParsedDraft {
     interests,
     careerGoals,
     experienceSummary,
+    experiences,
     preferredIndustries: (draft.preferredIndustries || []).map(String).filter(Boolean).slice(0, 15),
     preferredLocations: (draft.preferredLocations || []).map(String).filter(Boolean).slice(0, 15),
   };
@@ -638,6 +642,11 @@ function heuristicParseResumeProfile(resumeText: string): ParsedResumeProfile {
     }
   }
 
+  // Structured experiences only when header/date patterns map cleanly — never invent from summary prose
+  const experiences = parseExperienceEntries(
+    sectionSlice(text, ["experience", "work experience", "internship", "employment"], 2000),
+  );
+
   const interests: string[] = [];
   const interestBlock = sectionSlice(text, ["interests", "hobbies", "areas of interest"], 400);
   if (interestBlock) {
@@ -671,6 +680,7 @@ function heuristicParseResumeProfile(resumeText: string): ParsedResumeProfile {
     interests: Array.from(new Set(interests)),
     careerGoals,
     experienceSummary,
+    experiences,
     preferredIndustries: Array.from(new Set(preferredIndustries)),
     preferredLocations: Array.from(new Set(preferredLocations)),
     linkedinUrl: linkedin,
@@ -696,6 +706,7 @@ function finalizeParsedProfile(draft: ParsedDraft, source: "ai" | "heuristic"): 
     ["interests", (cleaned.interests?.length ?? 0) > 0],
     ["careerGoals", Boolean(cleaned.careerGoals && cleaned.careerGoals.trim().length >= 10)],
     ["experienceSummary", Boolean(cleaned.experienceSummary)],
+    ["experiences", (cleaned.experiences?.length ?? 0) > 0],
   ];
 
   for (const [key, ok] of checks) {
@@ -706,6 +717,7 @@ function finalizeParsedProfile(draft: ParsedDraft, source: "ai" | "heuristic"): 
       key === "experienceSummary" ||
       key === "graduationYear"
     ) {
+      // experiences is optional — only list as missing when no summary either (for UX hints)
       missingFields.push(key);
     }
   }
@@ -907,6 +919,7 @@ class CareerVerseAIService implements AIService {
           interests: [],
           careerGoals: null,
           experienceSummary: null,
+          experiences: [],
           preferredIndustries: [],
           preferredLocations: [],
           linkedinUrl: null,
@@ -926,6 +939,7 @@ class CareerVerseAIService implements AIService {
         "- college: institution name only if explicitly present; otherwise null. Do not invent.",
         "- skills: clean array of skill tokens only (React.js, Next.js). Strip section labels like SKILLS, Languages and Frameworks, Backend, Cloud and Database.",
         "- experienceSummary: put SUMMARY / profile / experience paragraphs here.",
+        "- experiences: array of {company, months, start, end, responsibilities} ONLY when work/internship entries are clear. Otherwise []. Never invent companies.",
         "- careerGoals: short intent only (roles seeking / objective). NEVER copy the full summary. If no explicit objective/goals, use null.",
         "- interests: only from Interests/Hobbies section; else [].",
       ].join(" "),
@@ -942,6 +956,7 @@ class CareerVerseAIService implements AIService {
           interests: fallback.interests,
           careerGoals: fallback.careerGoals,
           experienceSummary: fallback.experienceSummary,
+          experiences: fallback.experiences ?? [],
           preferredIndustries: fallback.preferredIndustries,
           preferredLocations: fallback.preferredLocations,
           linkedinUrl: fallback.linkedinUrl,
@@ -986,6 +1001,10 @@ class CareerVerseAIService implements AIService {
           typeof parsed.experienceSummary === "string" && parsed.experienceSummary.trim()
             ? parsed.experienceSummary.trim().slice(0, 2000)
             : fallback.experienceSummary,
+        experiences: (() => {
+          const fromAi = sanitizeExperiences(parsed.experiences);
+          return fromAi.length ? fromAi : fallback.experiences ?? [];
+        })(),
         preferredIndustries:
           Array.isArray(parsed.preferredIndustries) && parsed.preferredIndustries.length
             ? parsed.preferredIndustries.map(String).slice(0, 15)
@@ -1013,6 +1032,9 @@ class CareerVerseAIService implements AIService {
       if (!merged.skills.length && fallback.skills.length) merged.skills = fallback.skills;
       if (!merged.experienceSummary && fallback.experienceSummary) {
         merged.experienceSummary = fallback.experienceSummary;
+      }
+      if (!(merged.experiences?.length) && fallback.experiences?.length) {
+        merged.experiences = fallback.experiences;
       }
       if (!merged.careerGoals && fallback.careerGoals) merged.careerGoals = fallback.careerGoals;
 

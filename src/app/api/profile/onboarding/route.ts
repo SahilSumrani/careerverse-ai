@@ -11,6 +11,7 @@ import {
   trackAnalytics,
   computeProfileCompleteness,
 } from "@/lib/api";
+import { sanitizeExperiences } from "@/lib/experiences";
 import { onboardingSchema } from "@/lib/validators";
 import { aiService } from "@/lib/ai/service";
 
@@ -53,6 +54,7 @@ export async function POST(req: Request) {
       graduationYear: data.graduationYear,
       careerGoals: data.careerGoals,
       experienceSummary: data.experienceSummary || null,
+      experiences: sanitizeExperiences(data.experiences ?? []),
       preferredIndustries: data.preferredIndustries,
       preferredLocations: data.preferredLocations,
       workPreference: data.workPreference,

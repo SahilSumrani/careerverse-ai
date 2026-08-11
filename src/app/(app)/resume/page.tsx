@@ -42,6 +42,19 @@ function isPdf(mime: string, name: string) {
   return mime.includes("pdf") || name.toLowerCase().endsWith(".pdf");
 }
 
+function looksLikeLocalPath(path: string | null | undefined) {
+  if (!path) return false;
+  const p = path.replace(/\\/g, "/");
+  if (p.startsWith("resumes/")) return false;
+  return p.startsWith("/") || /^[A-Za-z]:\//.test(p) || p.includes("/tmp/");
+}
+
+function looksBrokenStorageUrl(url: string | null | undefined) {
+  if (!url) return false;
+  const u = url.replace(/\\/g, "/");
+  return u.includes("/tmp/") || u.includes("/careerverse-uploads/");
+}
+
 export default function ResumePage() {
   const [file, setFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
@@ -52,9 +65,11 @@ export default function ResumePage() {
   const [fileName, setFileName] = useState("");
   const [resumes, setResumes] = useState<ResumeMeta[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileUnavailable, setFileUnavailable] = useState<string | null>(null);
 
   const loadResumes = useCallback(async () => {
     setLoadingMeta(true);
+    setFileUnavailable(null);
     try {
       const res = await fetch("/api/resume");
       const data = await res.json();
@@ -64,7 +79,6 @@ export default function ResumePage() {
       const latest = list[0];
       if (latest) {
         setFileName(latest.fileName);
-        setPreviewUrl(latest.storageUrl || null);
         const last = latest.analyses?.[latest.analyses.length - 1];
         if (last?.resultJson) {
           try {
@@ -73,12 +87,32 @@ export default function ResumePage() {
             // ignore
           }
         }
-        // Refresh signed URL when we only have a path
-        if (!latest.storageUrl && latest.storagePath) {
-          const signed = await fetch(`/api/resume/file?id=${encodeURIComponent(latest.id)}`);
-          const signedData = await signed.json();
-          if (signed.ok && signedData.url) setPreviewUrl(signedData.url);
+
+        // Never open legacy Storage links that embed /tmp object paths
+        if (looksBrokenStorageUrl(latest.storageUrl) || looksLikeLocalPath(latest.storagePath)) {
+          setPreviewUrl(null);
+        } else if (latest.storageUrl?.startsWith("http")) {
+          setPreviewUrl(latest.storageUrl);
+        } else {
+          setPreviewUrl(null);
         }
+
+        const signed = await fetch(`/api/resume/file?id=${encodeURIComponent(latest.id)}`);
+        const signedData = await signed.json();
+        if (signed.ok) {
+          if (signedData.unavailable) {
+            setPreviewUrl(null);
+            setFileUnavailable(
+              signedData.reason ||
+                "This resume file is no longer available. Please re-upload a PDF or DOCX.",
+            );
+          } else if (signedData.url) {
+            setPreviewUrl(signedData.url);
+            setFileUnavailable(null);
+          }
+        }
+      } else {
+        setPreviewUrl(null);
       }
     } finally {
       setLoadingMeta(false);
@@ -98,6 +132,7 @@ export default function ResumePage() {
     setBusy(true);
     setError("");
     setAnalysis(null);
+    setFileUnavailable(null);
     try {
       const form = new FormData();
       form.append("file", file);
@@ -120,6 +155,13 @@ export default function ResumePage() {
 
   const latest = resumes[0];
   const pdf = latest ? isPdf(latest.mimeType, latest.fileName) : false;
+  const canPreviewPdf =
+    Boolean(latest && pdf && previewUrl && !previewUrl.startsWith("gs://") && !fileUnavailable);
+
+  function scrollToUpload() {
+    document.getElementById("resume-file")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("resume-file")?.focus();
+  }
 
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
@@ -174,7 +216,7 @@ export default function ResumePage() {
                       : "No resume on file yet"}
                 </CardDescription>
               </div>
-              {previewUrl ? (
+              {previewUrl && !fileUnavailable ? (
                 <a
                   href={previewUrl}
                   target="_blank"
@@ -189,18 +231,31 @@ export default function ResumePage() {
 
           {loadingMeta ? (
             <Skeleton className="h-72 w-full" />
-          ) : latest && pdf && previewUrl && !previewUrl.startsWith("gs://") ? (
+          ) : fileUnavailable ? (
+            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-medium text-amber-950">Resume file unavailable</p>
+              <p className="text-sm text-amber-900/80">{fileUnavailable}</p>
+              <Button type="button" variant="secondary" onClick={scrollToUpload}>
+                Re-upload resume
+              </Button>
+              {latest?.extractedText?.trim() ? (
+                <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-white/80 p-3 text-xs leading-relaxed text-muted-foreground">
+                  {latest.extractedText}
+                </div>
+              ) : null}
+            </div>
+          ) : canPreviewPdf ? (
             <iframe
               title="Resume preview"
-              src={previewUrl}
+              src={previewUrl!}
               className="h-[28rem] w-full rounded-xl border border-border bg-muted"
             />
           ) : latest ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 {pdf
-                  ? "PDF preview unavailable (missing Storage URL). Use download if a link appears, or re-upload."
-                  : "DOCX preview shows extracted text below. Use download when Storage URL is available."}
+                  ? "PDF preview unavailable. Use download if a link appears, or re-upload."
+                  : "DOCX preview shows extracted text below. Use download when a file link is available."}
               </p>
               <div className="max-h-[28rem] overflow-y-auto whitespace-pre-wrap rounded-xl border border-border bg-muted/40 p-4 text-sm leading-relaxed">
                 {latest.extractedText?.trim() || "No extracted text stored for this file."}

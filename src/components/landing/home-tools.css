@@ -1,23 +1,16 @@
-/* Dropship .section.is-tabs — wave bleeds behind heading; white floor under panel */
+/* Looking-for sits under hero — tools use a clean light floor (no blue wave bleed) */
 .cv-tabs {
   position: relative;
   z-index: 3;
-  background: transparent;
-  padding: 9.5rem 0 7rem;
+  background: #fff;
+  padding: 4.5rem 0 5rem;
   margin-top: 0;
+  isolation: isolate;
 }
 
-/* White floor starts under the icon rail so cards sit on white */
+/* Soft white floor only — no leftover radial “blob” overlays */
 .cv-tabs::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 58%;
-  bottom: 0;
-  background: #fff;
-  z-index: 0;
-  pointer-events: none;
+  content: none;
 }
 
 .cv-tabs-head {
@@ -27,26 +20,25 @@
   padding: 0 var(--cv-space-md, 20px);
   position: relative;
   z-index: 3;
-  /* Dropship text-color-alternate over blue wave */
-  color: #fff;
+  color: #0b1220;
 }
 
 .cv-tabs-head .cv-section-title {
-  color: #fff;
+  color: #0b1220;
 }
 
 .cv-tabs-head .cv-section-sub {
   margin-left: auto;
   margin-right: auto;
-  color: rgba(255, 255, 255, 0.88);
+  color: #667085;
 }
 
 .cv-tabs-pill {
   display: inline-flex;
   margin-bottom: 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  background: #eef3ff;
+  color: #225aea;
   font-family: var(--font-body), Inter, sans-serif;
   font-size: 12px;
   font-weight: 500;
@@ -74,7 +66,8 @@
   min-height: 4rem;
   padding: 0.38rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.38);
+  background: #f5f8ff;
+  border: 1px solid #e4e7ec;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -91,7 +84,7 @@
   border-radius: 0.85rem;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: #0b1220;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -300,11 +293,7 @@
 
 @media (max-width: 768px) {
   .cv-tabs {
-    padding: 6rem 0 5rem;
-  }
-
-  .cv-tabs::after {
-    top: 52%;
+    padding: 3.5rem 0 4rem;
   }
 
   .cv-tabs-head .cv-section-title {
@@ -331,7 +320,7 @@
 
 @media (max-width: 380px) {
   .cv-tabs {
-    padding: 4.5rem 0 3.5rem;
+    padding: 3rem 0 3rem;
   }
 
   .cv-tabs-head {

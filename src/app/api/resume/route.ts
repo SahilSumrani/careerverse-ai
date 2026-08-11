@@ -14,8 +14,16 @@ import {
   trackAnalytics,
 } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
-import { hasFirebaseAdminCredentials, getAdminStorage } from "@/lib/firebase-admin";
+import {
+  hasFirebaseAdminCredentials,
+  getAdminStorage,
+  resolveStorageBucket,
+} from "@/lib/firebase-admin";
 
+/**
+ * Upload to Firebase Storage at resumes/{uid}/{filename}.
+ * On failure returns null — caller may fall back to /tmp but must NOT mint Storage URLs for local paths.
+ */
 async function tryUploadToStorage(
   uid: string,
   fileName: string,
@@ -23,8 +31,7 @@ async function tryUploadToStorage(
   mimeType: string,
 ): Promise<{ storagePath: string; storageUrl: string | null } | null> {
   if (!hasFirebaseAdminCredentials()) return null;
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  const bucketName = resolveStorageBucket();
   if (!bucketName) return null;
 
   try {
@@ -44,6 +51,7 @@ async function tryUploadToStorage(
       });
       storageUrl = url;
     } catch {
+      // Prefer gs:// reference over a broken HTTP link; client refreshes via /api/resume/file
       storageUrl = `gs://${bucketName}/${storagePath}`;
     }
     return { storagePath, storageUrl };
@@ -90,11 +98,14 @@ export async function POST(req: Request) {
       saved.mimeType,
     );
 
+    // storageUrl only when bytes actually live in Storage — never for /tmp fallback
     let storagePath = cloud?.storagePath ?? null;
+    let storageUrl: string | null = cloud?.storageUrl ?? null;
     let storageBackend: "firebase" | "tmp" = cloud ? "firebase" : "tmp";
     if (!cloud) {
       const local = await writeResumeToTmp(saved.buffer, saved.fileName, saved.ext);
       storagePath = local.storagePath;
+      storageUrl = null;
       storageBackend = "tmp";
     }
 
@@ -118,7 +129,7 @@ export async function POST(req: Request) {
       mimeType: saved.mimeType,
       sizeBytes: saved.sizeBytes,
       storagePath,
-      storageUrl: cloud?.storageUrl ?? null,
+      storageUrl,
       extractedText,
       uploadedAt,
       analyses: [
@@ -169,7 +180,7 @@ export async function POST(req: Request) {
       note:
         storageBackend === "firebase"
           ? undefined
-          : "Stored under /tmp fallback (ephemeral on Vercel). Set FIREBASE_STORAGE_BUCKET + Admin credentials for durable Storage uploads.",
+          : "Stored under /tmp fallback (ephemeral on Vercel). Set FIREBASE_STORAGE_BUCKET (e.g. careerverse-ai-3f969.appspot.com or *.firebasestorage.app from Console) + Admin credentials — do not generate Storage download URLs for /tmp files.",
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

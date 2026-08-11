@@ -184,18 +184,20 @@
   width: 60%;
   height: 75%;
   transform: translateX(-50%);
-  background: radial-gradient(ellipse at 50% 8%, rgba(147, 180, 255, 0.28), rgba(34, 90, 234, 0.08) 40%, transparent 72%);
+  background: radial-gradient(ellipse at 50% 8%, rgba(147, 180, 255, 0.12), transparent 70%);
   filter: blur(28px);
   pointer-events: none;
+  opacity: 0.7;
 }
 
 .cv-funnel-invert .cv-funnel-glow {
   top: 0;
   width: 40%;
   height: 58%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(95, 140, 255, 0.28), rgba(34, 90, 234, 0.06) 42%, transparent 72%);
+  background: radial-gradient(ellipse at 50% 0%, rgba(95, 140, 255, 0.1), transparent 72%);
   filter: blur(20px);
-  clip-path: polygon(40% 0%, 60% 0%, 90% 100%, 10% 100%);
+  /* No hard triangular clip — that read as a blue “daag” streak */
+  clip-path: none;
 }
 
 .cv-funnel-beam {

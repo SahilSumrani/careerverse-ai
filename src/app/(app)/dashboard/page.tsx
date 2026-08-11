@@ -369,10 +369,22 @@ export default async function DashboardPage() {
                 {resumeScore != null ? (
                   <p className="mt-2 text-xs text-muted-foreground">Latest analysis score: {resumeScore}</p>
                 ) : null}
-                {resume.storageUrl?.startsWith("gs://") || resume.storagePath?.startsWith("resumes/") ? (
+                {resume.storageUrl?.startsWith("gs://") ||
+                (resume.storagePath?.startsWith("resumes/") &&
+                  !resume.storagePath.includes("/tmp/")) ? (
                   <Badge tone="info" className="mt-3">
                     Firebase Storage
                   </Badge>
+                ) : resume.storagePath?.includes("/tmp") ||
+                  resume.storageUrl?.includes("/tmp/") ? (
+                  <>
+                    <Badge tone="default" className="mt-3">
+                      File unavailable — re-upload
+                    </Badge>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Previous download link pointed at a temporary path. Re-upload to restore preview.
+                    </p>
+                  </>
                 ) : (
                   <Badge tone="default" className="mt-3">
                     Metadata in Firestore
@@ -386,7 +398,11 @@ export default async function DashboardPage() {
               href="/resume"
               className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
             >
-              {resume ? "Manage resume" : "Upload resume"}
+              {resume
+                ? resume.storagePath?.includes("/tmp") || resume.storageUrl?.includes("/tmp/")
+                  ? "Re-upload resume"
+                  : "Manage resume"
+                : "Upload resume"}
             </Link>
           </Card>
 

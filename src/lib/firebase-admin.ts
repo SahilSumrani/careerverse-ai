@@ -75,12 +75,34 @@ function buildCredential() {
   return { projectId: projectId || undefined };
 }
 
-function resolveStorageBucket() {
-  return (
+/**
+ * Resolve the GCS/Firebase Storage bucket name for Admin uploads.
+ *
+ * Set FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET to the
+ * exact bucket shown in Firebase Console → Storage (not a guess):
+ *   - Legacy:   `{projectId}.appspot.com`  (e.g. careerverse-ai-3f969.appspot.com)
+ *   - New (2024+): `{projectId}.firebasestorage.app`
+ *
+ * Both are valid only if Storage was provisioned for that project. A bare
+ * `.firebasestorage.app` env value with Storage never enabled → NoSuchBucket.
+ * Do not paste a full `gs://…/path` or a download URL — bucket id only.
+ */
+export function resolveStorageBucket(): string {
+  const raw =
     process.env.FIREBASE_STORAGE_BUCKET ||
     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
-    ""
-  );
+    "";
+  let bucket = raw.trim();
+  if (!bucket) return "";
+  // Accept accidental gs://bucket or gs://bucket/path
+  if (bucket.startsWith("gs://")) {
+    bucket = bucket.slice(5);
+  }
+  // Drop object path if someone pasted gs://bucket/resumes/...
+  const slash = bucket.indexOf("/");
+  if (slash !== -1) bucket = bucket.slice(0, slash);
+  // Strip trailing dots / whitespace
+  return bucket.replace(/\/+$/, "").trim();
 }
 
 export function getFirebaseAdminApp(): App {

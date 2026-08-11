@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, access } from "fs/promises";
 import path from "path";
 import { randomBytes } from "crypto";
 
@@ -6,6 +6,46 @@ const ALLOWED = new Map([
   ["application/pdf", ".pdf"],
   ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"],
 ]);
+
+/** True when storagePath is a local filesystem path (never a GCS object key). */
+export function isLocalTmpStoragePath(storagePath: string | null | undefined): boolean {
+  if (!storagePath) return false;
+  const p = storagePath.replace(/\\/g, "/");
+  if (p.startsWith("resumes/")) return false;
+  if (p.startsWith("gs://")) return false;
+  // Absolute paths (POSIX /tmp/… or Windows C:/…) are never Storage object keys
+  if (p.startsWith("/") || /^[A-Za-z]:\//.test(p)) return true;
+  return p.includes("/tmp/") || p.includes("/careerverse-uploads/");
+}
+
+/** Object keys we upload under Firebase Storage. */
+export function isFirebaseResumeObjectPath(storagePath: string | null | undefined): boolean {
+  if (!storagePath) return false;
+  const p = storagePath.replace(/\\/g, "/");
+  return p.startsWith("resumes/") && !isLocalTmpStoragePath(p);
+}
+
+/**
+ * Detect signed/download URLs that incorrectly embed local /tmp paths
+ * (legacy bug: getSignedUrl was called with a filesystem path as the object name).
+ */
+export function isBrokenResumeStorageUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const u = url.replace(/\\/g, "/");
+  if (u.includes("/tmp/") || u.includes("/careerverse-uploads/")) return true;
+  // gs://bucket/tmp/... or bare path mistaken for URL
+  if (u.startsWith("/") && isLocalTmpStoragePath(u)) return true;
+  return false;
+}
+
+export async function localResumeFileExists(storagePath: string): Promise<boolean> {
+  try {
+    await access(storagePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function isServerlessReadonlyFs() {
   return Boolean(

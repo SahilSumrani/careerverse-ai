@@ -1,0 +1,136 @@
+.cv-empower {
+  position: relative;
+  padding: 4.5rem 1.25rem;
+  background:
+    radial-gradient(ellipse 80% 70% at 20% 0%, rgba(34, 90, 234, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 90% 100%, rgba(14, 165, 233, 0.25), transparent 50%),
+    linear-gradient(135deg, #0b1f4d 0%, #225aea 55%, #1d4ed8 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+.cv-empower-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 780px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cv-empower-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #bfdbfe;
+}
+
+.cv-empower h2 {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 3.5vw, 2.45rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.cv-empower-lead {
+  margin: 0 auto 1.75rem;
+  max-width: 34rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #dbeafe;
+}
+
+.cv-empower-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-bottom: 2rem;
+}
+
+.cv-empower-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.75rem 1.4rem;
+  border-radius: 12px;
+  background: #fff;
+  color: #225aea;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.cv-empower-primary:hover {
+  background: #f8fafc;
+}
+
+.cv-empower-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.75rem 1.2rem;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.92rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cv-empower-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.cv-empower-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  text-align: left;
+}
+
+.cv-empower-stats li {
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.cv-empower-stats strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.92rem;
+}
+
+.cv-empower-stats span {
+  font-size: 0.8rem;
+  color: #bfdbfe;
+  line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .cv-empower {
+    padding: 3.25rem 1rem;
+  }
+
+  .cv-empower-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cv-empower-actions {
+    flex-direction: column;
+  }
+
+  .cv-empower-primary,
+  .cv-empower-secondary {
+    width: 100%;
+  }
+}

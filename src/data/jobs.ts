@@ -111,4 +111,75 @@ export const DUMMY_JOBS: DummyJob[] = [
     tags: ["Node.js", "APIs", "Students"],
     blurb: "Help power applications tracking and notifications APIs used by CareerVerse students nationwide.",
   },
+  {
+    id: "jv-10",
+    title: "Marketing Intern",
+    company: "BrightPath Campus",
+    location: "Work From Home",
+    type: "Internship",
+    workMode: "Remote",
+    salary: "₹10–15k / mo",
+    tags: ["Marketing", "Content", "Students"],
+    blurb: "Run campus campaigns and social content for early-career hiring seasons.",
+  },
+  {
+    id: "jv-11",
+    title: "UI/UX Design Intern",
+    company: "SoftQA Studio",
+    location: "Delhi",
+    type: "Internship",
+    workMode: "Hybrid",
+    salary: "₹15–25k / mo",
+    tags: ["Design", "Figma", "Students"],
+    blurb: "Design job-seeker flows and portfolio case studies with mentored critiques.",
+  },
+  {
+    id: "jv-12",
+    title: "Data Science Intern",
+    company: "Orbit Finance",
+    location: "Mumbai",
+    type: "Internship",
+    workMode: "On-site",
+    salary: "₹20–35k / mo",
+    tags: ["Data Science", "Python", "SQL"],
+    blurb: "Support match-score analytics and hiring funnel dashboards for recruiters.",
+  },
 ];
+
+export function getHomeJobs(limit = 8) {
+  return DUMMY_JOBS.filter((j) => j.type !== "Internship").slice(0, limit);
+}
+
+export function getHomeInternships(limit = 8) {
+  return DUMMY_JOBS.filter((j) => j.type === "Internship" || j.type === "Apprenticeship").slice(0, limit);
+}
+
+export const LOOKING_FOR_CHIPS = [
+  { label: "Internships", href: "/internships" },
+  { label: "Jobs", href: "/jobs" },
+  { label: "AI resume", href: "/resume" },
+  { label: "Events", href: "/events" },
+  { label: "Roadmap", href: "/roadmap" },
+] as const;
+
+export const JOB_FILTER_CHIPS = [
+  "Work from home",
+  "Part-time",
+  "Engineering",
+  "Design",
+  "Data Science",
+  "Big brands",
+  "MBA",
+  "Media",
+] as const;
+
+export const INTERNSHIP_FILTER_CHIPS = [
+  "Work from home",
+  "Part-time",
+  "Engineering",
+  "Design",
+  "Data Science",
+  "Big brands",
+  "Marketing",
+  "MBA",
+] as const;

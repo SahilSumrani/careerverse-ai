@@ -37,7 +37,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/events" className="text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/events/browse" className="text-sm text-muted-foreground hover:text-foreground">
         ← Events
       </Link>
 

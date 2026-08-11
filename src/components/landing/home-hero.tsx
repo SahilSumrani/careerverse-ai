@@ -334,8 +334,8 @@ export function HomeHero() {
           <Link href="/auth/signup" className="cv-btn-wrap">
             <span className="cv-btn">Start Free Trial</span>
           </Link>
-          <Link href="/events" className="cv-btn-wrap is-secondary">
-            <span className="cv-btn">Watch Demo</span>
+          <Link href="/jobs" className="cv-btn-wrap is-secondary">
+            <span className="cv-btn">Browse Jobs</span>
           </Link>
         </div>
       </div>

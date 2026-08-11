@@ -16,6 +16,7 @@ import {
   ClipboardList,
   Shield,
   Search,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,6 +36,16 @@ const moreLinks = [
   { href: "/network", label: "Network", icon: Network },
   { href: "/events/browse", label: "Events", icon: Calendar },
   { href: "/mentors", label: "Mentors", icon: Users },
+  { href: "/profile", label: "Profile", icon: UserRound },
+];
+
+/** Primary tabs for the mobile bottom bar (student job-seeker flow). */
+const mobilePrimary = [
+  { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/opportunities/browse", label: "Jobs", icon: Briefcase },
+  { href: "/applications", label: "Apps", icon: ClipboardList },
+  { href: "/roadmap", label: "Roadmap", icon: Route },
+  { href: "/copilot", label: "Copilot", icon: Compass },
 ];
 
 export function AppSidebar({
@@ -73,10 +84,13 @@ export function AppSidebar({
           CareerVerse <span className="text-blue-300">AI</span>
         </Link>
 
-        <div className="mt-4 flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm text-sidebar-foreground">
+        <Link
+          href="/opportunities/browse"
+          className="mt-4 flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm text-sidebar-foreground transition hover:bg-white/10 hover:text-white"
+        >
           <Search className="h-4 w-4 shrink-0" />
-          <span className="truncate">Search anything…</span>
-        </div>
+          <span className="truncate">Search jobs…</span>
+        </Link>
 
         <nav className="no-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-2">
           <div>
@@ -98,7 +112,7 @@ export function AppSidebar({
           </div>
         </nav>
 
-        <div className="mt-2 shrink-0 rounded-2xl bg-white/5 p-2.5">
+        <Link href="/profile" className="mt-2 shrink-0 rounded-2xl bg-white/5 p-2.5 transition hover:bg-white/10">
           <div className="flex items-center gap-2.5">
             <Avatar name={userName || userEmail} className="h-9 w-9 bg-blue-500/30 text-white" />
             <div className="min-w-0">
@@ -106,7 +120,7 @@ export function AppSidebar({
               <p className="truncate text-xs text-sidebar-foreground">{userEmail}</p>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
     </aside>
   );
@@ -114,16 +128,18 @@ export function AppSidebar({
 
 export function MobileNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
-  const items = [
-    ...mainLinks,
-    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
-  ].slice(0, 5);
+  const items = isAdmin
+    ? [...mobilePrimary.slice(0, 4), { href: "/admin", label: "Admin", icon: Shield }]
+    : mobilePrimary;
   return (
     <nav className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-border bg-card/95 p-2 shadow-lg backdrop-blur md:hidden">
       <ul className="grid grid-cols-5 gap-1">
         {items.map((link) => {
           const Icon = link.icon;
-          const active = pathname.startsWith(link.href);
+          const active =
+            link.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === link.href || pathname.startsWith(`${link.href}/`);
           return (
             <li key={link.href}>
               <Link

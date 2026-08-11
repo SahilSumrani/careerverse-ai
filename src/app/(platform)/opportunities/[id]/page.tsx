@@ -37,7 +37,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/opportunities" className="text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/opportunities/browse" className="text-sm text-muted-foreground hover:text-foreground">
         ← Opportunities
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3">

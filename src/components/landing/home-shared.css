@@ -61,11 +61,14 @@
   font-size: 12px;
   font-weight: 500;
   letter-spacing: -0.24px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .cv-eyebrow-mark {
   width: 20px;
   height: 20px;
+  flex: none;
   border-radius: 6px;
   background: var(--cv-accent);
   color: #fff;
@@ -299,5 +302,37 @@ header .cv-btn-wrap.is-secondary .cv-btn {
   .cv-container {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .cv-eyebrow {
+    gap: 6px;
+    padding: 5px 10px 5px 5px;
+    font-size: 11px;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: left;
+    border-radius: 999px;
+  }
+}
+
+@media (max-width: 380px) {
+  .cv-section-title {
+    font-size: 1.35rem;
+    overflow-wrap: anywhere;
+  }
+
+  .cv-eyebrow {
+    font-size: 10px;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .cv-funnel {
+    height: 12rem;
+  }
+
+  .cv-funnel-badge {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1.15rem;
   }
 }

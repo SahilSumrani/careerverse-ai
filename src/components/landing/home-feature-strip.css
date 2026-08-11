@@ -127,3 +127,24 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+@media (max-width: 380px) {
+  .cv-strip {
+    padding: 2.75rem 0;
+  }
+
+  .cv-strip-card {
+    padding: 1.15rem;
+  }
+
+  .cv-strip-card h3 {
+    font-size: 1.2rem;
+    overflow-wrap: anywhere;
+  }
+
+  .cv-strip-art-photo {
+    margin-bottom: -1.15rem;
+    margin-left: -1.15rem;
+    margin-right: -1.15rem;
+  }
+}

@@ -255,7 +255,7 @@ export default function OnboardingPage() {
                 <Textarea
                   value={form.interests}
                   onChange={(e) => setForm({ ...form, interests: e.target.value })}
-                  placeholder="AI, Product, Startups"
+                  placeholder="AI, Design, Startups"
                 />
               </div>
             )}
@@ -267,7 +267,7 @@ export default function OnboardingPage() {
                 <Textarea
                   value={form.careerGoals}
                   onChange={(e) => setForm({ ...form, careerGoals: e.target.value })}
-                  placeholder="I want to become an AI Product Manager within 2 years..."
+                  placeholder="I want to become an AI-focused career coach within 2 years..."
                 />
                 <Label>Preferred industries</Label>
                 <Input

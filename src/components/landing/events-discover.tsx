@@ -92,7 +92,7 @@ const EVENTS: DiscoverEvent[] = [
     org: "CareerVerse",
     kind: "Tour",
     mode: "Online",
-    tags: ["Product tour", "Stages"],
+    tags: ["Platform tour", "Stages"],
     date: "Sep 16, 2026",
     location: "Online",
     status: "Open",

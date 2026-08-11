@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { AuthControls } from "@/components/layout/auth-controls";
 
 const nav = [
+  { href: "/jobs", label: "Jobs" },
   { href: "/events", label: "Events" },
   { href: "/opportunities", label: "Opportunities" },
   { href: "/hiring-flow", label: "Hiring flow" },

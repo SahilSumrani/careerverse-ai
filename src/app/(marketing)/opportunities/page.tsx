@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const OPPORTUNITIES = [
   {
-    title: "Product Engineer",
+    title: "Software Engineer",
     org: "Northstar Labs",
     type: "Full-time · Remote",
     blurb: "Ship candidate scoring surfaces and recruiter workflows used by high-volume hiring teams.",
@@ -23,7 +23,7 @@ const OPPORTUNITIES = [
     title: "People Ops Intern",
     org: "Harbor Collective",
     type: "Internship · On-site",
-    blurb: "Support interview scheduling, score reviews, and hiring alerts for a growing product org.",
+    blurb: "Support interview scheduling, score reviews, and hiring alerts for a growing talent team.",
   },
   {
     title: "Talent Sourcer",

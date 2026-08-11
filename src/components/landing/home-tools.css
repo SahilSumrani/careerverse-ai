@@ -328,3 +328,53 @@
     min-height: 3.5rem;
   }
 }
+
+@media (max-width: 380px) {
+  .cv-tabs {
+    padding: 4.5rem 0 3.5rem;
+  }
+
+  .cv-tabs-head {
+    padding: 0 12px;
+  }
+
+  .cv-tabs-head .cv-section-title {
+    font-size: 1.35rem;
+    overflow-wrap: anywhere;
+  }
+
+  .cv-tabs-rail-wrap {
+    padding: 0 0.65rem;
+  }
+
+  .cv-tab-btn {
+    width: 2.85rem;
+    height: 2.85rem;
+    padding: 0.25rem;
+  }
+
+  .cv-tab-icon {
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+  }
+
+  .cv-tab-tip {
+    display: none;
+  }
+
+  .cv-tabs-panel {
+    padding: 0 0.75rem;
+  }
+
+  .cv-tabs-main {
+    padding: 1.35rem 1rem;
+  }
+
+  .cv-tabs-main h3 {
+    font-size: 1.05rem;
+  }
+
+  .cv-tabs-footer {
+    padding: 1rem;
+  }
+}

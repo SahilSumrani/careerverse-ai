@@ -127,7 +127,7 @@ export default function CommunityPage() {
     <div>
       <PageHeader
         title="Community"
-        description="Share career questions, interview notes, and product discussions. Demo posts are marked."
+        description="Share career questions, interview notes, and job-search tips. Demo posts are marked."
         actions={
           <Select value={category} onChange={(e) => setCategory(e.target.value)} className="w-44">
             <option value="">All categories</option>

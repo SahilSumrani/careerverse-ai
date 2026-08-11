@@ -185,7 +185,7 @@ export default function SignUpPage() {
             <span className="cv-auth-avatar">JS</span>
             <div>
               <strong>Jordan Singh</strong>
-              <span>Product designer · early career</span>
+              <span>UX designer · early career</span>
             </div>
           </div>
         </div>

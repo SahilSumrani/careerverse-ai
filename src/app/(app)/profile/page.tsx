@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseJsonArray } from "@/lib/utils";
@@ -44,6 +45,18 @@ export default async function ProfilePage() {
               <Badge key={r.roleId}>{r.role.name}</Badge>
             ))}
             {user.isDemo ? <Badge tone="warning">Demo account</Badge> : null}
+            <Link
+              href="/onboarding"
+              className="inline-flex h-9 items-center rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
+            >
+              Update profile
+            </Link>
+            <Link
+              href="/resume"
+              className="inline-flex h-9 items-center rounded-xl border border-border bg-card px-3 text-xs font-semibold"
+            >
+              Update resume
+            </Link>
           </div>
         }
       />

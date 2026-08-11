@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
 import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -7,6 +7,11 @@ import { CopilotWidget } from "@/components/career/copilot-widget";
 
 /** DB/auth-backed routes — never prerender at build (Vercel may lack DATABASE_URL). */
 export const dynamic = "force-dynamic";
+
+async function signOutAction() {
+  "use server";
+  await signOut({ redirectTo: "/" });
+}
 
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -28,10 +33,10 @@ export default async function PlatformLayout({ children }: { children: React.Rea
       <AppSidebar isAdmin={isAdmin} userName={session.user.name} userEmail={session.user.email} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopbar
-          title="CareerVerse"
           userName={session.user.name}
           userEmail={session.user.email}
           userImage={session.user.image}
+          signOutAction={signOutAction}
         />
         <main className="flex-1 px-4 py-6 pb-28 md:px-7 md:pb-8">{children}</main>
       </div>

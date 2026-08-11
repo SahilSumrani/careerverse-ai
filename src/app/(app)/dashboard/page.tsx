@@ -105,7 +105,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/opportunities"
+            href="/opportunities/browse"
             className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm"
           >
             Explore opportunities
@@ -203,7 +203,7 @@ export default async function DashboardPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold">Opportunities for you</h2>
-              <Link href="/opportunities" className="text-sm font-medium text-primary">
+              <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
                 See all
               </Link>
             </div>
@@ -249,7 +249,7 @@ export default async function DashboardPage() {
                   title="No matching opportunities yet"
                   description="Try adjusting filters or improving your profile."
                   action={
-                    <Link href="/opportunities" className="text-sm font-medium text-primary">
+                    <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
                       Explore Opportunities
                     </Link>
                   }
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
                 title="No applications"
                 description="Start tracking your career opportunities."
                 action={
-                  <Link href="/opportunities" className="text-sm font-medium text-primary">
+                  <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
                     Explore Opportunities
                   </Link>
                 }
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
               Add resume, skills, and clearer goals to improve matches.
             </p>
             <Link
-              href="/profile"
+              href="/onboarding"
               className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
             >
               Edit profile

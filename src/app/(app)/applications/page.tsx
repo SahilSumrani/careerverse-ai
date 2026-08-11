@@ -131,7 +131,7 @@ export default function ApplicationsPage() {
           title="No applications yet"
           description="Save opportunities to track prep, applications, interviews, and offers in one place."
           action={
-            <Link href="/opportunities">
+            <Link href="/opportunities/browse">
               <Button>Explore Opportunities</Button>
             </Link>
           }

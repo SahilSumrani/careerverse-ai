@@ -104,6 +104,64 @@
   color: #225aea;
 }
 
+.cv-mkt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.cv-mkt-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f5f8ff;
+  border: 1px solid #dbe6ff;
+  color: #225aea;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 380px) {
+  .cv-mkt-hero {
+    padding: 3.25rem 1rem 2.5rem;
+  }
+
+  .cv-mkt-hero h1 {
+    font-size: 1.65rem;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .cv-mkt-hero p {
+    font-size: 0.95rem;
+  }
+
+  .cv-mkt-ctas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cv-mkt-ctas .cv-btn-wrap {
+    width: 100%;
+  }
+
+  .cv-mkt-ctas .cv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cv-mkt-grid {
+    padding: 0 1rem 3.5rem;
+  }
+
+  .cv-mkt-card {
+    padding: 1.15rem 1rem;
+  }
+}
+
 .cv-mkt-band {
   max-width: 72rem;
   margin: 0 auto 4rem;

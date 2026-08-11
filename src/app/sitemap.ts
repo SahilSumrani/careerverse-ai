@@ -5,6 +5,7 @@ const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replac
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
     "",
+    "/jobs",
     "/opportunities",
     "/events",
     "/hiring-flow",

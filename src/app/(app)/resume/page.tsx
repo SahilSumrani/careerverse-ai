@@ -85,7 +85,7 @@ export default function ResumePage() {
               id="target-role"
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value)}
-              placeholder="e.g. Product Manager"
+              placeholder="e.g. Software Engineer"
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

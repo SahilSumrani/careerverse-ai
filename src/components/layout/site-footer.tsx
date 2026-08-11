@@ -36,13 +36,16 @@ export function SiteFooter() {
             </ul>
           </div>
           <div>
-            <p className="cv-site-footer-h">Product</p>
+            <p className="cv-site-footer-h">Platform</p>
             <ul>
               <li>
                 <Link href="/auth/signup">Start Free Trial</Link>
               </li>
               <li>
                 <Link href="/auth/signin">Sign in</Link>
+              </li>
+              <li>
+                <Link href="/jobs">Jobs</Link>
               </li>
               <li>
                 <Link href="/events">Events</Link>

@@ -14,7 +14,7 @@ export default async function RoadmapPage({
   const sp = await searchParams;
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
       <PageHeader
         title="Career Roadmap"
         description="Pick a role, generate a personalized plan from your profile, and check off milestones. Progress saves on this device."

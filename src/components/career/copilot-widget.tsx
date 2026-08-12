@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/states";
-import { Sparkles, X } from "lucide-react";
+import { Send, Sparkles, X } from "lucide-react";
+import "@/styles/cv-product.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -71,7 +71,7 @@ export function CopilotWidget() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-lg md:bottom-6"
+        className="fixed bottom-20 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-[0_10px_28px_rgba(34,90,234,0.28)] transition hover:brightness-105 md:bottom-6"
         aria-label="Open AI Career Copilot"
       >
         <Sparkles className="h-4 w-4" />
@@ -79,52 +79,53 @@ export function CopilotWidget() {
       </button>
       {open ? (
         <div className="fixed inset-x-3 bottom-24 z-50 md:inset-auto md:bottom-20 md:right-4 md:w-[380px]">
-          <Card className="flex h-[420px] flex-col overflow-hidden p-0 shadow-md">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <div>
-                <p className="text-sm font-semibold">AI Career Copilot</p>
-                <p className="text-xs text-muted-foreground">Uses your profile context when signed in</p>
+          <div className="cv-shell flex h-[420px] flex-col overflow-hidden shadow-lg">
+            <div className="cv-shell-inner flex h-full flex-col">
+              <div className="flex items-center justify-between border-b border-border bg-white/80 px-4 py-3 backdrop-blur-sm">
+                <div>
+                  <p className="text-sm font-semibold">AI Career Copilot</p>
+                  <p className="text-xs text-muted-foreground">Uses your profile when signed in</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Link href="/copilot" className="px-2 text-xs font-medium text-primary hover:underline">
+                    Full page
+                  </Link>
+                  <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close copilot">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <Link href="/copilot" className="px-2 text-xs font-medium text-primary hover:underline">
-                  Full page
-                </Link>
-                <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close copilot">
-                  <X className="h-4 w-4" />
+              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                {busy && log.length <= 1 ? <Skeleton className="h-14 w-full" /> : null}
+                {log.map((m, i) => (
+                  <div
+                    key={`${m.role}-${i}`}
+                    className={m.role === "assistant" ? "cv-msg cv-msg-assistant" : "cv-msg cv-msg-user"}
+                  >
+                    {m.content}
+                  </div>
+                ))}
+                {busy ? (
+                  <p className="text-xs text-muted-foreground">Thinking with your career context…</p>
+                ) : null}
+              </div>
+              <div className="cv-composer">
+                <Input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="What are my skill gaps?"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void send();
+                  }}
+                  aria-label="Copilot message"
+                  className="border-border bg-white"
+                />
+                <Button onClick={() => void send()} disabled={busy || !message.trim()} aria-label="Send">
+                  <Send className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-              {busy && log.length <= 1 ? <Skeleton className="h-14 w-full" /> : null}
-              {log.map((m, i) => (
-                <div
-                  key={`${m.role}-${i}`}
-                  className={
-                    m.role === "assistant"
-                      ? "whitespace-pre-wrap rounded-xl bg-muted px-3 py-2 text-sm"
-                      : "ml-8 whitespace-pre-wrap rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground"
-                  }
-                >
-                  {m.content}
-                </div>
-              ))}
-              {busy ? <p className="text-xs text-muted-foreground">Thinking with your career context…</p> : null}
-            </div>
-            <div className="flex gap-2 border-t border-border p-3">
-              <Input
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="What are my skill gaps?"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void send();
-                }}
-                aria-label="Copilot message"
-              />
-              <Button onClick={() => void send()} disabled={busy || !message.trim()}>
-                Send
-              </Button>
-            </div>
-          </Card>
+          </div>
         </div>
       ) : null}
     </>

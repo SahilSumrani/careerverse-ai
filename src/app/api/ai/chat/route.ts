@@ -1,5 +1,33 @@
 import { getCareerContext, jsonError, jsonOk, requireSession } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
+import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
+
+/** Light per-user daily Copilot message cap (Firestore counter). */
+const DAILY_CHAT_CAP = 40;
+
+async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remaining: number }> {
+  if (!hasFirebaseAdminCredentials()) {
+    // ponytail: no Admin → skip quota; enforce when Firestore is available
+    return { ok: true, remaining: DAILY_CHAT_CAP };
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  const ref = getAdminDb().collection("users").doc(userId).collection("rateLimits").doc("aiChat");
+  try {
+    const result = await getAdminDb().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const data = snap.data() || {};
+      const count = data.day === day ? Number(data.count || 0) : 0;
+      if (count >= DAILY_CHAT_CAP) {
+        return { ok: false, remaining: 0 };
+      }
+      tx.set(ref, { day, count: count + 1, updatedAt: new Date().toISOString() }, { merge: true });
+      return { ok: true, remaining: DAILY_CHAT_CAP - count - 1 };
+    });
+    return result;
+  } catch {
+    return { ok: true, remaining: DAILY_CHAT_CAP };
+  }
+}
 
 /** AI chat grounded in Firestore profile (+ heuristics when AI_API_KEY is unset). */
 export async function POST(req: Request) {
@@ -12,6 +40,15 @@ export async function POST(req: Request) {
     };
     const message = (body.message || body.prefill || "").trim();
     if (!message) return jsonError("Message required", 400);
+
+    const quota = await consumeChatQuota(session.user.id);
+    if (!quota.ok) {
+      return jsonError(
+        `Daily Copilot limit reached (${DAILY_CHAT_CAP}/day). Come back tomorrow, or use Roadmaps / Career Intelligence meanwhile.`,
+        429,
+        { remaining: 0, limit: DAILY_CHAT_CAP },
+      );
+    }
 
     const history = Array.isArray(body.history)
       ? body.history
@@ -32,7 +69,11 @@ export async function POST(req: Request) {
       history,
       ctx: ctx ?? undefined,
     });
-    return jsonOk({ reply: result.reply, usedProfile: Boolean(ctx) });
+    return jsonOk({
+      reply: result.reply,
+      usedProfile: Boolean(ctx),
+      remaining: quota.remaining,
+    });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);

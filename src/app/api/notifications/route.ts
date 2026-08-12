@@ -1,3 +1,4 @@
+import type { DocumentReference } from "firebase-admin/firestore";
 import { jsonError, jsonOk, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 
@@ -13,51 +14,87 @@ type Notif = {
   userId?: string;
 };
 
+/** Legacy seed payloads written by seedIfEmpty — never surface these. */
+function isSeedOrDemoNotif(id: string, data: Record<string, unknown>): boolean {
+  if (data.isDemo === true) return true;
+  if (id.startsWith("seed-notif") || id.startsWith("demo-notif") || id.startsWith("demo-")) return true;
+  const title = String(data.title || "");
+  const body = String(data.body || "");
+  if (/^new job match\b/i.test(title) && /junior frontend/i.test(`${title} ${body}`)) return true;
+  if (/^resume uploaded$/i.test(title) && /resume intelligence/i.test(body)) return true;
+  if (/^onboarding complete$/i.test(title) && /career intelligence and matching/i.test(body)) return true;
+  return false;
+}
+
+function mapDoc(id: string, data: Record<string, unknown>, userId: string): Notif | null {
+  if (isSeedOrDemoNotif(id, data)) return null;
+  return {
+    id,
+    type: String(data.type || "SYSTEM"),
+    title: String(data.title || "Notification"),
+    body: String(data.body || ""),
+    href: data.href ? String(data.href) : undefined,
+    read: Boolean(data.read),
+    createdAt: String(data.createdAt || new Date().toISOString()),
+    userId,
+    isDemo: false,
+  };
+}
+
+/** Best-effort delete of leftover seed docs so they disappear permanently. */
+async function purgeSeedDocs(refs: DocumentReference[]) {
+  if (!refs.length || !hasFirebaseAdminCredentials()) return;
+  try {
+    const batch = getAdminDb().batch();
+    refs.slice(0, 40).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  } catch {
+    // non-blocking
+  }
+}
+
 async function listForUser(userId: string): Promise<Notif[]> {
   if (!hasFirebaseAdminCredentials()) return [];
   try {
-    // Prefer subcollection users/{uid}/notifications
-    const sub = await getAdminDb()
+    const db = getAdminDb();
+    const sub = await db
       .collection("users")
       .doc(userId)
       .collection("notifications")
       .orderBy("createdAt", "desc")
-      .limit(30)
+      .limit(40)
       .get();
+
     if (!sub.empty) {
-      return sub.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          type: String(data.type || "SYSTEM"),
-          title: String(data.title || "Notification"),
-          body: String(data.body || ""),
-          href: data.href ? String(data.href) : undefined,
-          read: Boolean(data.read),
-          createdAt: String(data.createdAt || new Date().toISOString()),
-          userId,
-        };
-      });
+      const purge: DocumentReference[] = [];
+      const items = sub.docs
+        .map((d) => {
+          const data = d.data() as Record<string, unknown>;
+          if (isSeedOrDemoNotif(d.id, data)) {
+            purge.push(d.ref);
+            return null;
+          }
+          return mapDoc(d.id, data, userId);
+        })
+        .filter(Boolean) as Notif[];
+      void purgeSeedDocs(purge);
+      return items;
     }
 
-    const top = await getAdminDb()
-      .collection("notifications")
-      .where("userId", "==", userId)
-      .limit(30)
-      .get();
-    return top.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        type: String(data.type || "SYSTEM"),
-        title: String(data.title || "Notification"),
-        body: String(data.body || ""),
-        href: data.href ? String(data.href) : undefined,
-        read: Boolean(data.read),
-        createdAt: String(data.createdAt || new Date().toISOString()),
-        userId,
-      };
-    });
+    const top = await db.collection("notifications").where("userId", "==", userId).limit(40).get();
+    const purge: DocumentReference[] = [];
+    const items = top.docs
+      .map((d) => {
+        const data = d.data() as Record<string, unknown>;
+        if (isSeedOrDemoNotif(d.id, data)) {
+          purge.push(d.ref);
+          return null;
+        }
+        return mapDoc(d.id, data, userId);
+      })
+      .filter(Boolean) as Notif[];
+    void purgeSeedDocs(purge);
+    return items;
   } catch {
     return [];
   }
@@ -101,8 +138,11 @@ export async function PATCH(req: Request) {
     }
 
     if (!id) return jsonError("Notification id required", 400);
+    if (id.startsWith("seed-notif") || id.startsWith("demo-")) {
+      await sub.doc(id).delete().catch(() => undefined);
+      return jsonOk({ ok: true });
+    }
     await sub.doc(id).set({ read: true }, { merge: true });
-    // Also try top-level collection
     try {
       await getAdminDb().collection("notifications").doc(id).set({ read: true }, { merge: true });
     } catch {

@@ -139,7 +139,7 @@ export function EventsBrowseClient({ items }: { items: EventItem[] }) {
       ) : (
         <EmptyState
           title="No events match these filters"
-          description="Try another type, or show all dates. Demo events seed automatically when Firestore is empty."
+          description="Try another type, or show all dates. Events load from Firestore only."
           action={
             <Button
               variant="outline"

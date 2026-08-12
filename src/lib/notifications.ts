@@ -17,6 +17,7 @@ export async function createNotification(input: {
     if (!hasFirebaseAdminCredentials()) return { id: "local", ...input };
     const ref = await getAdminDb().collection("notifications").add({
       ...input,
+      isDemo: false,
       read: false,
       createdAt: new Date().toISOString(),
     });

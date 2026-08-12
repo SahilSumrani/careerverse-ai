@@ -19,7 +19,8 @@ export function CopilotWidget() {
   const [log, setLog] = useState<Msg[]>([
     {
       role: "assistant",
-      content: "Ask about career fit, skill gaps, opportunities, resume improvements, or what to do this week.",
+      content:
+        "Career/resume coach only — ask about skill gaps, target roles, interviews, or what to do this week. Off-topic questions get a short redirect.",
     },
   ]);
 
@@ -50,7 +51,13 @@ export function CopilotWidget() {
       const data = await res.json();
       setLog((prev) => [
         ...prev,
-        { role: "assistant", content: data.reply || data.error || "Unavailable right now." },
+        {
+          role: "assistant",
+          content:
+            res.status === 429
+              ? data.error || "Daily Copilot limit reached. Try again tomorrow."
+              : data.reply || data.error || "Unavailable right now.",
+        },
       ]);
     } catch {
       setLog((prev) => [...prev, { role: "assistant", content: "Copilot is temporarily unavailable." }]);

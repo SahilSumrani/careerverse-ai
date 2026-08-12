@@ -7,6 +7,7 @@ import { Bell, CalendarDays } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/states";
+import { createSoftCache } from "@/lib/client-cache";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Overview",
@@ -43,6 +44,9 @@ type Notif = {
   isDemo?: boolean;
 };
 
+type NotifCache = { items: Notif[]; unread: number };
+const notifCache = createSoftCache<NotifCache>();
+
 export function AppTopbar({
   userName,
   userEmail,
@@ -62,19 +66,26 @@ export function AppTopbar({
     year: "numeric",
   });
   const [open, setOpen] = useState(false);
+  const cached = notifCache.peek();
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<Notif[]>([]);
-  const [unread, setUnread] = useState(0);
+  const [items, setItems] = useState<Notif[]>(cached?.items ?? []);
+  const [unread, setUnread] = useState(cached?.unread ?? 0);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? notifCache.has();
+    if (!soft) setLoading(true);
     try {
       const res = await fetch("/api/notifications");
       const data = await res.json();
       if (res.ok) {
-        setItems(data.items || []);
-        setUnread(data.unread ?? (data.items || []).filter((n: Notif) => !n.read).length);
+        const next: NotifCache = {
+          items: (data.items || []).filter((n: Notif) => !n.isDemo && !n.id.startsWith("seed-notif")),
+          unread: data.unread ?? 0,
+        };
+        setItems(next.items);
+        setUnread(next.unread);
+        notifCache.set(next);
       }
     } finally {
       setLoading(false);
@@ -82,7 +93,7 @@ export function AppTopbar({
   }, []);
 
   useEffect(() => {
-    void load();
+    void load({ soft: notifCache.has() });
   }, [load]);
 
   useEffect(() => {
@@ -94,7 +105,11 @@ export function AppTopbar({
   }, [open]);
 
   async function markRead(id: string) {
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setItems((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      notifCache.set({ items: next, unread: Math.max(0, unread - 1) });
+      return next;
+    });
     setUnread((u) => Math.max(0, u - 1));
     await fetch("/api/notifications", {
       method: "PATCH",
@@ -104,7 +119,11 @@ export function AppTopbar({
   }
 
   async function markAll() {
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setItems((prev) => {
+      const next = prev.map((n) => ({ ...n, read: true }));
+      notifCache.set({ items: next, unread: 0 });
+      return next;
+    });
     setUnread(0);
     await fetch("/api/notifications", {
       method: "PATCH",
@@ -128,7 +147,7 @@ export function AppTopbar({
             type="button"
             onClick={() => {
               setOpen((v) => !v);
-              if (!open) void load();
+              if (!open) void load({ soft: true });
             }}
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground"
             aria-label="Notifications"
@@ -150,7 +169,7 @@ export function AppTopbar({
                 </Button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {loading ? (
+                {loading && !items.length ? (
                   <div className="space-y-2 p-3">
                     <Skeleton className="h-12 w-full" />
                     <Skeleton className="h-12 w-full" />
@@ -187,7 +206,6 @@ export function AppTopbar({
                                 Mark read
                               </button>
                             ) : null}
-                            {n.isDemo ? <span className="text-[10px] text-muted-foreground">Demo</span> : null}
                           </div>
                         </div>
                         {!n.read ? <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" /> : null}

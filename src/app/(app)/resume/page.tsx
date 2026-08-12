@@ -6,6 +6,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { createSoftCache } from "@/lib/client-cache";
 
 type ResumeAnalysis = {
   disclaimer: string;
@@ -55,20 +56,31 @@ function looksBrokenStorageUrl(url: string | null | undefined) {
   return u.includes("/tmp/") || u.includes("/careerverse-uploads/");
 }
 
+type ResumeCache = {
+  resumes: ResumeMeta[];
+  analysis: ResumeAnalysis | null;
+  fileName: string;
+  previewUrl: string | null;
+  fileUnavailable: string | null;
+};
+const resumeCache = createSoftCache<ResumeCache>();
+
 export default function ResumePage() {
+  const cached = resumeCache.peek();
   const [file, setFile] = useState<File | null>(null);
   const [targetRole, setTargetRole] = useState("");
   const [busy, setBusy] = useState(false);
-  const [loadingMeta, setLoadingMeta] = useState(true);
+  const [loadingMeta, setLoadingMeta] = useState(!cached);
   const [error, setError] = useState("");
-  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
-  const [fileName, setFileName] = useState("");
-  const [resumes, setResumes] = useState<ResumeMeta[]>([]);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [fileUnavailable, setFileUnavailable] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(cached?.analysis ?? null);
+  const [fileName, setFileName] = useState(cached?.fileName ?? "");
+  const [resumes, setResumes] = useState<ResumeMeta[]>(cached?.resumes ?? []);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(cached?.previewUrl ?? null);
+  const [fileUnavailable, setFileUnavailable] = useState<string | null>(cached?.fileUnavailable ?? null);
 
-  const loadResumes = useCallback(async () => {
-    setLoadingMeta(true);
+  const loadResumes = useCallback(async (opts?: { soft?: boolean }) => {
+    const soft = opts?.soft ?? resumeCache.has();
+    if (!soft) setLoadingMeta(true);
     setFileUnavailable(null);
     try {
       const res = await fetch("/api/resume");
@@ -76,22 +88,29 @@ export default function ResumePage() {
       if (!res.ok) return;
       const list: ResumeMeta[] = data.resumes || [];
       setResumes(list);
+      let nextAnalysis: ResumeAnalysis | null = null;
+      let nextFileName = "";
+      let nextPreview: string | null = null;
+      let nextUnavailable: string | null = null;
       const latest = list[0];
       if (latest) {
+        nextFileName = latest.fileName;
         setFileName(latest.fileName);
         const last = latest.analyses?.[latest.analyses.length - 1];
         if (last?.resultJson) {
           try {
-            setAnalysis(JSON.parse(last.resultJson) as ResumeAnalysis);
+            nextAnalysis = JSON.parse(last.resultJson) as ResumeAnalysis;
+            setAnalysis(nextAnalysis);
           } catch {
             // ignore
           }
         }
 
-        // Never open legacy Storage links that embed /tmp object paths
         if (looksBrokenStorageUrl(latest.storageUrl) || looksLikeLocalPath(latest.storagePath)) {
+          nextPreview = null;
           setPreviewUrl(null);
         } else if (latest.storageUrl?.startsWith("http")) {
+          nextPreview = latest.storageUrl;
           setPreviewUrl(latest.storageUrl);
         } else {
           setPreviewUrl(null);
@@ -101,12 +120,14 @@ export default function ResumePage() {
         const signedData = await signed.json();
         if (signed.ok) {
           if (signedData.unavailable) {
-            setPreviewUrl(null);
-            setFileUnavailable(
+            nextPreview = null;
+            nextUnavailable =
               signedData.reason ||
-                "This resume file is no longer available. Please re-upload a PDF or DOCX.",
-            );
+              "This resume file is no longer available. Please re-upload a PDF or DOCX.";
+            setPreviewUrl(null);
+            setFileUnavailable(nextUnavailable);
           } else if (signedData.url) {
+            nextPreview = signedData.url;
             setPreviewUrl(signedData.url);
             setFileUnavailable(null);
           }
@@ -114,13 +135,20 @@ export default function ResumePage() {
       } else {
         setPreviewUrl(null);
       }
+      resumeCache.set({
+        resumes: list,
+        analysis: nextAnalysis,
+        fileName: nextFileName,
+        previewUrl: nextPreview,
+        fileUnavailable: nextUnavailable,
+      });
     } finally {
       setLoadingMeta(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadResumes();
+    void loadResumes({ soft: resumeCache.has() });
   }, [loadResumes]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -229,7 +257,7 @@ export default function ResumePage() {
             </div>
           </CardHeader>
 
-          {loadingMeta ? (
+          {loadingMeta && !resumes.length && !analysis ? (
             <Skeleton className="h-72 w-full" />
           ) : fileUnavailable ? (
             <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">

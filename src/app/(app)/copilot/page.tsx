@@ -18,7 +18,7 @@ const STARTERS = [
 ];
 
 const GREETING =
-  "Hi — I’m CareerVerse Copilot. Ask about career fit, skill gaps, opportunities, resume improvements, interview prep, or what to do this week. I’ll use your profile context when available.";
+  "Hi — I’m CareerVerse Copilot. I only help with careers, resumes, skills, interviews, and job search using your profile. Ask what to do today or this week.";
 
 function CopilotInner() {
   const searchParams = useSearchParams();
@@ -53,7 +53,13 @@ function CopilotInner() {
       const data = await res.json();
       setLog((prev) => [
         ...prev,
-        { role: "assistant", content: data.reply || data.error || "Copilot is unavailable right now." },
+        {
+          role: "assistant",
+          content:
+            res.status === 429
+              ? data.error || "Daily Copilot limit reached. Try again tomorrow."
+              : data.reply || data.error || "Copilot is unavailable right now.",
+        },
       ]);
     } catch {
       setLog((prev) => [...prev, { role: "assistant", content: "Copilot is temporarily unavailable." }]);

@@ -1235,6 +1235,30 @@ class CareerVerseAIService implements AIService {
             careerStage: ctx?.careerStage ?? null,
           }).map((m) => m.title);
 
+    const offTopic = (() => {
+      const q = norm(input.message);
+      const careerHit =
+        /\b(career|job|jobs|resume|cv|interview|skill|skills|gap|gaps|internship|intern|apply|application|applications|mentor|roadmap|profile|portfolio|linkedin|github|offer|salary|role|roles|hiring|ats|cover\s*letter|network|networking|opportunity|opportunities|work|employer|recruiter|experience|goal|goals|onboarding|copilot|hire|hired|promotion|layoff|freelance|startup|college|degree|project|projects|leetcode|dsa|system\s*design|behavioral|star\s*stor)\b/.test(
+          q,
+        );
+      const pureDefn = /^(what\s+is|who\s+is|define|explain|tell\s+me\s+about)\b/.test(q) && !careerHit;
+      const encyclo =
+        /\b(capital of|weather|recipe|movie|lyrics|joke|homework|math problem|translate|news today)\b/.test(q);
+      if (encyclo || pureDefn) return true;
+      return false;
+    })();
+
+    if (offTopic) {
+      const skillHint = skills.slice(0, 4).join(", ") || "your listed skills";
+      const pathHint = topPaths[0] || "your target role";
+      return {
+        reply: [
+          "I’m CareerVerse Copilot — I only help with careers, resumes, skills, interviews, and job search.",
+          `Want a career angle instead? Ask how this connects to ${pathHint}, how to show ${skillHint} on your resume, or what to do today/this week toward that path.`,
+        ].join("\n"),
+      };
+    }
+
     const heuristicReply = (() => {
       const q = norm(input.message);
       const skillList = skills.length ? skills.slice(0, 8).join(", ") : "none listed yet";
@@ -1254,7 +1278,7 @@ class CareerVerseAIService implements AIService {
           `• Skills you already have: ${skillList}`,
           `• Priority skill gaps: ${gapList}`,
           skillGaps[0]
-            ? `This week: pick one gap (“${skillGaps[0]}”), ship a small project or certificate proof, then add it on Profile and re-run Career Intelligence.`
+            ? `Today/this week: pick one gap (“${skillGaps[0]}”), ship a small project or certificate proof, then add it on Profile and re-run Career Intelligence.`
             : "Add more skills and goals on Profile, then regenerate Career Intelligence so I can name concrete gaps.",
           "Want me to draft a 7-day plan for the top gap, or open Roadmaps for that path?",
         ].join("\n");
@@ -1269,9 +1293,9 @@ class CareerVerseAIService implements AIService {
         return `Upload/analyze under Resume Intelligence for a target role. With skills (${skillList}), emphasize truthful keywords and quantified outcomes. Re-upload after edits.`;
       }
 
-      if (/\b(this week|next steps?|what should i do|plan)\b/.test(q)) {
+      if (/\b(this week|today|next steps?|what should i do|plan)\b/.test(q)) {
         return [
-          "This week (profile-aware):",
+          "Today / this week (profile-aware):",
           `1) Close one gap${skillGaps[0] ? `: ${skillGaps[0]}` : ""} with a tiny public artifact.`,
           "2) Tailor resume for one target role and re-analyze.",
           "3) Save 3 matched opportunities in Applications.",
@@ -1293,10 +1317,11 @@ class CareerVerseAIService implements AIService {
 
     const raw = await callOpenAICompatible(
       [
-        "You are CareerVerse Copilot, a concise career coach.",
-        "Answer the user's latest message directly using the provided profile context.",
-        "Never invent credentials. Never reply with a generic greeting or capability list if the user asked a specific question.",
-        "If they ask about skill gaps, list concrete gaps from context.skillGaps (or infer from skills vs topPaths).",
+        "You are CareerVerse Copilot — career/resume/job-seeker coach ONLY.",
+        "Refuse off-topic questions (general encyclopedia, homework, weather, entertainment) politely in 1–2 sentences and redirect to career/resume/skills/interview/job-search.",
+        "Ground answers in the provided profile context (skills, gaps, goals, topPaths, experience). Never invent credentials.",
+        "Prefer concrete today/this-week actions when advising next steps.",
+        "Never reply with a generic greeting or capability list if the user asked a specific in-scope question.",
         'Return JSON only: {"reply":"..."}',
       ].join(" "),
       JSON.stringify({
@@ -1313,6 +1338,7 @@ class CareerVerseAIService implements AIService {
               stage: ctx.careerStage,
               careerScore: ctx.careerScore,
               experienceSummary: ctx.experienceSummary?.slice(0, 500),
+              resumeExcerpt: ctx.resumeText?.slice(0, 800) || null,
             }
           : null,
         heuristicHint: heuristicReply,

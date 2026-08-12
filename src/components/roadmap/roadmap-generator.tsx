@@ -17,6 +17,7 @@ type AiStage = { key: string; title: string; items: string[] };
 type ProgressMap = Record<string, boolean>;
 
 const progressCache = createSoftCache<Record<string, ProgressMap>>(Infinity);
+const careersCache = createSoftCache<{ careers: CareerOption[]; suggested: string[] }>();
 
 function storageKey(roleId: string) {
   return `cv-roadmap-progress:${roleId}`;
@@ -55,9 +56,10 @@ export function RoadmapGenerator({
   careers?: CareerOption[];
   initialTitle?: string;
 }) {
-  const [careers, setCareers] = useState<CareerOption[]>(careersProp ?? []);
-  const [suggested, setSuggested] = useState<string[]>([]);
-  const [loadingCareers, setLoadingCareers] = useState(!careersProp?.length);
+  const cachedCareers = careersCache.peek();
+  const [careers, setCareers] = useState<CareerOption[]>(careersProp ?? cachedCareers?.careers ?? []);
+  const [suggested, setSuggested] = useState<string[]>(cachedCareers?.suggested ?? []);
+  const [loadingCareers, setLoadingCareers] = useState(!(careersProp?.length || cachedCareers?.careers?.length));
   const [customTitle, setCustomTitle] = useState("");
   const [roleId, setRoleId] = useState("");
   const [progress, setProgress] = useState<ProgressMap>({});
@@ -73,13 +75,25 @@ export function RoadmapGenerator({
       setLoadingCareers(false);
       return;
     }
-    setLoadingCareers(true);
+    if (careersCache.has()) {
+      const hit = careersCache.peek();
+      if (hit?.careers?.length) {
+        setCareers(hit.careers);
+        setSuggested(hit.suggested || []);
+        setLoadingCareers(false);
+      }
+    } else {
+      setLoadingCareers(true);
+    }
     try {
       const res = await fetch("/api/roadmap");
       const data = await res.json();
       if (res.ok) {
-        setCareers((data.careers || []) as CareerOption[]);
-        setSuggested(Array.isArray(data.suggested) ? data.suggested.map(String) : []);
+        const nextCareers = (data.careers || []) as CareerOption[];
+        const nextSuggested = Array.isArray(data.suggested) ? data.suggested.map(String) : [];
+        setCareers(nextCareers);
+        setSuggested(nextSuggested);
+        careersCache.set({ careers: nextCareers, suggested: nextSuggested });
       }
     } catch {
       // empty list + honest empty state

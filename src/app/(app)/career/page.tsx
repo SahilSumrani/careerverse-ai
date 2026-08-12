@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader, Skeleton } from "@/components/ui/states";
 import { ChevronDown, ChevronUp, Route, Sparkles } from "lucide-react";
+import { createSoftCache } from "@/lib/client-cache";
 
 type Analysis = {
   disclaimer: string;
@@ -25,15 +26,22 @@ type Analysis = {
   recommendedActions: string[];
 };
 
+const careerCache = createSoftCache<Analysis>();
+
 function CareerIntelligenceInner() {
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [busy, setBusy] = useState(true);
+  const cached = careerCache.peek();
+  const [analysis, setAnalysis] = useState<Analysis | null>(cached ?? null);
+  const [busy, setBusy] = useState(!cached);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [savedGaps, setSavedGaps] = useState<string[]>([]);
 
-  async function load(generate = false) {
-    setBusy(true);
+  const load = useCallback(async (generate = false) => {
+    if (!generate && careerCache.has()) {
+      // soft refresh — keep UI, no skeleton flash
+    } else {
+      setBusy(true);
+    }
     setError("");
     try {
       const res = await fetch("/api/career/analyze", { method: generate ? "POST" : "GET" });
@@ -46,6 +54,7 @@ function CareerIntelligenceInner() {
         data.analysis ||
         (data.profile?.careerAnalysisJson ? JSON.parse(data.profile.careerAnalysisJson) : null);
       setAnalysis(next);
+      if (next) careerCache.set(next);
       if (next?.suitablePaths?.[0]?.title) {
         setExpanded({ [next.suitablePaths[0].title]: true });
       }
@@ -54,7 +63,7 @@ function CareerIntelligenceInner() {
     } finally {
       setBusy(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load(false);
@@ -64,7 +73,7 @@ function CareerIntelligenceInner() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [load]);
 
   const gapQuery = useMemo(() => {
     const gaps = analysis?.skillGaps?.slice(0, 4) || [];

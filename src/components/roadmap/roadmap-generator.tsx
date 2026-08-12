@@ -1,21 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/avatar";
-import { CAREER_ROADMAP_ROLES, type CareerRoadmapRole } from "@/data/career-roadmaps";
+import { Input } from "@/components/ui/input";
+import { EmptyState, Skeleton } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
 import { createSoftCache } from "@/lib/client-cache";
 
+type CareerOption = { id: string; title: string; skills?: string[] };
+type AiStage = { key: string; title: string; items: string[] };
 type ProgressMap = Record<string, boolean>;
 
 const progressCache = createSoftCache<Record<string, ProgressMap>>(Infinity);
 
 function storageKey(roleId: string) {
   return `cv-roadmap-progress:${roleId}`;
+}
+
+function itemId(stageKey: string, item: string, index: number) {
+  return `${stageKey}:${index}:${item.slice(0, 40)}`;
 }
 
 function loadProgress(roleId: string): ProgressMap {
@@ -41,50 +49,94 @@ function saveProgress(roleId: string, map: ProgressMap) {
 }
 
 export function RoadmapGenerator({
-  careers,
+  careers: careersProp,
   initialTitle,
 }: {
-  careers?: Array<{ id: string; title: string; isDemo?: boolean }>;
+  careers?: CareerOption[];
   initialTitle?: string;
 }) {
-  const roles = CAREER_ROADMAP_ROLES;
-  const categories = useMemo(
-    () => Array.from(new Set(roles.map((r) => r.category))),
-    [roles],
-  );
-
-  const initial =
-    (initialTitle && roles.find((r) => r.title.toLowerCase() === initialTitle.toLowerCase())) ||
-    roles.find((r) => r.id === "frontend") ||
-    roles[0];
-
-  const [category, setCategory] = useState(initial.category);
-  const [roleId, setRoleId] = useState(initial.id);
+  const [careers, setCareers] = useState<CareerOption[]>(careersProp ?? []);
+  const [suggested, setSuggested] = useState<string[]>([]);
+  const [loadingCareers, setLoadingCareers] = useState(!careersProp?.length);
+  const [customTitle, setCustomTitle] = useState("");
+  const [roleId, setRoleId] = useState("");
   const [progress, setProgress] = useState<ProgressMap>({});
-  const [openStage, setOpenStage] = useState<string | null>(initial.stages[0]?.id ?? null);
+  const [openStage, setOpenStage] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [aiStages, setAiStages] = useState<Array<{ key: string; title: string; items: string[] }> | null>(
-    null,
-  );
+  const [stages, setStages] = useState<AiStage[] | null>(null);
+  const [goal, setGoal] = useState("");
 
-  const role: CareerRoadmapRole =
-    roles.find((r) => r.id === roleId) || roles.find((r) => r.category === category) || roles[0];
-
-  const filtered = roles.filter((r) => (category ? r.category === category : true));
+  const loadCareers = useCallback(async () => {
+    if (careersProp?.length) {
+      setCareers(careersProp);
+      setLoadingCareers(false);
+      return;
+    }
+    setLoadingCareers(true);
+    try {
+      const res = await fetch("/api/roadmap");
+      const data = await res.json();
+      if (res.ok) {
+        setCareers((data.careers || []) as CareerOption[]);
+        setSuggested(Array.isArray(data.suggested) ? data.suggested.map(String) : []);
+      }
+    } catch {
+      // empty list + honest empty state
+    } finally {
+      setLoadingCareers(false);
+    }
+  }, [careersProp]);
 
   useEffect(() => {
-    setProgress(loadProgress(role.id));
-    setOpenStage(role.stages[0]?.id ?? null);
-    setAiStages(null);
-    setAiError("");
-  }, [role.id]);
+    void loadCareers();
+  }, [loadCareers]);
 
-  const allMilestoneIds = role.stages.flatMap((s) => s.milestones.map((m) => m.id));
-  const doneCount = allMilestoneIds.filter((id) => progress[id]).length;
-  const pct = allMilestoneIds.length ? Math.round((doneCount / allMilestoneIds.length) * 100) : 0;
+  const role = useMemo(() => {
+    if (roleId === "custom" && customTitle.trim()) {
+      return { id: "custom", title: customTitle.trim(), skills: [] as string[] };
+    }
+    return careers.find((c) => c.id === roleId) || null;
+  }, [careers, roleId, customTitle]);
+
+  useEffect(() => {
+    if (!careers.length || roleId) return;
+    const fromQuery =
+      initialTitle &&
+      careers.find((c) => c.title.toLowerCase() === initialTitle.toLowerCase());
+    if (fromQuery) {
+      setRoleId(fromQuery.id);
+      return;
+    }
+    if (initialTitle?.trim()) {
+      setCustomTitle(initialTitle.trim());
+      setRoleId("custom");
+      return;
+    }
+    const fromSuggested = suggested[0]
+      ? careers.find((c) => c.title.toLowerCase() === suggested[0].toLowerCase())
+      : undefined;
+    setRoleId(fromSuggested?.id || careers[0]?.id || "");
+  }, [careers, initialTitle, roleId, suggested]);
+
+  useEffect(() => {
+    if (!role) return;
+    setProgress(loadProgress(role.id));
+    setStages(null);
+    setGoal("");
+    setAiError("");
+    setOpenStage(null);
+  }, [role?.id, role?.title]);
+
+  const allItemIds = useMemo(() => {
+    if (!stages) return [];
+    return stages.flatMap((s) => s.items.map((item, i) => itemId(s.key, item, i)));
+  }, [stages]);
+  const doneCount = allItemIds.filter((id) => progress[id]).length;
+  const pct = allItemIds.length ? Math.round((doneCount / allItemIds.length) * 100) : 0;
 
   function toggle(id: string) {
+    if (!role) return;
     setProgress((prev) => {
       const next = { ...prev, [id]: !prev[id] };
       saveProgress(role.id, next);
@@ -93,6 +145,10 @@ export function RoadmapGenerator({
   }
 
   async function generateAi() {
+    if (!role?.title) {
+      setAiError("Pick or enter a career title first");
+      return;
+    }
     setAiBusy(true);
     setAiError("");
     try {
@@ -115,12 +171,25 @@ export function RoadmapGenerator({
         setAiError(data.error || "Unable to generate personalized roadmap");
         return;
       }
-      setAiStages(data.result?.stages || null);
+      const nextStages = (data.result?.stages || []) as AiStage[];
+      setStages(nextStages.length ? nextStages : null);
+      setGoal(String(data.result?.goal || role.title));
+      setOpenStage(nextStages[0]?.key ?? null);
+      if (!nextStages.length) setAiError("No stages returned — try again or pick another role");
     } catch {
       setAiError("Unable to generate personalized roadmap");
     } finally {
       setAiBusy(false);
     }
+  }
+
+  if (loadingCareers) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -129,181 +198,214 @@ export function RoadmapGenerator({
         <div className="hero-soft border-b border-border px-5 py-5 md:px-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-primary">Interactive career roadmap</p>
-              <h2 className="mt-1 font-display text-2xl tracking-tight md:text-3xl">{role.title}</h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{role.blurb}</p>
+              <p className="text-sm font-medium text-primary">Personalized career roadmap</p>
+              <h2 className="mt-1 font-display text-2xl tracking-tight md:text-3xl">
+                {goal || role?.title || "Choose a target role"}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Stages are generated from your CareerVerse profile and AI — not canned demo paths.
+              </p>
             </div>
-            <Badge tone="accent">{pct}% complete</Badge>
+            {stages ? <Badge tone="accent">{pct}% complete</Badge> : null}
           </div>
-          <Progress value={pct} className="mt-4 h-2.5" />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {doneCount} of {allMilestoneIds.length} milestones checked · progress saves on this device
-          </p>
+          {stages ? (
+            <>
+              <Progress value={pct} className="mt-4 h-2.5" />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {doneCount} of {allItemIds.length} milestones checked · progress saves on this device
+              </p>
+            </>
+          ) : null}
         </div>
 
         <div className="space-y-4 p-5 md:p-6">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Category
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => {
-                    setCategory(c);
-                    const next = roles.find((r) => r.category === c);
-                    if (next) setRoleId(next.id);
-                  }}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                    category === c
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card hover:border-primary/40",
-                  )}
-                >
-                  {c}
-                </button>
-              ))}
+          {suggested.length ? (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                From your career intelligence
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {suggested.map((title) => {
+                  const match = careers.find((c) => c.title.toLowerCase() === title.toLowerCase());
+                  return (
+                    <button
+                      key={title}
+                      type="button"
+                      onClick={() => {
+                        if (match) setRoleId(match.id);
+                        else {
+                          setCustomTitle(title);
+                          setRoleId("custom");
+                        }
+                      }}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                        (match ? roleId === match.id : roleId === "custom" && customTitle === title)
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card hover:border-primary/40",
+                      )}
+                    >
+                      {title}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Role ({filtered.length}
-              {careers?.length ? "" : ""})
+              Target role ({careers.length})
             </p>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  onClick={() => setRoleId(r.id)}
-                  className={cn(
-                    "rounded-2xl border px-3 py-3 text-left transition",
-                    roleId === r.id
-                      ? "border-primary bg-accent/50 shadow-sm"
-                      : "border-border bg-card hover:border-primary/35",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
+            {careers.length ? (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {careers.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRoleId(r.id)}
+                    className={cn(
+                      "rounded-2xl border px-3 py-3 text-left transition",
+                      roleId === r.id
+                        ? "border-primary bg-accent/50 shadow-sm"
+                        : "border-border bg-card hover:border-primary/35",
+                    )}
+                  >
                     <span className="text-sm font-semibold">{r.title}</span>
-                    {r.isDemo ? <Badge tone="warning">Demo</Badge> : null}
-                  </span>
-                  <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">{r.blurb}</span>
-                </button>
-              ))}
-            </div>
+                    {r.skills?.length ? (
+                      <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
+                        {r.skills.slice(0, 4).join(" · ")}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                title="No catalog roles available"
+                description="Enter a custom career title below, or complete Career Intelligence for suggestions."
+              />
+            )}
           </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Or custom title
+              </label>
+              <Input
+                value={customTitle}
+                onChange={(e) => {
+                  setCustomTitle(e.target.value);
+                  setRoleId("custom");
+                }}
+                placeholder="e.g. Platform Engineer"
+              />
+            </div>
+            <Button onClick={() => void generateAi()} disabled={aiBusy || !role?.title}>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              {aiBusy ? "Generating…" : stages ? "Regenerate roadmap" : "Generate AI roadmap"}
+            </Button>
+          </div>
+          {aiError ? <p className="text-sm text-destructive">{aiError}</p> : null}
         </div>
       </Card>
 
-      <div className="space-y-3">
-        {role.stages.map((stage, index) => {
-          const open = openStage === stage.id;
-          const stageDone = stage.milestones.filter((m) => progress[m.id]).length;
-          return (
-            <Card key={stage.id} className="overflow-hidden p-0">
-              <button
-                type="button"
-                className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left md:px-5"
-                onClick={() => setOpenStage(open ? null : stage.id)}
-                aria-expanded={open}
-              >
-                <div>
-                  <p className="text-xs font-semibold text-primary">
-                    Stage {index + 1}
-                    {stage.weeks ? ` · ${stage.weeks}` : ""}
-                  </p>
-                  <p className="mt-0.5 text-base font-semibold">{stage.title}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {stage.skills.map((s) => (
-                      <Badge key={s} tone="default">
-                        {s}
-                      </Badge>
-                    ))}
+      {!stages && !aiBusy ? (
+        <EmptyState
+          title="No roadmap yet"
+          description="Pick a role and generate a personalized staged plan from your profile. Complete onboarding if generation fails."
+          action={
+            <Link href="/career" className="text-sm font-semibold text-primary">
+              Open Career Intelligence →
+            </Link>
+          }
+        />
+      ) : null}
+
+      {aiBusy && !stages ? (
+        <div className="space-y-3">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+      ) : null}
+
+      {stages ? (
+        <div className="space-y-3">
+          {stages.map((stage, index) => {
+            const open = openStage === stage.key;
+            const stageIds = stage.items.map((item, i) => itemId(stage.key, item, i));
+            const stageDone = stageIds.filter((id) => progress[id]).length;
+            return (
+              <Card key={stage.key} className="overflow-hidden p-0">
+                <button
+                  type="button"
+                  className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left md:px-5"
+                  onClick={() => setOpenStage(open ? null : stage.key)}
+                  aria-expanded={open}
+                >
+                  <div>
+                    <p className="text-xs font-semibold text-primary">Stage {index + 1}</p>
+                    <p className="mt-0.5 text-base font-semibold">{stage.title}</p>
                   </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {stageDone}/{stage.milestones.length}
-                  </span>
-                  <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition", open && "rotate-180")} />
-                </div>
-              </button>
-              {open ? (
-                <div className="space-y-2 border-t border-border px-4 py-4 md:px-5">
-                  {stage.milestones.map((m) => {
-                    const checked = !!progress[m.id];
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => toggle(m.id)}
-                        className={cn(
-                          "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition",
-                          checked ? "border-primary/40 bg-accent/40" : "border-border bg-card hover:border-primary/30",
-                        )}
-                      >
-                        <span
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {stageDone}/{stage.items.length}
+                    </span>
+                    <ChevronDown
+                      className={cn("h-4 w-4 text-muted-foreground transition", open && "rotate-180")}
+                    />
+                  </div>
+                </button>
+                {open ? (
+                  <div className="space-y-2 border-t border-border px-4 py-4 md:px-5">
+                    {stage.items.map((item, i) => {
+                      const id = itemId(stage.key, item, i);
+                      const checked = !!progress[id];
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => toggle(id)}
                           className={cn(
-                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                            checked ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                            "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition",
+                            checked
+                              ? "border-primary/40 bg-accent/40"
+                              : "border-border bg-card hover:border-primary/30",
                           )}
                         >
-                          {checked ? <Check className="h-3 w-3" /> : null}
-                        </span>
-                        <span>
-                          <span className="block text-sm font-semibold">{m.title}</span>
-                          <span className="mt-0.5 block text-xs text-muted-foreground">{m.detail}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Personalized AI overlay
-          </CardTitle>
-          <CardDescription>
-            Optional: generate stages from your CareerVerse profile context. Structured roadmap above stays interactive
-            either way.
-          </CardDescription>
-        </CardHeader>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => void generateAi()} disabled={aiBusy}>
-            {aiBusy ? "Generating…" : "Generate AI roadmap"}
-          </Button>
-        </div>
-        {aiError ? <p className="mt-3 text-sm text-destructive">{aiError}</p> : null}
-        {aiStages ? (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {aiStages.map((stage, index) => (
-              <Card key={stage.key} className="shadow-none">
-                <CardHeader>
-                  <CardTitle className="text-base">
-                    {index + 1}. {stage.title}
-                  </CardTitle>
-                </CardHeader>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  {stage.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                          <span
+                            className={cn(
+                              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                              checked
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border",
+                            )}
+                          >
+                            {checked ? <Check className="h-3 w-3" /> : null}
+                          </span>
+                          <span className="text-sm font-medium">{item}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </Card>
-            ))}
-          </div>
-        ) : null}
-      </Card>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {stages ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">About this plan</CardTitle>
+            <CardDescription>
+              Personalized with your skills, gaps, and goals. Not a guarantee of hiring outcomes — regenerate anytime.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,10 @@
 import { getCareerContext, jsonError, jsonOk, requireSession } from "@/lib/api";
-import { aiService } from "@/lib/ai/service";
+import { aiService, CAREER_CATALOG } from "@/lib/ai/service";
+import { auth } from "@/lib/auth";
+
+function slugId(title: string) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "career";
+}
 
 export async function POST(req: Request) {
   try {
@@ -32,13 +37,26 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const { CAREER_ROADMAP_ROLES } = await import("@/data/career-roadmaps");
-  return jsonOk({
-    careers: CAREER_ROADMAP_ROLES.map((r) => ({
-      id: r.id,
-      title: r.title,
-      category: r.category,
-      isDemo: r.isDemo ?? true,
-    })),
-  });
+  const careers = CAREER_CATALOG.map((c) => ({
+    id: slugId(c.title),
+    title: c.title,
+    skills: c.skills,
+  }));
+
+  let suggested: string[] = [];
+  try {
+    const session = await auth();
+    if (session?.user?.id) {
+      const ctx = await getCareerContext(session.user.id);
+      suggested = ctx?.topPaths?.length
+        ? ctx.topPaths
+        : ctx?.careerGoals
+          ? [ctx.careerGoals.split(/[.\n]/)[0]?.trim()].filter(Boolean).slice(0, 1)
+          : [];
+    }
+  } catch {
+    // public catalog still returned
+  }
+
+  return jsonOk({ careers, suggested, source: "catalog" });
 }

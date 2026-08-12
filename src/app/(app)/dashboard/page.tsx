@@ -85,8 +85,7 @@ export default async function DashboardPage() {
           <p className="text-sm font-medium text-primary">Recruiter workspace</p>
           <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Welcome, {firstName}</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Post roles, review applicants, and keep hiring pipelines organized. Student matching tools stay available for
-            demos.
+            Post roles, review applicants, and keep hiring pipelines organized.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -101,7 +100,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/jobs" className="text-sm font-semibold text-primary">
-              Browse sample jobs →
+              Browse jobs →
             </Link>
             <Link href="/network" className="text-sm font-semibold text-primary">
               Find talent →

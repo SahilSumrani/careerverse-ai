@@ -63,7 +63,7 @@ export default function MentorsPage() {
     <div>
       <PageHeader
         title="Mentors"
-        description="Find mentors by expertise and industry. Request a connection — demo profiles are marked."
+        description="Find mentors by expertise and industry. Request a connection from real directory profiles."
       />
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 

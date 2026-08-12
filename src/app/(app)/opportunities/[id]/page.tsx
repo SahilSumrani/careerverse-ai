@@ -6,11 +6,11 @@ import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DUMMY_JOBS } from "@/data/jobs";
+import { getJobById } from "@/lib/jobs-firestore";
 
 export default async function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = DUMMY_JOBS.find((j) => j.id === id);
+  const job = await getJobById(id);
   if (!job) notFound();
 
   const session = await auth();
@@ -29,7 +29,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
       })
     : null;
 
-  const meta = [job.company, job.type, job.location, job.workMode, "Demo listing"].filter(Boolean);
+  const meta = [job.company, job.type, job.location, job.workMode].filter(Boolean);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -47,9 +47,11 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
           <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             {meta.map((part, i) => (
               <span key={`${part}-${i}`} className="inline-flex items-center gap-2">
-                {i > 0 ? <span className="text-border" aria-hidden>
-                  ·
-                </span> : null}
+                {i > 0 ? (
+                  <span className="text-border" aria-hidden>
+                    ·
+                  </span>
+                ) : null}
                 {part}
               </span>
             ))}
@@ -138,7 +140,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground">Compensation</dt>
-            <dd className="font-medium">{job.salary}</dd>
+            <dd className="font-medium">{job.salary || "—"}</dd>
           </div>
         </dl>
         <div className="mt-6">

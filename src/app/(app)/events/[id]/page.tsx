@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { RegisterButton } from "@/components/events/register-button";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
-import { SEED_EVENTS } from "@/lib/seed-data";
 
 export const metadata = {
   title: "Event",
@@ -13,27 +12,25 @@ export const metadata = {
 };
 
 async function loadEvent(id: string) {
-  if (hasFirebaseAdminCredentials()) {
-    try {
-      const doc = await getAdminDb().collection("events").doc(id).get();
-      if (doc.exists) {
-        const data = doc.data() || {};
-        return {
-          id: doc.id,
-          title: String(data.title || "Event"),
-          organizationName: (data.organizationName as string) || null,
-          location: (data.location as string) || "TBA",
-          startsAt: String(data.startsAt || new Date().toISOString()),
-          type: (data.type as string) || "Meetup",
-          blurb: (data.blurb as string) || "",
-          isDemo: Boolean(data.isDemo),
-        };
-      }
-    } catch {
-      // fallback
-    }
+  if (!hasFirebaseAdminCredentials()) return null;
+  try {
+    const doc = await getAdminDb().collection("events").doc(id).get();
+    if (!doc.exists) return null;
+    const data = doc.data() || {};
+    if (data.isDemo) return null;
+    return {
+      id: doc.id,
+      title: String(data.title || "Event"),
+      organizationName: (data.organizationName as string) || null,
+      location: (data.location as string) || "TBA",
+      startsAt: String(data.startsAt || new Date().toISOString()),
+      type: (data.type as string) || "Meetup",
+      blurb: (data.blurb as string) || "",
+      isDemo: false,
+    };
+  } catch {
+    return null;
   }
-  return SEED_EVENTS.find((e) => e.id === id) || null;
 }
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {

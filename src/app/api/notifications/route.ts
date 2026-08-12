@@ -1,7 +1,5 @@
 import { jsonError, jsonOk, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
-import { getUserById } from "@/lib/firestore-users";
-import { seedNotifications } from "@/lib/seed-data";
 
 type Notif = {
   id: string;
@@ -65,31 +63,12 @@ async function listForUser(userId: string): Promise<Notif[]> {
   }
 }
 
-async function seedIfEmpty(userId: string, name: string | null | undefined): Promise<Notif[]> {
-  const seeds = seedNotifications(name).map((n) => ({ ...n, userId }));
-  if (!hasFirebaseAdminCredentials()) return seeds;
-  try {
-    const col = getAdminDb().collection("users").doc(userId).collection("notifications");
-    const batch = getAdminDb().batch();
-    for (const n of seeds) {
-      batch.set(col.doc(n.id), n, { merge: true });
-    }
-    await batch.commit();
-    return seeds;
-  } catch {
-    return seeds;
-  }
-}
-
 export async function GET() {
   try {
     const session = await requireSession();
-    let items = await listForUser(session.user.id);
-    if (!items.length) {
-      const user = await getUserById(session.user.id);
-      items = await seedIfEmpty(session.user.id, user?.name || session.user.name);
-    }
-    items.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const items = (await listForUser(session.user.id)).sort((a, b) =>
+      a.createdAt < b.createdAt ? 1 : -1,
+    );
     return jsonOk({
       items,
       unread: items.filter((i) => !i.read).length,

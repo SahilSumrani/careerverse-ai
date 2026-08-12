@@ -1,14 +1,15 @@
 import { jsonOk } from "@/lib/api";
-import { DUMMY_JOBS } from "@/data/jobs";
 import { auth } from "@/lib/auth";
 import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
+import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
 
-/** Static demo opportunities while Firestore jobs collection is optional. */
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") || "").toLowerCase();
-  let items = DUMMY_JOBS.map((j) => ({
+  const { jobs, source } = await loadJobsFromFirestore(50);
+
+  let items = jobs.map((j) => ({
     id: j.id,
     title: j.title,
     description: j.blurb,
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
     skillsJson: JSON.stringify(j.tags),
     skills: j.tags.map((name) => ({ skill: { name } })),
     status: "PUBLISHED",
-    isDemo: true,
+    isDemo: false,
     createdAt: new Date().toISOString(),
   }));
 
@@ -52,5 +53,11 @@ export async function GET(req: Request) {
       )
     : items;
 
-  return jsonOk({ items: withMatch, total: withMatch.length, page: 1, pageSize: withMatch.length });
+  return jsonOk({
+    items: withMatch,
+    total: withMatch.length,
+    page: 1,
+    pageSize: withMatch.length,
+    source,
+  });
 }

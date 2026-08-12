@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress, Avatar } from "@/components/ui/avatar";
 import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
-import { DUMMY_JOBS } from "@/data/jobs";
+import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -52,10 +52,11 @@ export default async function DashboardPage() {
       ? "Previous file unavailable — re-upload"
       : resume.fileName;
 
+  const { jobs: liveJobs } = await loadJobsFromFirestore(12);
   const matched = isStudentFacing
     ? (
         await Promise.all(
-          DUMMY_JOBS.slice(0, 8).map(async (job) => ({
+          liveJobs.slice(0, 8).map(async (job) => ({
             job,
             match: ctx
               ? await aiService.jobMatching({

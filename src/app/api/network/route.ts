@@ -33,32 +33,6 @@ export async function GET() {
       }
     }
 
-    if (!people.length) {
-      people = [
-        {
-          id: "demo-net-1",
-          name: "Meera Patel",
-          email: "meera@demo.careerverse",
-          isDemo: true,
-          profile: { headline: "CS junior · interested in product design", careerStage: "STUDENT" },
-        },
-        {
-          id: "demo-net-2",
-          name: "Kabir Singh",
-          email: "kabir@demo.careerverse",
-          isDemo: true,
-          profile: { headline: "Data analytics intern seeker", careerStage: "EARLY_CAREER" },
-        },
-        {
-          id: "demo-net-3",
-          name: "Ananya Rao",
-          email: "ananya@demo.careerverse",
-          isDemo: true,
-          profile: { headline: "Full-stack projects · open to feedback", careerStage: "STUDENT" },
-        },
-      ];
-    }
-
     return jsonOk({
       people,
       suggestions: people,
@@ -66,7 +40,7 @@ export async function GET() {
       requests: [],
       sent: [],
       received: [],
-      demo: people.some((s) => s.isDemo),
+      demo: false,
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

@@ -73,7 +73,10 @@ function readLocal(): ApplicationItem[] | null {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as ApplicationItem[];
+    const parsed = JSON.parse(raw) as ApplicationItem[];
+    const real = parsed.filter((a) => !a.isDemo && !a.id.startsWith("demo-app-") && !a.opportunity?.isDemo);
+    if (real.length !== parsed.length) writeLocal(real);
+    return real;
   } catch {
     return null;
   }

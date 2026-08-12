@@ -175,17 +175,42 @@ function deterministicJobMatch(
   ctx: UserCareerContext,
   opportunity: { title: string; description: string; skills: string[]; eligibility?: string | null; type: string },
 ): OpportunityMatchResult {
-  const needed = opportunity.skills.length
+  const META_TAGS = new Set(
+    [
+      "students",
+      "internship",
+      "full-time",
+      "part-time",
+      "contract",
+      "early career",
+      "new grad",
+      "campus",
+      "outreach",
+      "events",
+      "portfolio",
+      "apprenticeship",
+      "healthcare",
+      "fintech",
+      "remote",
+      "hybrid",
+      "onsite",
+    ].map((t) => t.toLowerCase()),
+  );
+  const neededRaw = opportunity.skills.length
     ? opportunity.skills
     : opportunity.description
         .split(/[\s,./|()]+/)
         .filter((w) => w.length > 3)
         .slice(0, 12);
-  const strengths = overlap(ctx.skills, needed);
-  const gaps = missingFrom(needed.slice(0, 8), ctx.skills);
+  const needed = neededRaw.filter((s) => !META_TAGS.has(norm(s)));
+  const strengths = overlap(ctx.skills, needed.length ? needed : neededRaw);
+  const gaps = missingFrom((needed.length ? needed : neededRaw).slice(0, 8), ctx.skills).filter(
+    (g) => !META_TAGS.has(norm(g)),
+  );
   const goalHit = norm(ctx.careerGoals ?? "").includes(norm(opportunity.title).split(" ")[0] ?? "") ? 10 : 0;
+  const denom = Math.max((needed.length ? needed : neededRaw).length || 1, 1);
   const score = clamp(
-    Math.round((strengths.length / Math.max(needed.length || 1, 1)) * 75 + goalHit + (ctx.profileCompleteness > 50 ? 8 : 0)),
+    Math.round((strengths.length / denom) * 75 + goalHit + (ctx.profileCompleteness > 50 ? 8 : 0)),
     28,
     95,
   );

@@ -114,12 +114,12 @@ function ApplicationTimeline({
     <div className="mt-4 border-t border-border pt-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Pipeline
+          Stage timeline
         </p>
         {updated ? <p className="text-xs text-muted-foreground">Updated {updated}</p> : null}
       </div>
 
-      <ol className="relative grid gap-0 sm:grid-cols-5">
+      <ol className="relative grid gap-2 sm:grid-cols-5 sm:gap-0">
         {TIMELINE.map((stage, index) => {
           const done = !isTerminal && index < current;
           const active = !isTerminal && index === current;
@@ -131,7 +131,7 @@ function ApplicationTimeline({
                 <span
                   className={cn(
                     "absolute left-[1.15rem] top-3 hidden h-0.5 w-[calc(100%-0.5rem)] sm:block",
-                    done || active ? "bg-primary/70" : "bg-border",
+                    done || active ? "bg-primary/50" : "bg-border",
                   )}
                   aria-hidden
                 />
@@ -141,7 +141,9 @@ function ApplicationTimeline({
                 disabled={updating}
                 onClick={() => onUpdate(stage.key)}
                 className={cn(
-                  "relative z-[1] flex w-full items-start gap-3 rounded-xl px-1 py-1 text-left transition hover:bg-muted/60 sm:flex-col sm:items-center sm:text-center",
+                  "relative z-[1] flex w-full items-start gap-3 rounded-xl border px-2 py-2 text-left transition sm:flex-col sm:items-center sm:border-transparent sm:px-1 sm:py-1 sm:text-center",
+                  active && "border-primary/30 bg-primary/5 sm:bg-primary/5",
+                  !active && "border-transparent hover:bg-muted/50",
                   updating && "opacity-60",
                 )}
               >
@@ -149,7 +151,7 @@ function ApplicationTimeline({
                   className={cn(
                     "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold",
                     active && "border-primary bg-primary text-primary-foreground shadow-sm",
-                    done && "border-primary/40 bg-primary/15 text-primary",
+                    done && "border-primary/30 bg-card text-primary",
                     future && "border-border bg-card text-muted-foreground",
                     rejectedHere && "border-destructive bg-destructive/10 text-destructive",
                   )}
@@ -160,17 +162,21 @@ function ApplicationTimeline({
                   <span
                     className={cn(
                       "block text-sm font-semibold",
-                      active ? "text-primary" : "text-foreground",
+                      active ? "text-primary" : done ? "text-foreground/80" : "text-foreground",
                     )}
                   >
                     {stage.label}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-muted-foreground">{stage.hint}</span>
-                  {active && created && stage.key === "SAVED" ? (
-                    <span className="mt-1 block text-[11px] text-muted-foreground">{created}</span>
-                  ) : null}
-                  {active && updated && stage.key !== "SAVED" ? (
-                    <span className="mt-1 block text-[11px] text-muted-foreground">{updated}</span>
+                  {active ? (
+                    <>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">{stage.hint}</span>
+                      {created && stage.key === "SAVED" ? (
+                        <span className="mt-1 block text-[11px] text-muted-foreground">{created}</span>
+                      ) : null}
+                      {updated && stage.key !== "SAVED" ? (
+                        <span className="mt-1 block text-[11px] text-muted-foreground">{updated}</span>
+                      ) : null}
+                    </>
                   ) : null}
                 </span>
               </button>
@@ -207,15 +213,9 @@ function ApplicationTimeline({
         </div>
       )}
 
-      {item.nextAction ? (
-        <p className="mt-3 rounded-xl bg-accent/60 px-3 py-2 text-xs text-foreground">
-          <span className="font-semibold">Next step:</span> {item.nextAction}
-        </p>
-      ) : (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Tap a stage to update status. Dates appear when the stage is current.
-        </p>
-      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        Tap a stage to update status.
+      </p>
     </div>
   );
 }
@@ -325,7 +325,7 @@ export default function ApplicationsPage() {
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden">
       <PageHeader
         title="Application Tracker"
-        description="Open a role to see the stage timeline — Saved → Prep → Applied → Interview → Offer."
+        description="Track each role through Saved → Prep → Applied → Interview → Offer. Expand a card to update the stage."
         actions={
           <div className="flex gap-2">
             <Button variant={view === "list" ? "default" : "outline"} size="sm" onClick={() => setView("list")}>

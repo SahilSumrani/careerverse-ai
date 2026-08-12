@@ -8,6 +8,20 @@ import { HOME_TOOLS } from "@/data/home-content";
 import { CV_ICONS } from "@/data/cv-icons";
 import "./home-tools.css";
 
+/** Match rail icons to tool ids (HOME_TOOLS order ≠ CV_ICONS order). */
+const TOOL_ICON: Record<string, string> = {
+  scoring: CV_ICONS[0],
+  resume: CV_ICONS[1],
+  voice: CV_ICONS[2],
+  magic: CV_ICONS[3],
+  scheduler: CV_ICONS[4],
+  discord: CV_ICONS[5],
+  hubspot: CV_ICONS[5],
+  talent: CV_ICONS[6],
+  analytics: CV_ICONS[7],
+  roles: CV_ICONS[8],
+};
+
 const PREVIEW_META: Record<
   string,
   { eyebrow: string; metric: string; metricLabel: string; rows: { label: string; value: string; tone?: "good" | "warn" | "mute" }[] }
@@ -155,7 +169,12 @@ function ToolPreview({ toolId, title }: { toolId: string; title: string }) {
 }
 
 export function HomeTools() {
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(() =>
+    Math.max(
+      0,
+      HOME_TOOLS.findIndex((t) => t.id === "scoring"),
+    ),
+  );
   const paused = useRef(false);
 
   useEffect(() => {
@@ -167,7 +186,7 @@ export function HomeTools() {
   }, []);
 
   const tool = HOME_TOOLS[active];
-  const iconSrc = CV_ICONS[active % CV_ICONS.length];
+  const iconSrc = TOOL_ICON[tool.id] ?? CV_ICONS[active % CV_ICONS.length];
 
   return (
     <section className="cv-tabs" id="for-recruiters">
@@ -184,7 +203,7 @@ export function HomeTools() {
         <div className="cv-tabs-rail">
           {HOME_TOOLS.map((t, i) => {
             const selected = i === active;
-            const src = CV_ICONS[i % CV_ICONS.length];
+            const src = TOOL_ICON[t.id] ?? CV_ICONS[i % CV_ICONS.length];
             return (
               <button
                 key={t.id}

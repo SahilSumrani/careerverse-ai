@@ -149,24 +149,11 @@
 }
 
 .cv-final-graphic-wrap {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 48rem;
-  height: 8rem;
-  margin: 0 auto;
-  pointer-events: none;
+  display: none;
 }
 
 .cv-final-graphic-glow {
-  position: absolute;
-  left: 50%;
-  top: 40%;
-  width: min(28rem, 80vw);
-  height: 12rem;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, transparent 70%);
+  display: none;
 }
 
 .cv-final-graphic {
@@ -178,7 +165,8 @@
   z-index: 2;
   max-width: 42rem;
   margin: 0 auto;
-  padding: 0 1rem 1rem;
+  padding: 2.75rem 1rem 3rem;
+  text-align: center;
 }
 
 .cv-final-heading h2 {
@@ -189,6 +177,7 @@
   letter-spacing: -0.03em;
   line-height: 1.15;
   color: #fff;
+  background: none;
 }
 
 .cv-final-heading p {
@@ -201,26 +190,31 @@
   font-weight: 500;
 }
 
+.cv-home a.cv-final-btn,
+a.cv-final-btn,
 .cv-final-btn {
   margin-top: 1.6rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 114px;
-  min-height: 42px;
-  padding: 14px 21px;
-  border-radius: 12px;
-  background: #fff;
-  color: #1f1f1f !important;
+  min-width: 9.5rem;
+  min-height: 2.75rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 0.75rem;
+  background: #fff !important;
+  color: #0b1220 !important;
   font-family: var(--font-body), Inter, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 650;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
   text-decoration: none;
 }
 
+.cv-home a.cv-final-btn:hover,
+a.cv-final-btn:hover,
 .cv-final-btn:hover {
   filter: brightness(0.97);
+  color: #0b1220 !important;
 }
 
 /* Dropship @media max-width:991px */

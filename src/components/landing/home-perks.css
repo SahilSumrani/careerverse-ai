@@ -57,10 +57,20 @@
   color: #225aea;
 }
 
-.cv-perk-visual,
-.cv-perk-art,
+.cv-perk-visual {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 7rem;
+}
+
 .cv-perk-photo {
-  display: none;
+  width: auto;
+  max-width: 11rem;
+  height: 7rem;
+  object-fit: contain;
 }
 
 .cv-perk-glyph {

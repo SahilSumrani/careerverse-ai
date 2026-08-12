@@ -50,12 +50,18 @@
   text-decoration: none;
 }
 
-/* Blue CTAs must stay white even under .cv-home a inherit */
+/* Blue CTAs stay white on blue fills */
 .cv-home a.cv-tabs-link,
 .cv-home a.cv-empower-primary,
-.cv-home a.cv-final-btn,
 .cv-home .cv-btn-wrap:not(.is-secondary) .cv-btn {
   color: #fff !important;
+}
+
+/* White "Ready to begin" button needs dark text (not inherit / not forced white) */
+.cv-home a.cv-final-btn,
+a.cv-final-btn {
+  color: #0b1220 !important;
+  background: #fff !important;
 }
 
 .cv-container {

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   Bell,
   Clock3,
@@ -8,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PERKS } from "@/data/home-content";
+import { DS } from "@/data/dropship-assets";
 import "./home-perks.css";
 
 const ICONS: Record<(typeof PERKS)[number]["icon"], LucideIcon> = {
@@ -45,6 +47,16 @@ export function HomePerks() {
                   <h3>{perk.title}</h3>
                 </div>
                 <p>{perk.text}</p>
+                <div className="cv-perk-visual">
+                  <Image
+                    src={DS.perkArt[perk.icon]}
+                    alt=""
+                    width={200}
+                    height={140}
+                    className="cv-perk-photo"
+                    unoptimized
+                  />
+                </div>
               </article>
             );
           })}

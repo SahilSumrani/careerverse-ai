@@ -153,10 +153,6 @@ export function HomeFinalCta() {
 
       <section className="cv-final">
         <div className="cv-final-top">
-          <div className="cv-final-graphic-wrap" aria-hidden>
-            <div className="cv-final-graphic-glow" />
-          </div>
-
           <div className="cv-final-heading">
             <h2>Ready to begin?</h2>
             <p>Start your free trial and shortlist stronger candidates today.</p>

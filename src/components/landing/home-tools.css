@@ -10,24 +10,25 @@
   scroll-margin-top: 5.5rem;
 }
 
-/* Wider soft cone — tip under CV hub, fills the fold instead of a skinny spike */
+/* Soft blue wash under Jobtale hero — not a harsh Dropship spike */
 .cv-tabs-spotlight {
   position: absolute;
   left: 50%;
   top: 0;
   z-index: 0;
-  width: min(110rem, 220vw);
-  height: min(28rem, 70vw);
+  width: 100%;
+  height: 22rem;
   transform: translateX(-50%);
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(34, 90, 234, 0.96) 0%,
-    rgba(61, 120, 236, 0.88) 22%,
-    rgba(170, 205, 250, 0.55) 58%,
-    rgba(255, 255, 255, 0) 100%
+    #225aea 0%,
+    #3d78ec 35%,
+    #ddecfc 78%,
+    #fff 100%
   );
-  clip-path: polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%);
+  clip-path: none;
+  border-radius: 0 0 40% 40% / 0 0 18% 18%;
 }
 
 .cv-tabs::after {
@@ -501,9 +502,10 @@ a.cv-tabs-link:hover {
   }
 
   .cv-tabs-spotlight {
-    width: min(80rem, 200vw);
-    height: min(22rem, 85vw);
-    clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
+    width: 100%;
+    height: 18rem;
+    clip-path: none;
+    border-radius: 0 0 45% 45% / 0 0 14% 14%;
   }
 
   .cv-tabs::after {

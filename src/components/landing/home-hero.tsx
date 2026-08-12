@@ -1,368 +1,173 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { COMPANY_MARQUEE, type CompanyMarqueeCard } from "@/data/home-content";
-import { DS } from "@/data/dropship-assets";
+import { useRouter } from "next/navigation";
+import { MapPin, Search, Star } from "lucide-react";
 import "./home-hero.css";
 
-/**
- * Dropship odyn `wt()` hero tunnel, adapted for CareerVerse:
- * - 3 curved rows (bowl / straight / arch)
- * - two panels per track (seamless -50% loop), all L→R like Dropship
- * - company cards pass behind CV hub along vertical beam
- * - left = skeleton, right = filled (clip-path wipe across center)
- * - soft scale into CV hub so cards flow through the node
- */
-
-type Curve = "bowl" | "straight" | "arch";
-
-function CompanyLogo({ item }: { item: CompanyMarqueeCard }) {
-  if (item.logoUrl) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.logoUrl} alt="" className="cv-marquee-img" width={54} height={54} />
-    );
-  }
-  return (
-    <span className="cv-marquee-logo" style={{ background: `${item.tint}18`, color: item.tint }}>
-      {item.initials}
-    </span>
-  );
-}
-
-function MarqueeCard({ item }: { item: CompanyMarqueeCard }) {
-  return (
-    <div className="cv-marquee-item" data-cv-marquee-item="">
-      <div className="cv-marquee-img-wrap">
-        <CompanyLogo item={item} />
-      </div>
-      <div className="cv-marquee-text">
-        <p className="cv-marquee-name">{item.company}</p>
-        <p className="cv-marquee-meta">{item.role}</p>
-      </div>
-      <div className="cv-marquee-line" />
-      <div className="cv-marquee-text is-right">
-        <p className="cv-marquee-score">{item.kind}</p>
-        <p className="cv-marquee-meta is-brand">{item.badge}</p>
-      </div>
-
-      <div className="cv-marquee-skeleton" aria-hidden>
-        <div className="cv-marquee-img-wrap">
-          <span className="cv-marquee-img-skel" />
-        </div>
-        <div className="cv-marquee-text">
-          <span className="cv-skel-line is-lg" />
-          <span className="cv-skel-line is-sm" />
-        </div>
-        <div className="cv-marquee-line" />
-        <div className="cv-marquee-text is-right">
-          <span className="cv-skel-line is-md" />
-          <span className="cv-skel-pill" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MarqueePanel({
-  items,
-  offset,
-}: {
-  items: CompanyMarqueeCard[];
-  offset: number;
-}) {
-  return (
-    <div className="cv-hero-marquee-panel">
-      <div className="cv-hero-marquee-list">
-        {items.map((item, i) => (
-          <MarqueeCard key={`${offset}-${item.id}-${i}`} item={item} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MarqueeRow({
-  items,
-  offset,
-  curve,
-}: {
-  items: CompanyMarqueeCard[];
-  offset: number;
-  curve: Curve;
-}) {
-  return (
-    <div className="cv-hero-marquee-layout" data-curve={curve}>
-      <div className="cv-hero-marquee-track" data-cv-marquee-track="">
-        <MarqueePanel items={items} offset={offset} />
-        <MarqueePanel items={items} offset={offset + 3} />
-      </div>
-    </div>
-  );
-}
-
-function easePower4Out(t: number) {
-  return 1 - (1 - t) ** 4;
-}
-
-function easePower2Out(t: number) {
-  return 1 - (1 - t) * (1 - t);
-}
+const PROOF_AVATARS = ["NS", "BP", "HC", "LA", "OF"];
 
 export function HomeHero() {
-  const visualRef = useRef<HTMLDivElement>(null);
-  const iconRef = useRef<HTMLButtonElement>(null);
-  const burstingRef = useRef(false);
-  const animCacheRef = useRef<Animation[]>([]);
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [location, setLocation] = useState("");
 
-  const rowA = COMPANY_MARQUEE.slice(0, 9);
-  const rowB = [...COMPANY_MARQUEE.slice(3, 9), ...COMPANY_MARQUEE.slice(0, 3)];
-  const rowC = [...COMPANY_MARQUEE.slice(6), ...COMPANY_MARQUEE.slice(0, 6)];
-
-  const refreshAnims = useCallback(() => {
-    const root = visualRef.current;
-    if (!root) return [];
-    const anims = [...root.querySelectorAll<HTMLElement>("[data-cv-marquee-track]")].flatMap((t) =>
-      t.getAnimations(),
-    );
-    animCacheRef.current = anims;
-    return anims;
-  }, []);
-
-  const setRate = useCallback(
-    (rate: number) => {
-      const anims = animCacheRef.current.length ? animCacheRef.current : refreshAnims();
-      anims.forEach((anim) => {
-        anim.playbackRate = rate;
-      });
-    },
-    [refreshAnims],
-  );
-
-  useEffect(() => {
-    const root = visualRef.current;
-    if (!root) return;
-
-    let alive = true;
-    let intersecting = false;
-    let rafId = 0;
-
-    // Dropship odyn-bundle.css: 120px pad so bowl/arch can rise without clipping
-    const applyPad = () => {
-      const pad = window.innerWidth <= 767 ? 52 : 120;
-      root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
-        layout.style.paddingTop = `${pad}px`;
-        layout.style.paddingBottom = `${pad}px`;
-        layout.style.marginTop = `-${pad}px`;
-        layout.style.marginBottom = `-${pad}px`;
-      });
-    };
-    applyPad();
-    window.addEventListener("resize", applyPad);
-
-    refreshAnims();
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        intersecting = !!entry?.isIntersecting;
-      },
-      { threshold: 0 },
-    );
-    io.observe(root);
-
-    /**
-     * Mirrors Dropship odyn `wt()` ticker:
-     * - bowl / straight / arch y+rotation from distance to center beam
-     * - skeleton clip wipe (left faded → right clear) as cards cross mid
-     * - soft scale into CV hub so cards read as flowing through the node
-     */
-    const tick = () => {
-      if (!alive) return;
-
-      if (intersecting) {
-        const box = root.getBoundingClientRect();
-        const mid = box.left + box.width / 2;
-        // Dropship odyn: mobile 1800 / desktop 3000
-        const radius = window.innerWidth <= 767 ? 1800 : 3000;
-        // Reach of the “enter hub” squash (≈ badge + white halo)
-        const hubReach = window.innerWidth <= 767 ? 72 : 96;
-
-        root.querySelectorAll<HTMLElement>("[data-curve]").forEach((layout) => {
-          const curve = (layout.dataset.curve || "straight") as Curve;
-
-          layout.querySelectorAll<HTMLElement>("[data-cv-marquee-item]").forEach((item) => {
-            // Visual rect after CSS marquee transform (never mix with offsetLeft)
-            const rect = item.getBoundingClientRect();
-            const dx = rect.left + rect.width / 2 - mid;
-            const skel = item.querySelector<HTMLElement>(".cv-marquee-skeleton");
-
-            let y = 0;
-            let rot = 0;
-            if (curve !== "straight") {
-              const clamped = Math.min(Math.abs(dx), radius);
-              const hyp = Math.sqrt(Math.max(0, radius * radius - clamped * clamped));
-              const rise = hyp - radius;
-              const angle = (Math.atan2(clamped, hyp) * 180) / Math.PI;
-              const sign = dx === 0 ? 0 : Math.sign(dx);
-              y = curve === "bowl" ? rise : -rise;
-              rot = curve === "bowl" ? -sign * angle : sign * angle;
-            }
-
-            // Ease into / out of the CV hub (smoothstep)
-            const u = Math.min(1, Math.abs(dx) / hubReach);
-            const hubT = u * u * (3 - 2 * u);
-            const throughScale = 0.76 + 0.24 * hubT;
-
-            item.style.transform = `translate3d(0, ${y}px, 0) rotate(${rot}deg) scale(${throughScale})`;
-
-            if (skel) {
-              // Dropship: clip skeleton from the right as card crosses mid
-              const x = Math.max(0, Math.min(1, (rect.right - mid) / Math.max(rect.width, 1)));
-              const clipPx = Math.round(x * item.offsetWidth);
-              skel.style.clipPath = `inset(0 ${clipPx}px 0 0 round 12px)`;
-            }
-          });
-        });
-      }
-
-      rafId = requestAnimationFrame(tick);
-    };
-
-    rafId = requestAnimationFrame(tick);
-
-    return () => {
-      alive = false;
-      cancelAnimationFrame(rafId);
-      io.disconnect();
-      window.removeEventListener("resize", applyPad);
-    };
-  }, [refreshAnims]);
-
-  const onIconEnter = useCallback(() => {
-    const icon = iconRef.current;
-    if (!icon || burstingRef.current) return;
-    icon.style.transform = "translate(-50%, -50%) scale(0.95)";
-  }, []);
-
-  const onIconLeave = useCallback(() => {
-    const icon = iconRef.current;
-    if (!icon || burstingRef.current) return;
-    icon.style.transform = "translate(-50%, -50%) scale(1)";
-  }, []);
-
-  const onIconClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (burstingRef.current) return;
-      burstingRef.current = true;
-
-      const icon = iconRef.current;
-      if (icon) {
-        icon.style.transform = "translate(-50%, -50%) scale(1.1)";
-        window.setTimeout(() => {
-          if (icon) icon.style.transform = "translate(-50%, -50%) scale(1)";
-        }, 180);
-      }
-
-      refreshAnims();
-
-      const unlock = window.setTimeout(() => {
-        burstingRef.current = false;
-        setRate(1);
-      }, 2500);
-
-      const rampStart = performance.now();
-      const ramp = (now: number) => {
-        const t = Math.min(1, (now - rampStart) / 500);
-        setRate(1 + (20 - 1) * easePower4Out(t));
-        if (t < 1) {
-          requestAnimationFrame(ramp);
-          return;
-        }
-        window.setTimeout(() => {
-          const easeStart = performance.now();
-          const ease = (n: number) => {
-            const u = Math.min(1, (n - easeStart) / 1000);
-            setRate(20 + (1 - 20) * easePower2Out(u));
-            if (u < 1) {
-              requestAnimationFrame(ease);
-            } else {
-              window.clearTimeout(unlock);
-              setRate(1);
-              burstingRef.current = false;
-            }
-          };
-          requestAnimationFrame(ease);
-        }, 400);
-      };
-      requestAnimationFrame(ramp);
-    },
-    [refreshAnims, setRate],
-  );
+  function onSearch(e: FormEvent) {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (location.trim()) params.set("location", location.trim());
+    const qs = params.toString();
+    router.push(qs ? `/jobs?${qs}` : "/jobs");
+  }
 
   return (
-    <section className="cv-hero">
-      <div className="cv-hero-copy">
-        <div className="cv-eyebrow">
-          <span className="cv-eyebrow-mark">CV</span>
-          Explainable AI for recruiting teams
-        </div>
-        <h1>
-          Hire with <span className="cv-hero-highlight">signal</span>, not noise
-        </h1>
-        <p className="cv-hero-sub">
-          Score candidates, run voice interviews, and search talent in plain language—so your team
-          interviews with confidence.
-        </p>
-        <div className="cv-hero-ctas">
-          <Link href="/auth/signup" className="cv-btn-wrap">
-            <span className="cv-btn">Hire talent</span>
-          </Link>
-          <Link href="/#for-candidates" className="cv-btn-wrap is-secondary">
-            <span className="cv-btn">Find a job</span>
-          </Link>
-        </div>
-      </div>
+    <>
+      <section className="cv-hero">
+        <div className="cv-hero-copy">
+          <h1>
+            Build your recruiting workspace with{" "}
+            <span className="cv-hero-highlight">CareerVerse AI</span>
+          </h1>
+          <p className="cv-hero-sub">
+            Score candidates, search talent in plain language, and track hiring—from fresher
+            roles to full-time—in one CareerVerse account.
+          </p>
 
-      <div className="cv-hero-stage">
-        <div className="cv-hero-visual" data-hero-marquee="" ref={visualRef}>
-          <div className="cv-hero-gradient" aria-hidden>
-            <span className="cv-hero-beam-core" />
+          <form className="cv-hero-search" onSubmit={onSearch} role="search">
+            <label className="cv-hero-search-field">
+              <Search className="cv-hero-search-icon" size={18} aria-hidden />
+              <input
+                type="search"
+                name="q"
+                placeholder="Role, skill, or company"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search roles"
+              />
+            </label>
+            <span className="cv-hero-search-divider" aria-hidden />
+            <label className="cv-hero-search-field is-loc">
+              <MapPin className="cv-hero-search-icon" size={18} aria-hidden />
+              <input
+                type="text"
+                name="location"
+                placeholder="Location or remote"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                aria-label="Location"
+              />
+            </label>
+            <button type="submit" className="cv-hero-search-btn">
+              Search
+            </button>
+          </form>
+
+          <div className="cv-hero-proof">
+            <div className="cv-hero-avatars" aria-hidden>
+              {PROOF_AVATARS.map((a) => (
+                <span key={a}>{a}</span>
+              ))}
+            </div>
+            <div className="cv-hero-rating">
+              <Star size={14} fill="currentColor" aria-hidden />
+              <Star size={14} fill="currentColor" aria-hidden />
+              <Star size={14} fill="currentColor" aria-hidden />
+              <Star size={14} fill="currentColor" aria-hidden />
+              <Star size={14} fill="currentColor" aria-hidden />
+              <span>4.8</span>
+            </div>
+            <p>Trusted by recruiting teams hiring students &amp; early talent</p>
           </div>
 
-          <MarqueeRow items={rowA} offset={0} curve="bowl" />
-          <MarqueeRow items={rowB} offset={4} curve="straight" />
-          <MarqueeRow items={rowC} offset={8} curve="arch" />
-
-          <button
-            type="button"
-            className="cv-hero-icon"
-            data-hero-icon=""
-            ref={iconRef}
-            aria-label="Speed up company stream"
-            onMouseEnter={onIconEnter}
-            onMouseLeave={onIconLeave}
-            onClick={onIconClick}
-          >
-            <span className="cv-hero-icon-hit" aria-hidden />
-            <span className="cv-hero-icon-inner">CV</span>
-          </button>
-
-          <div className="cv-hero-fade" aria-hidden>
-            <img
-              className="cv-hero-wave-img"
-              src={DS.heroWave}
-              srcSet={`${DS.heroWave1600} 1600w, ${DS.heroWave} 1920w`}
-              sizes="100vw"
-              alt=""
-              fetchPriority="high"
-            />
-            <div className="cv-hero-fade-block" />
+          <div className="cv-hero-ctas">
+            <Link href="/auth/signup" className="cv-btn-wrap">
+              <span className="cv-btn">Hire talent</span>
+            </Link>
+            <Link href="/#for-candidates" className="cv-btn-wrap is-secondary">
+              <span className="cv-btn">Find a job</span>
+            </Link>
           </div>
         </div>
-      </div>
-    </section>
+
+        <div className="cv-hero-board" aria-hidden>
+          <div className="cv-hero-board-inner">
+            <article className="cv-hero-win is-profile">
+              <header>
+                <span className="cv-hero-win-dot" />
+                <strong>Candidate</strong>
+              </header>
+              <div className="cv-hero-win-body">
+                <div className="cv-hero-avatar">AK</div>
+                <div>
+                  <p className="cv-hero-win-name">Aisha Khan</p>
+                  <p className="cv-hero-win-meta">React · Bangalore</p>
+                </div>
+                <em>94%</em>
+              </div>
+              <ul>
+                <li>Skills match</li>
+                <li>Voice score 88</li>
+                <li>Ready to interview</li>
+              </ul>
+            </article>
+
+            <article className="cv-hero-win is-role">
+              <header>
+                <span className="cv-hero-win-dot" />
+                <strong>Open role</strong>
+              </header>
+              <div className="cv-hero-win-body is-stack">
+                <p className="cv-hero-win-name">Junior Frontend Engineer</p>
+                <p className="cv-hero-win-meta">Northstar Labs · Hybrid</p>
+                <div className="cv-hero-tags">
+                  <span>React</span>
+                  <span>TypeScript</span>
+                  <span>Fresher</span>
+                </div>
+              </div>
+            </article>
+
+            <article className="cv-hero-win is-funnel">
+              <header>
+                <span className="cv-hero-win-dot" />
+                <strong>Hiring stages</strong>
+              </header>
+              <div className="cv-hero-funnel">
+                <div>
+                  <span>Applied</span>
+                  <b>128</b>
+                </div>
+                <div>
+                  <span>Screening</span>
+                  <b>54</b>
+                </div>
+                <div>
+                  <span>Interview</span>
+                  <b>34</b>
+                </div>
+                <div>
+                  <span>Offer</span>
+                  <b>7</b>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="cv-trusted" aria-label="Trusted companies">
+        <p>Trusted by teams hiring through CareerVerse</p>
+        <ul>
+          <li>Northstar Labs</li>
+          <li>BrightPath</li>
+          <li>Harbor Collective</li>
+          <li>Lumen AI</li>
+          <li>Orbit Finance</li>
+          <li>SoftQA Studio</li>
+        </ul>
+      </section>
+    </>
   );
 }

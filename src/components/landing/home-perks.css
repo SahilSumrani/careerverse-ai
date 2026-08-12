@@ -46,18 +46,21 @@
 }
 
 .cv-perk-glass {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.75rem;
+  background: #eef3ff;
+  color: #225aea;
 }
 
-.cv-perk-glass img {
-  width: 2.25rem !important;
-  height: 2.25rem !important;
-  display: block;
+.cv-perk-visual,
+.cv-perk-art,
+.cv-perk-photo {
+  display: none;
 }
 
 .cv-perk-glyph {

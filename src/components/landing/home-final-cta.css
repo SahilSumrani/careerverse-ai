@@ -152,29 +152,32 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 90rem;
-  aspect-ratio: 1440 / 591;
+  max-width: 48rem;
+  height: 8rem;
   margin: 0 auto;
   pointer-events: none;
 }
 
-.cv-final-graphic {
-  object-fit: cover;
-  width: 136%;
-  max-width: none;
-  height: 100%;
+.cv-final-graphic-glow {
   position: absolute;
-  inset: 0% auto auto 50%;
-  transform: translateX(-50%);
-  display: block;
+  left: 50%;
+  top: 40%;
+  width: min(28rem, 80vw);
+  height: 12rem;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, transparent 70%);
+}
+
+.cv-final-graphic {
+  display: none;
 }
 
 .cv-final-heading {
   position: relative;
   z-index: 2;
   max-width: 42rem;
-  /* Sit below the glow icon — less overlap than Dropship’s -6rem pull-up */
-  margin: -1.5rem auto 0;
+  margin: 0 auto;
   padding: 0 1rem 1rem;
 }
 

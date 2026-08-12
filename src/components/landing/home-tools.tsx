@@ -174,7 +174,7 @@ export function HomeTools() {
       <div className="cv-tabs-spotlight" aria-hidden />
       <div className="cv-tabs-head">
         <p className="cv-tabs-kicker">For recruiters</p>
-        <h2 className="cv-section-title">Hiring tools that show signal</h2>
+        <h2 className="cv-section-title">CareerVerse hiring tools</h2>
         <p className="cv-section-sub">
           Scoring, voice interviews, Magic AI Search, and hiring flow—every recruiting tool in one account.
         </p>

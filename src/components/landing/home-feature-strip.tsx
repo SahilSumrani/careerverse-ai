@@ -1,7 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { DS } from "@/data/dropship-assets";
+import { ArrowRight, Library, Workflow } from "lucide-react";
 import "./home-feature-strip.css";
 
 export function HomeFeatureStrip() {
@@ -9,38 +7,44 @@ export function HomeFeatureStrip() {
     <section className="cv-strip">
       <div className="cv-container cv-strip-grid">
         <article className="cv-strip-card">
+          <span className="cv-strip-icon">
+            <Library size={22} aria-hidden />
+          </span>
           <h3>Your talent bank</h3>
           <p>Search candidates by skills, location, AI scores, and interview stage—in one CareerVerse library.</p>
           <Link href="/network" className="cv-strip-link">
-            Learn More <ArrowRight className="h-4 w-4" />
+            Learn more <ArrowRight className="h-4 w-4" />
           </Link>
-          <div className="cv-strip-art cv-strip-art-photo" aria-hidden>
-            <Image
-              src={DS.stripMillions}
-              alt=""
-              width={480}
-              height={280}
-              className="cv-strip-photo"
-              unoptimized
-            />
+          <div className="cv-strip-mock" aria-hidden>
+            <div className="cv-strip-mock-row">
+              <span>Aisha K.</span>
+              <em>94%</em>
+            </div>
+            <div className="cv-strip-mock-row">
+              <span>Rohan M.</span>
+              <em>91%</em>
+            </div>
+            <div className="cv-strip-mock-row">
+              <span>Priya N.</span>
+              <em>88%</em>
+            </div>
           </div>
         </article>
 
         <article className="cv-strip-card">
+          <span className="cv-strip-icon">
+            <Workflow size={22} aria-hidden />
+          </span>
           <h3>Track your hiring flow</h3>
           <p>Watch Applied → Screening → Interview → Offer update live for every open role.</p>
           <Link href="/hiring-flow" className="cv-strip-link">
-            Learn More <ArrowRight className="h-4 w-4" />
+            Learn more <ArrowRight className="h-4 w-4" />
           </Link>
-          <div className="cv-strip-art cv-strip-art-photo" aria-hidden>
-            <Image
-              src={DS.stripTrack}
-              alt=""
-              width={480}
-              height={280}
-              className="cv-strip-photo"
-              unoptimized
-            />
+          <div className="cv-strip-mock is-stages" aria-hidden>
+            <span>Applied 128</span>
+            <span>Screen 54</span>
+            <span>Interview 34</span>
+            <span>Offer 7</span>
           </div>
         </article>
       </div>

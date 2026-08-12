@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowUp, Plus } from "lucide-react";
 import { AI_PROMPTS } from "@/data/home-content";
-import { DS } from "@/data/dropship-assets";
 import "./home-ai-search.css";
 
 /**
@@ -116,7 +115,7 @@ export function HomeAiSearch() {
   return (
     <section className="cv-ai">
       <div className="cv-ai-bg" aria-hidden>
-        <img className="cv-ai-bg-img" src={DS.aiSearchBg} alt="" loading="lazy" />
+        <div className="cv-ai-bg-beam" />
         <div className="cv-ai-bg-fade is-left" />
         <div className="cv-ai-bg-fade" />
       </div>

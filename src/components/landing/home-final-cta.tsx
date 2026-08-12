@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { DS } from "@/data/dropship-assets";
 import { CV_ICONS } from "@/data/cv-icons";
 import "./home-final-cta.css";
 
@@ -155,7 +154,7 @@ export function HomeFinalCta() {
       <section className="cv-final">
         <div className="cv-final-top">
           <div className="cv-final-graphic-wrap" aria-hidden>
-            <img className="cv-final-graphic" src={DS.footerGraphic} alt="" loading="lazy" />
+            <div className="cv-final-graphic-glow" />
           </div>
 
           <div className="cv-final-heading">

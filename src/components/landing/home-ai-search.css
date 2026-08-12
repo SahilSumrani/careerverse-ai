@@ -12,7 +12,7 @@
   justify-content: center;
 }
 
-/* Dropship background-wrap / AI Search BG */
+/* Soft blue beams — CareerVerse, no Dropship product art */
 .cv-ai-bg {
   position: absolute;
   inset: 0;
@@ -22,21 +22,32 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: #fff;
 }
 
-.cv-ai-bg-img {
+.cv-ai-bg-beam {
   position: absolute;
   left: 50%;
   top: 50%;
+  width: min(70rem, 140vw);
+  height: 120%;
   transform: translate(-50%, -50%);
-  width: 90rem;
-  max-width: none;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 90, 234, 0.08) 28%,
+    rgba(34, 90, 234, 0.14) 50%,
+    rgba(34, 90, 234, 0.08) 72%,
+    transparent 100%
+  );
+  filter: blur(2px);
 }
 
-/* Soft white fades so beams read like Dropship */
+.cv-ai-bg-img {
+  display: none;
+}
+
+/* Soft white fades at edges */
 .cv-ai-bg-fade {
   position: absolute;
   inset: 0;

@@ -1,12 +1,11 @@
-/* Products band — tucks under hero wave (Dropship-style), no white void */
+/* Products band under Jobtale-style hero + trusted bar */
 .cv-tabs {
   position: relative;
   z-index: 1;
   isolation: isolate;
   background: #fff;
-  /* Pull up into hero fade so tip meets the tunnel, not a blank gap */
-  margin-top: -4.5rem;
-  padding: 5.5rem 0 5.5rem;
+  margin-top: 0;
+  padding: 4.5rem 0 5.5rem;
   overflow: clip;
   scroll-margin-top: 5.5rem;
 }
@@ -497,8 +496,8 @@ a.cv-tabs-link:hover {
 
 @media (max-width: 768px) {
   .cv-tabs {
-    padding: 4.25rem 0 4.5rem;
-    margin-top: -2.5rem;
+    padding: 3.5rem 0 4.5rem;
+    margin-top: 0;
   }
 
   .cv-tabs-spotlight {

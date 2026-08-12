@@ -1,43 +1,42 @@
-/* CareerVerse products band — sits BELOW hero; never overlaps sticky header */
+/* Products band — tucks under hero wave (Dropship-style), no white void */
 .cv-tabs {
   position: relative;
   z-index: 1;
   isolation: isolate;
   background: #fff;
-  /* Clear gap under hero tunnel — no negative pull into hero/header */
-  padding: 2.5rem 0 6.5rem;
-  margin-top: 0;
+  /* Pull up into hero fade so tip meets the tunnel, not a blank gap */
+  margin-top: -4.5rem;
+  padding: 5.5rem 0 5.5rem;
   overflow: clip;
+  scroll-margin-top: 5.5rem;
 }
 
-/* Soft blue triangular spotlight (products band only — clipped to section) */
+/* Wider soft cone — tip under CV hub, fills the fold instead of a skinny spike */
 .cv-tabs-spotlight {
   position: absolute;
   left: 50%;
   top: 0;
   z-index: 0;
-  width: min(92rem, 160vw);
-  height: min(38rem, 88vw);
+  width: min(110rem, 220vw);
+  height: min(28rem, 70vw);
   transform: translateX(-50%);
   pointer-events: none;
   background: linear-gradient(
     180deg,
-    rgba(34, 90, 234, 0.92) 0%,
-    rgba(91, 141, 239, 0.78) 28%,
-    rgba(221, 236, 252, 0.72) 62%,
+    rgba(34, 90, 234, 0.96) 0%,
+    rgba(61, 120, 236, 0.88) 22%,
+    rgba(170, 205, 250, 0.55) 58%,
     rgba(255, 255, 255, 0) 100%
   );
-  clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
-  filter: blur(0.5px);
+  clip-path: polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%);
 }
 
-/* White floor starts under the icon rail so cards sit on white */
 .cv-tabs::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: 58%;
+  top: 52%;
   bottom: 0;
   background: #fff;
   z-index: 0;
@@ -46,13 +45,27 @@
 
 .cv-tabs-head {
   text-align: center;
-  max-width: 42rem;
-  margin: 0 auto 1.75rem;
-  padding: 2.5rem var(--cv-space-md, 20px) 0;
+  max-width: 40rem;
+  margin: 0 auto 1.5rem;
+  padding: 1.25rem var(--cv-space-md, 20px) 0;
   position: relative;
   z-index: 3;
   color: #fff;
   overflow: visible;
+}
+
+.cv-tabs-kicker {
+  display: inline-flex;
+  margin: 0 0 0.85rem;
+  padding: 0.32rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .cv-tabs-head .cv-section-title {
@@ -60,13 +73,14 @@
   overflow: visible;
   padding-inline: 0.08em;
   text-wrap: balance;
+  font-size: clamp(1.65rem, 3.8vw, 2.45rem);
 }
 
 .cv-tabs-head .cv-section-sub {
   margin-left: auto;
   margin-right: auto;
-  color: rgba(255, 255, 255, 0.9);
-  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.92);
+  max-width: 32rem;
 }
 
 .cv-tabs-rail-wrap {
@@ -483,14 +497,14 @@ a.cv-tabs-link:hover {
 
 @media (max-width: 768px) {
   .cv-tabs {
-    padding: 3.25rem 0 5rem;
-    margin-top: 0;
+    padding: 4.25rem 0 4.5rem;
+    margin-top: -2.5rem;
   }
 
   .cv-tabs-spotlight {
-    width: min(72rem, 180vw);
-    height: min(28rem, 100vw);
-    clip-path: polygon(38% 0%, 62% 0%, 100% 100%, 0% 100%);
+    width: min(80rem, 200vw);
+    height: min(22rem, 85vw);
+    clip-path: polygon(42% 0%, 58% 0%, 100% 100%, 0% 100%);
   }
 
   .cv-tabs::after {

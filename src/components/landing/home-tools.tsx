@@ -170,10 +170,11 @@ export function HomeTools() {
   const iconSrc = CV_ICONS[active % CV_ICONS.length];
 
   return (
-    <section className="cv-tabs">
+    <section className="cv-tabs" id="for-recruiters">
       <div className="cv-tabs-spotlight" aria-hidden />
       <div className="cv-tabs-head">
-        <h2 className="cv-section-title">CareerVerse products</h2>
+        <p className="cv-tabs-kicker">For recruiters</p>
+        <h2 className="cv-section-title">Hiring tools that show signal</h2>
         <p className="cv-section-sub">
           Scoring, voice interviews, Magic AI Search, and hiring flow—every recruiting tool in one account.
         </p>

@@ -2,7 +2,7 @@
 .cv-hero {
   position: relative;
   /* Extra top space so hero copy sits below the sticky header */
-  padding: 8.5rem 0 3.5rem;
+  padding: 8.5rem 0 1.25rem;
   /* Do not clip the headline — overflow-x:clip + negative tracking cuts glyphs */
   overflow: visible;
   background: #fff;
@@ -425,22 +425,22 @@
   flex: none;
 }
 
-/* Soft blue floor under the tunnel — kept inside hero, no pull into products */
+/* Short blue floor — products band continues the gradient (no tall white void) */
 .cv-hero-fade-block {
   position: absolute;
   left: 50%;
   top: 0;
   z-index: 2;
   width: 100vw;
-  height: 18rem;
-  transform: translate(-50%, 95%);
-  background-image: linear-gradient(#ddecfc, #fff);
+  height: 7.5rem;
+  transform: translate(-50%, 72%);
+  background-image: linear-gradient(#ddecfc, rgba(255, 255, 255, 0));
   pointer-events: none;
 }
 
 @media (max-width: 768px) {
   .cv-hero {
-    padding: 7.5rem 0 4rem;
+    padding: 7.5rem 0 0.75rem;
   }
 
   .cv-hero-copy h1 {
@@ -490,14 +490,14 @@
   }
 
   .cv-hero-fade-block {
-    height: 14rem;
-    transform: translate(-50%, 90%);
+    height: 6rem;
+    transform: translate(-50%, 70%);
   }
 }
 
 @media (max-width: 560px) {
   .cv-hero {
-    padding: 6.5rem 0 3rem;
+    padding: 6.5rem 0 0.5rem;
   }
 
   .cv-hero-copy {
@@ -558,7 +558,7 @@
 
 @media (max-width: 380px) {
   .cv-hero {
-    padding: 5.75rem 0 2.5rem;
+    padding: 5.75rem 0 0.35rem;
   }
 
   .cv-hero-copy h1 {
@@ -590,6 +590,6 @@
   }
 
   .cv-hero-fade-block {
-    height: 12rem;
+    height: 5rem;
   }
 }

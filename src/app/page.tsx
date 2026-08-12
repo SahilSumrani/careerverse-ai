@@ -24,13 +24,7 @@ export default function LandingPage() {
       <SiteHeader />
       <main>
         <HomeHero />
-
-        <HomeLane
-          audience="recruiters"
-          id="for-recruiters"
-          title="Hiring tools that show signal before the interview"
-          lead="Score, search, and track candidates with explainable AI—built for recruiting teams."
-        />
+        {/* Products sits flush under hero — no lane gap (that created the white void) */}
         <HomeTools />
         <HomeAiSearch />
         <HomePipeline />

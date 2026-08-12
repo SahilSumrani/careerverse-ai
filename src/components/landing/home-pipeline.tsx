@@ -27,7 +27,7 @@ export function HomePipeline() {
       <div className="cv-pipe-head">
         <div className="cv-eyebrow" style={{ margin: "0 auto" }}>
           <span className="cv-eyebrow-mark">CV</span>
-          Live applications
+          Recruiter proof
         </div>
         <h2 className="cv-section-title" style={{ marginTop: "1rem" }}>
           Track candidates across every stage live

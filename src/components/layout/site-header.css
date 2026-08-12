@@ -223,3 +223,46 @@
   background: #f5f8ff;
   color: #225aea;
 }
+
+/* For candidates — compact audience panel */
+.cv-audience-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 60;
+  min-width: 240px;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #eef2f8;
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cv-audience-label {
+  margin: 0 0 0.35rem;
+  padding: 0 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #98a2b3;
+}
+
+.cv-audience-link {
+  display: block;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #344054 !important;
+  text-decoration: none;
+}
+
+.cv-audience-link:hover,
+.cv-audience-link.is-accent {
+  background: #f5f8ff;
+  color: #225aea !important;
+}

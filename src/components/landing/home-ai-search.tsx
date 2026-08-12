@@ -122,12 +122,17 @@ export function HomeAiSearch() {
       </div>
 
       <div className="cv-ai-inner">
+        <p className="cv-eyebrow" style={{ marginBottom: "0.85rem" }}>
+          <span className="cv-eyebrow-mark">CV</span>
+          Core differentiator
+        </p>
         <h2 className="cv-ai-title">Magic AI Search</h2>
         <p className="cv-ai-sub">
           Ask for talent in plain language—CareerVerse AI shortlists candidates with explainable scores.
+          No job board does this for recruiters.
         </p>
         <Link href="/copilot" className="cv-btn-wrap cv-ai-link">
-          <span className="cv-btn">Learn More</span>
+          <span className="cv-btn">Try Magic AI Search</span>
         </Link>
 
         <div className="cv-ai-component">

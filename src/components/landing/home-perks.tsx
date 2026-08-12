@@ -9,7 +9,7 @@ export function HomePerks() {
       <div className="cv-container">
         <div className="cv-eyebrow">
           <span className="cv-eyebrow-mark">CV</span>
-          CareerVerse AI is live!
+          Signal before every interview
         </div>
         <h2 className="cv-section-title" style={{ marginTop: "0.85rem" }}>
           Perks of CareerVerse AI

@@ -12,7 +12,7 @@ import {
 } from "@/data/listing-filters";
 import "./site-header.css";
 
-type MegaKey = "internships" | "jobs" | null;
+type MegaKey = "candidates" | "jobs" | "internships" | null;
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -48,14 +48,14 @@ export function SiteHeader() {
 
   const internshipSections = internshipMegaSections();
   const jobSections = jobMegaSections();
-  const activeSections = mega === "jobs" ? jobSections : internshipSections;
-  const activeSection = activeSections[megaTab] ?? activeSections[0];
 
   const internshipsActive =
-    pathname === "/internships" || pathname.startsWith("/internships/") || pathname.startsWith("/internship/");
+    pathname === "/internships" ||
+    pathname.startsWith("/internships/") ||
+    pathname.startsWith("/internship/");
   const jobsActive =
     pathname === "/jobs" || pathname.startsWith("/jobs/") || pathname.startsWith("/job/");
-  const eventsActive = pathname === "/events" || pathname.startsWith("/events/");
+  const candidatesActive = internshipsActive || jobsActive || pathname.startsWith("/events") || pathname.startsWith("/resume");
 
   return (
     <header className="cv-site-header sticky top-0 z-50 border-b border-[#eef2f8] bg-white text-[#0b1220]">
@@ -69,7 +69,54 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="cv-site-nav hidden items-center gap-1 md:flex" aria-label="Primary">
+        <nav className="cv-site-nav hidden items-center gap-0.5 md:flex" aria-label="Primary">
+          <Link href="/#for-recruiters" className="cv-nav-link">
+            For recruiters
+          </Link>
+
+          <div
+            className="cv-mega-wrap"
+            onMouseEnter={() => openMega("candidates")}
+            onMouseLeave={scheduleCloseMega}
+          >
+            <button
+              type="button"
+              className={`cv-mega-trigger${candidatesActive || mega === "candidates" ? " is-active" : ""}`}
+              aria-expanded={mega === "candidates"}
+              aria-controls={`${megaId}-candidates`}
+              onClick={() => (mega === "candidates" ? setMega(null) : openMega("candidates"))}
+            >
+              For candidates
+              <ChevronDown size={14} aria-hidden />
+            </button>
+            {mega === "candidates" ? (
+              <div
+                id={`${megaId}-candidates`}
+                className="cv-audience-panel"
+                role="menu"
+                onMouseEnter={() => openMega("candidates")}
+                onMouseLeave={scheduleCloseMega}
+              >
+                <p className="cv-audience-label">Candidate paths</p>
+                <Link href="/internships" className="cv-audience-link" role="menuitem">
+                  Internships
+                </Link>
+                <Link href="/jobs" className="cv-audience-link" role="menuitem">
+                  Fresher jobs
+                </Link>
+                <Link href="/events" className="cv-audience-link" role="menuitem">
+                  Events
+                </Link>
+                <Link href="/resume" className="cv-audience-link" role="menuitem">
+                  Resume builder
+                </Link>
+                <Link href="/#for-candidates" className="cv-audience-link is-accent" role="menuitem">
+                  Candidate section on homepage
+                </Link>
+              </div>
+            ) : null}
+          </div>
+
           <div
             className="cv-mega-wrap"
             onMouseEnter={() => openMega("internships")}
@@ -79,7 +126,7 @@ export function SiteHeader() {
               type="button"
               className={`cv-mega-trigger${internshipsActive || mega === "internships" ? " is-active" : ""}`}
               aria-expanded={mega === "internships"}
-              aria-controls={`${megaId}-panel`}
+              aria-controls={`${megaId}-internships`}
               onClick={() => (mega === "internships" ? setMega(null) : openMega("internships"))}
             >
               Internships
@@ -87,11 +134,11 @@ export function SiteHeader() {
             </button>
             {mega === "internships" ? (
               <MegaPanel
-                id={`${megaId}-panel`}
+                id={`${megaId}-internships`}
                 sections={internshipSections}
                 activeIndex={megaTab}
                 onTab={setMegaTab}
-                active={activeSection}
+                active={internshipSections[megaTab] ?? internshipSections[0]}
                 onMouseEnter={() => openMega("internships")}
                 onMouseLeave={scheduleCloseMega}
               />
@@ -125,13 +172,6 @@ export function SiteHeader() {
               />
             ) : null}
           </div>
-
-          <Link
-            href="/events"
-            className={`cv-nav-link${eventsActive ? " is-active" : ""}`}
-          >
-            Events
-          </Link>
         </nav>
 
         <div className="hidden items-center md:flex">
@@ -151,6 +191,12 @@ export function SiteHeader() {
 
       {open ? (
         <div className="cv-mobile-nav border-t border-[#eef2f8] bg-white px-4 py-3 md:hidden">
+          <Link href="/#for-recruiters" className="cv-mobile-simple">
+            For recruiters
+          </Link>
+          <Link href="/#for-candidates" className="cv-mobile-simple">
+            For candidates
+          </Link>
           <MobileAccordion
             title="Internships"
             href="/internships"
@@ -179,6 +225,9 @@ export function SiteHeader() {
           />
           <Link href="/events" className="cv-mobile-simple">
             Events
+          </Link>
+          <Link href="/resume" className="cv-mobile-simple">
+            Resume builder
           </Link>
           <AuthControls compact />
         </div>

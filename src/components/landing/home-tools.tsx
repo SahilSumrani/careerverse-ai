@@ -175,8 +175,7 @@ export function HomeTools() {
       <div className="cv-tabs-head">
         <h2 className="cv-section-title">CareerVerse products</h2>
         <p className="cv-section-sub">
-          Every tool you need for jobs, internships, AI matching, resume review, and application tracking—in one
-          CareerVerse account.
+          Scoring, voice interviews, Magic AI Search, and hiring flow—every recruiting tool in one account.
         </p>
       </div>
 
@@ -219,7 +218,8 @@ export function HomeTools() {
             <h3>{tool.title}</h3>
             <p>{tool.description}</p>
             <Link href={tool.href} className="cv-tabs-link">
-              View feature <ArrowRight className="h-4 w-4" />
+              <span>View feature</span>
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
           <div className="cv-tabs-side">

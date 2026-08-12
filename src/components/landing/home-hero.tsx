@@ -307,21 +307,21 @@ export function HomeHero() {
       <div className="cv-hero-copy">
         <div className="cv-eyebrow">
           <span className="cv-eyebrow-mark">CV</span>
-          CareerVerse AI 2.0 is live!
+          Explainable AI for recruiting teams
         </div>
         <h1>
-          Discover <span className="cv-hero-highlight">companies hiring</span> for you
+          Hire with <span className="cv-hero-highlight">signal</span>, not noise
         </h1>
         <p className="cv-hero-sub">
-          Browse fresher jobs and internships, match with explainable AI, and track applications—all in
-          CareerVerse AI.
+          Score candidates, run voice interviews, and search talent in plain language—so your team
+          interviews with confidence.
         </p>
         <div className="cv-hero-ctas">
           <Link href="/auth/signup" className="cv-btn-wrap">
-            <span className="cv-btn">Start Free Trial</span>
+            <span className="cv-btn">Hire talent</span>
           </Link>
-          <Link href="/jobs" className="cv-btn-wrap is-secondary">
-            <span className="cv-btn">Browse Jobs</span>
+          <Link href="/#for-candidates" className="cv-btn-wrap is-secondary">
+            <span className="cv-btn">Find a job</span>
           </Link>
         </div>
       </div>

@@ -50,6 +50,14 @@
   text-decoration: none;
 }
 
+/* Blue CTAs must stay white even under .cv-home a inherit */
+.cv-home a.cv-tabs-link,
+.cv-home a.cv-empower-primary,
+.cv-home a.cv-final-btn,
+.cv-home .cv-btn-wrap:not(.is-secondary) .cv-btn {
+  color: #fff !important;
+}
+
 .cv-container {
   width: 100%;
   max-width: 72rem;

@@ -5,7 +5,7 @@
   isolation: isolate;
   background: #fff;
   /* Clear gap under hero tunnel — no negative pull into hero/header */
-  padding: 5.5rem 0 7rem;
+  padding: 2.5rem 0 6.5rem;
   margin-top: 0;
   overflow: clip;
 }
@@ -226,18 +226,36 @@
   max-width: 28rem;
 }
 
-.cv-tabs-link {
+/* Beat `.cv-home a { color: inherit }` so the CTA stays white on blue */
+.cv-home a.cv-tabs-link,
+a.cv-tabs-link {
   margin-top: 1.5rem;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   height: 2.5rem;
-  padding: 0 1rem;
+  padding: 0 1.1rem;
   border-radius: 0.69rem;
   background: #225aea;
-  color: #fff;
+  color: #fff !important;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(34, 90, 234, 0.28);
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.cv-home a.cv-tabs-link:hover,
+a.cv-tabs-link:hover {
+  background: #1a4ad0;
+  color: #fff !important;
+  box-shadow: 0 10px 24px rgba(34, 90, 234, 0.34);
+  transform: translateY(-1px);
+}
+
+.cv-tabs-link span {
+  color: inherit;
 }
 
 .cv-tabs-side {

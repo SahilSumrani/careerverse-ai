@@ -1,6 +1,6 @@
 "use client";
 
-import { getSession, signIn } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { signInWithGooglePopup, warmFirebaseAuth } from "@/lib/firebase-auth-client";
 
 export type GoogleAuthResult = {
@@ -22,11 +22,10 @@ export function prefetchGoogleAuth() {
 }
 
 /**
- * Firebase Google popup → NextAuth JWT session → hard navigate.
- * Hard navigation avoids cookie/session races with client router.push.
- *
- * Flow is intentionally lean: one token verify/upsert inside NextAuth authorize
- * (no separate /api/auth/firebase + /api/auth/me round-trips).
+ * Firebase Google popup → NextAuth JWT session → navigate.
+ * Prefer soft assign via location; skip redundant getSession when possible
+ * by reading onboarding from authorize response URL / defaulting to dashboard
+ * after a successful signIn (JWT cookie is already set).
  */
 export async function completeGoogleAuth(options?: {
   callbackUrl?: string | null;
@@ -44,11 +43,24 @@ export async function completeGoogleAuth(options?: {
     throw new Error("Could not create a secure session. Try again.");
   }
 
-  const session = await getSession();
-  const onboardingComplete = Boolean(session?.user?.onboardingComplete);
-  // New Google accounts land on onboarding; treat incomplete as "new" for callers.
-  const isNewUser = !onboardingComplete;
+  // Avoid a second round-trip when possible: authorize already wrote the JWT.
+  // Soft-read session with a short timeout so we don't stall 3–4s on getSession.
+  let onboardingComplete = false;
+  try {
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 1200);
+    const sessRes = await fetch("/api/auth/session", { signal: ctrl.signal, cache: "no-store" });
+    window.clearTimeout(timer);
+    if (sessRes.ok) {
+      const session = (await sessRes.json()) as { user?: { onboardingComplete?: boolean } };
+      onboardingComplete = Boolean(session?.user?.onboardingComplete);
+    }
+  } catch {
+    // Fall through — send returning users to dashboard; onboarding middleware will correct if needed.
+    onboardingComplete = true;
+  }
 
+  const isNewUser = !onboardingComplete;
   const dest = destinationFor(onboardingComplete, options?.callbackUrl);
   window.location.assign(dest);
 

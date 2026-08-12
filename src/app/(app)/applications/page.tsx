@@ -338,12 +338,9 @@ export default function ApplicationsPage() {
         }
       />
 
-      {source ? (
+      {source && (source.includes("demo") || source.includes("local")) ? (
         <p className="mb-3 text-xs text-muted-foreground">
-          Source:{" "}
-          {source.includes("demo") || source.includes("local")
-            ? "Demo data (persists to Firestore when Admin is configured, else localStorage)"
-            : source}
+          Demo data — saves to your account when signed in.
         </p>
       ) : null}
 

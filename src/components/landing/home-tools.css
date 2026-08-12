@@ -541,6 +541,22 @@ a.cv-tabs-link:hover {
   .cv-tabs-rail {
     justify-content: flex-start;
     min-height: 3.5rem;
+    gap: 0.15rem;
+    padding: 0.35rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cv-tab-btn {
+    scroll-snap-align: center;
+  }
+
+  .cv-tab-btn.is-active {
+    transform: scale(1.04);
+  }
+
+  .cv-tabs {
+    overflow: visible;
   }
 
   .cv-tab-tip {
@@ -554,11 +570,14 @@ a.cv-tabs-link:hover {
   .cv-tabs {
     padding: 2.5rem 0 3.5rem;
     margin-top: 0;
+    overflow: visible;
   }
 
   .cv-tabs-spotlight {
-    height: min(22rem, 110vw);
-    clip-path: polygon(34% 0%, 66% 0%, 100% 100%, 0% 100%);
+    width: 100%;
+    height: 16rem;
+    clip-path: none;
+    border-radius: 0 0 45% 45% / 0 0 14% 14%;
   }
 
   .cv-tabs-head {

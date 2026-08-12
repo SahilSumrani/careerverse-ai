@@ -1,10 +1,10 @@
-/* SoftQA-inspired split auth — CareerVerse branding */
+/* CareerVerse blue theme — matches marketing site */
 .cv-auth-shell {
   --cv-auth-ink: #0b1220;
   --cv-auth-muted: #667085;
   --cv-auth-border: #e4e7ec;
-  --cv-auth-panel: #0c3d3a;
-  --cv-auth-panel-2: #0a2f2d;
+  --cv-auth-panel: #1a4ad0;
+  --cv-auth-panel-2: #0b1f4d;
   --cv-auth-accent: #225aea;
   min-height: 100svh;
   display: grid;
@@ -53,7 +53,7 @@
   width: 2rem;
   height: 2rem;
   border-radius: 0.55rem;
-  background: #0b1220;
+  background: #225aea;
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -143,12 +143,12 @@
   height: 2.85rem;
   border: 0;
   border-radius: 0.75rem;
-  background: #0b1220;
+  background: #225aea;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 
 .cv-auth-primary:disabled {
@@ -157,7 +157,7 @@
 }
 
 .cv-auth-primary:hover:not(:disabled) {
-  opacity: 0.92;
+  background: #1a4ad0;
 }
 
 .cv-auth-or {
@@ -228,8 +228,9 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 55% at 85% 0%, rgba(255, 255, 255, 0.14), transparent 55%),
-    linear-gradient(160deg, #0c3d3a 0%, #0a2f2d 55%, #082624 100%);
+    radial-gradient(ellipse 70% 55% at 85% 0%, rgba(255, 255, 255, 0.16), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 100%, rgba(96, 165, 250, 0.28), transparent 50%),
+    linear-gradient(160deg, #225aea 0%, #1a4ad0 45%, #0b1f4d 100%);
   color: #fff;
   padding: 3.5rem;
 }

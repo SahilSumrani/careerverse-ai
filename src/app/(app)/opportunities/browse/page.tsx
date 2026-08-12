@@ -117,6 +117,9 @@ export default async function OpportunitiesPage({
     })),
   );
   rows.sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0));
+  const strongRows = rows.filter((r) => (r.match?.score ?? 0) >= 40);
+  const weakCount = rows.length - strongRows.length;
+  const displayRows = strongRows.length ? strongRows : rows.slice(0, 6);
 
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-0">
@@ -124,10 +127,15 @@ export default async function OpportunitiesPage({
         title="Browse opportunities"
         description={
           source === "firestore"
-            ? "Live listings from Firestore with explainable AI matching."
-            : "Demo listings with explainable AI matching. Add a Firestore jobs collection anytime."
+            ? "Live listings with explainable AI matching."
+            : "Demo listings with explainable AI matching."
         }
       />
+      {weakCount > 0 && strongRows.length > 0 ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Showing stronger matches (40%+). Broaden skills or preferences to unlock more roles.
+        </p>
+      ) : null}
       <form className="mb-6 grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
         <input
           name="q"
@@ -168,7 +176,7 @@ export default async function OpportunitiesPage({
       </form>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {rows.map(({ item, match }) => (
+        {displayRows.map(({ item, match }) => (
           <Card key={item.id} className="flex h-full flex-col overflow-hidden p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -184,7 +192,10 @@ export default async function OpportunitiesPage({
                 </p>
               </div>
               {match ? (
-                <Badge tone="info" className="shrink-0">
+                <Badge
+                  tone={match.score >= 70 ? "accent" : match.score >= 50 ? "info" : "default"}
+                  className="shrink-0"
+                >
                   {match.score}% match
                 </Badge>
               ) : null}
@@ -200,15 +211,16 @@ export default async function OpportunitiesPage({
               ))}
             </div>
             {match?.reasons?.length ? (
-              <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
-                Why: {match.reasons.slice(0, 2).join(" · ")}
-              </p>
+              <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">{match.reasons[0]}</p>
             ) : null}
           </Card>
         ))}
-        {!rows.length ? (
+        {!displayRows.length ? (
           <div className="md:col-span-2">
-            <EmptyState title="No opportunities matched" description="Try a different search." />
+            <EmptyState
+              title="No strong matches yet"
+              description="Add skills and preferences, or try a different search to see better-fit roles."
+            />
           </div>
         ) : null}
       </div>

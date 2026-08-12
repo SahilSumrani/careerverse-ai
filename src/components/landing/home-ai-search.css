@@ -1,10 +1,11 @@
 /* Dropship .section.is-ai */
 .cv-ai {
   position: relative;
-  height: 100svh;
-  max-height: 60rem;
-  padding: 0;
-  overflow: hidden;
+  height: auto;
+  min-height: min(36rem, 100svh);
+  max-height: none;
+  padding: 5rem 0 4.5rem;
+  overflow: visible;
   background: #fff;
   text-align: center;
   display: flex;
@@ -234,23 +235,21 @@
 
 @media (max-width: 768px) {
   .cv-ai {
-    height: auto;
-    max-height: none;
-    min-height: 36rem;
-    padding: 4rem 0;
+    min-height: 0;
+    padding: 3.25rem 0 3rem;
   }
 
   .cv-ai-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 
   .cv-ai-component {
-    padding: 4.5rem 0;
+    padding: 2.5rem 0 1.5rem;
   }
 
   .cv-ai-loop-text {
-    font-size: 0.9375rem;
-    line-height: 3.25rem;
+    font-size: 0.9rem;
+    line-height: 2.75rem;
   }
 
   .cv-ai-bg-img {
@@ -260,8 +259,13 @@
 }
 
 @media (max-width: 560px) {
+  .cv-ai {
+    padding: 2.75rem 0 2.5rem;
+  }
+
   .cv-ai-box {
     border-radius: 1.25rem;
+    margin: 0 0.5rem;
   }
 
   .cv-ai-box-inner {
@@ -277,13 +281,13 @@
 
   .cv-ai-loop-text {
     font-size: 0.78rem;
-    line-height: 2.5rem;
+    line-height: 2.35rem;
     white-space: normal;
-    max-width: 14rem;
+    max-width: min(14rem, 58vw);
   }
 
   .cv-ai-loop {
-    height: 2.5rem;
+    height: 2.35rem;
   }
 
   .cv-ai-loop-item {
@@ -291,20 +295,25 @@
   }
 
   .cv-ai-title {
-    font-size: 1.65rem;
-    padding: 0 0.5rem;
+    font-size: 1.5rem;
+    padding: 0 0.75rem;
   }
 
   .cv-ai-sub {
     font-size: 13px;
-    padding: 0 0.75rem;
+    padding: 0 1rem;
+    line-height: 1.45;
+  }
+
+  .cv-ai-component {
+    padding: 1.75rem 0 0.5rem;
   }
 }
 
 @media (max-width: 380px) {
   .cv-ai {
     min-height: 0;
-    padding: 3rem 0;
+    padding: 2.25rem 0 2rem;
   }
 
   .cv-ai-inner {

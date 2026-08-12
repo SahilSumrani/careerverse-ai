@@ -36,25 +36,45 @@ export default async function DashboardPage() {
   const ctx = await getCareerContext(session.user.id).catch(() => null);
   const resume = user?.resume || user?.resumes?.[0] || null;
   const resumeScore = resume?.analyses?.[0]?.score;
+  const resumeDurable =
+    Boolean(resume) &&
+    (resume?.storageUrl?.startsWith("gs://") ||
+      (Boolean(resume?.storagePath?.startsWith("resumes/")) &&
+        !resume?.storagePath?.includes("/tmp/")) ||
+      (Boolean(resume?.storageUrl) && !resume?.storageUrl?.includes("/tmp/")));
+  const resumeUnavailable =
+    Boolean(resume) &&
+    (resume?.storagePath?.includes("/tmp") || resume?.storageUrl?.includes("/tmp/"));
+  const resumeStatusLabel = !resume ? "Missing" : resumeUnavailable ? "Re-upload" : resumeDurable ? "Ready" : "Pending";
+  const resumeStatusHint = !resume
+    ? "Upload to improve matches"
+    : resumeUnavailable
+      ? "Previous file unavailable — re-upload"
+      : resume.fileName;
 
   const matched = isStudentFacing
-    ? await Promise.all(
-        DUMMY_JOBS.slice(0, 4).map(async (job) => ({
-          job,
-          match: ctx
-            ? await aiService.jobMatching({
-                ctx,
-                opportunity: {
-                  title: job.title,
-                  description: job.blurb,
-                  skills: job.tags,
-                  eligibility: null,
-                  type: job.type,
-                },
-              })
-            : null,
-        })),
+    ? (
+        await Promise.all(
+          DUMMY_JOBS.slice(0, 8).map(async (job) => ({
+            job,
+            match: ctx
+              ? await aiService.jobMatching({
+                  ctx,
+                  opportunity: {
+                    title: job.title,
+                    description: job.blurb,
+                    skills: job.tags,
+                    eligibility: null,
+                    type: job.type,
+                  },
+                })
+              : null,
+          })),
+        )
       )
+        .filter((row) => (row.match?.score ?? 0) >= 40)
+        .sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0))
+        .slice(0, 4)
     : [];
 
   if (isHr) {
@@ -70,7 +90,7 @@ export default async function DashboardPage() {
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Open roles" value={0} hint="Opportunity posting coming soon" icon={<Briefcase className="h-4 w-4" />} />
-          <StatCard label="Applicants" value={0} hint="Firestore applicant inbox" icon={<Users className="h-4 w-4" />} />
+          <StatCard label="Applicants" value={0} hint="Applicant inbox" icon={<Users className="h-4 w-4" />} />
           <StatCard label="Interviews" value={0} hint="Schedule tracking" icon={<Calendar className="h-4 w-4" />} highlight />
         </div>
         <Card className="p-5">
@@ -98,7 +118,7 @@ export default async function DashboardPage() {
           <p className="text-sm font-medium text-primary">Mentor workspace</p>
           <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Hi, {firstName}</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Guide learners with career roadmaps and feedback. Session booking lands on Firestore next.
+            Guide learners with career roadmaps and feedback. Session booking is coming next.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -160,8 +180,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Resume"
-          value={resume ? "Ready" : "Missing"}
-          hint={resume ? resume.fileName : "Upload to improve matches"}
+          value={resumeStatusLabel}
+          hint={resumeStatusHint}
           icon={<FileText className="h-4 w-4" />}
         />
         <StatCard
@@ -293,7 +313,8 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <div className="grid gap-3">
-              {matched.map(({ job, match }) => (
+              {matched.length ? (
+                matched.map(({ job, match }) => (
                 <Card key={job.id} className="p-4 transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex gap-3">
@@ -317,23 +338,33 @@ export default async function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    {match ? <Badge tone="info">{match.score}% match</Badge> : null}
+                    {match ? (
+                      <Badge tone={match.score >= 70 ? "accent" : match.score >= 50 ? "info" : "default"}>
+                        {match.score}% match
+                      </Badge>
+                    ) : null}
                   </div>
                   {match ? (
                     <p className="mt-3 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">Why:</span> {match.reasons[0]}
-                      {match.gaps[0] ? (
-                        <>
-                          {" "}
-                          · <span className="font-medium text-foreground">Gap:</span> {match.gaps.slice(0, 2).join(", ")}
-                        </>
-                      ) : null}
+                      {match.reasons[0]}
+                      {match.gaps[0] ? <> · Build next: {match.gaps.slice(0, 2).join(", ")}</> : null}
                     </p>
                   ) : (
                     <p className="mt-3 text-xs text-muted-foreground">{job.blurb}</p>
                   )}
                 </Card>
-              ))}
+              ))
+              ) : (
+                <EmptyState
+                  title="No strong matches yet"
+                  description="Broaden your skills or preferences to see roles with clearer fit (40%+)."
+                  action={
+                    <Link href="/profile" className="text-sm font-semibold text-primary">
+                      Update profile →
+                    </Link>
+                  }
+                />
+              )}
             </div>
           </section>
 
@@ -370,25 +401,22 @@ export default async function DashboardPage() {
                 {resumeScore != null ? (
                   <p className="mt-2 text-xs text-muted-foreground">Latest analysis score: {resumeScore}</p>
                 ) : null}
-                {resume.storageUrl?.startsWith("gs://") ||
-                (resume.storagePath?.startsWith("resumes/") &&
-                  !resume.storagePath.includes("/tmp/")) ? (
+                {resumeDurable ? (
                   <Badge tone="info" className="mt-3">
-                    Firebase Storage
+                    File saved securely
                   </Badge>
-                ) : resume.storagePath?.includes("/tmp") ||
-                  resume.storageUrl?.includes("/tmp/") ? (
+                ) : resumeUnavailable ? (
                   <>
-                    <Badge tone="default" className="mt-3">
+                    <Badge tone="warning" className="mt-3">
                       File unavailable — re-upload
                     </Badge>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Previous download link pointed at a temporary path. Re-upload to restore preview.
+                      Previous download link expired. Re-upload to restore preview.
                     </p>
                   </>
                 ) : (
                   <Badge tone="default" className="mt-3">
-                    Metadata in Firestore
+                    On file
                   </Badge>
                 )}
               </>

@@ -192,9 +192,15 @@ function deterministicJobMatch(
   return {
     score,
     reasons: [
-      strengths.length ? ` overlapping skills: ${strengths.slice(0, 4).join(", ")}` : "Limited direct skill overlap yet",
-      `Opportunity type (${opportunity.type}) vs preference context`,
-      ctx.interests.length ? `Interests considered: ${ctx.interests.slice(0, 3).join(", ")}` : "Add interests for better matching",
+      strengths.length
+        ? `Matches your ${strengths.slice(0, 3).join(", ")} skills`
+        : "Limited skill overlap so far — add skills to your profile for stronger matches",
+      opportunity.type
+        ? `This is a ${opportunity.type} role${ctx.interests.length ? " — check it fits your preferences" : ""}`
+        : "Role type considered against your preferences",
+      ctx.interests.length
+        ? `Aligned with your interest in ${ctx.interests.slice(0, 2).join(" and ")}`
+        : "Add career interests for clearer matching",
     ].map((r) => r.trim()),
     strengths: strengths.length ? strengths : ["Willingness to learn (self-declared goals)"],
     gaps,

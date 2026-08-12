@@ -87,18 +87,59 @@ function CopilotInner() {
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 md:px-6">
-          {log.map((m, i) => (
-            <div
-              key={`${m.role}-${i}`}
-              className={
-                m.role === "assistant"
-                  ? "max-w-[90%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-3 text-sm"
-                  : "ml-auto max-w-[90%] whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground"
-              }
-            >
-              {m.content}
+          {log.length <= 1 ? (
+            <div className="mx-auto flex max-w-lg flex-col items-center gap-4 py-8 text-center">
+              <div className="rounded-2xl bg-primary/10 px-4 py-3 text-sm text-foreground">{GREETING}</div>
+              <p className="text-sm text-muted-foreground">Try a starter prompt to begin:</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {STARTERS.map((s) => (
+                  <Button
+                    key={`empty-${s}`}
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => void send(s)}
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
+              <div className="mt-2 grid w-full gap-2 text-left sm:grid-cols-2">
+                {[
+                  { t: "Skill gaps", d: "See what to learn next for your target role." },
+                  { t: "Interview prep", d: "Practice questions tailored to your profile." },
+                  { t: "Resume tips", d: "Tighten bullets for stronger ATS-friendly clarity." },
+                  { t: "This week", d: "Get a short action list you can finish in 7 days." },
+                ].map((card) => (
+                  <button
+                    key={card.t}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void send(`Help me with: ${card.t.toLowerCase()}`)}
+                    className="rounded-2xl border border-border bg-card px-3 py-3 text-left transition hover:border-primary/40"
+                  >
+                    <p className="text-sm font-semibold">{card.t}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{card.d}</p>
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
+          ) : (
+            log.map((m, i) => (
+              <div
+                key={`${m.role}-${i}`}
+                className={
+                  m.role === "assistant"
+                    ? "max-w-[90%] whitespace-pre-wrap rounded-2xl bg-muted px-4 py-3 text-sm"
+                    : "ml-auto max-w-[90%] whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground"
+                }
+              >
+                {m.content}
+              </div>
+            ))
+          )}
+          {busy ? <Skeleton className="h-16 w-2/3 rounded-2xl" /> : null}
           {busy ? <p className="text-xs text-muted-foreground">Thinking with your profile…</p> : null}
           <div ref={bottomRef} />
         </div>

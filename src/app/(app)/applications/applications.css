@@ -1,0 +1,225 @@
+/* Untitled UI–inspired Application Tracker surface */
+
+.cv-apps-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid color-mix(in oklab, var(--border) 70%, white);
+  background:
+    radial-gradient(120% 80% at 10% -10%, rgba(16, 185, 129, 0.12), transparent 55%),
+    radial-gradient(90% 70% at 100% 0%, rgba(34, 90, 234, 0.08), transparent 50%),
+    #f8fafc;
+  box-shadow: var(--shadow-md);
+  animation: cv-apps-shell-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-shell::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0.45;
+  mask-image: linear-gradient(180deg, black, transparent 92%);
+}
+
+.cv-apps-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.cv-apps-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+  background: color-mix(in oklab, white 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.cv-apps-tab {
+  position: relative;
+  padding: 0.9rem 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  transition: color 180ms ease;
+}
+
+.cv-apps-tab:hover {
+  color: var(--foreground);
+}
+
+.cv-apps-tab[data-active="true"] {
+  color: var(--foreground);
+}
+
+.cv-apps-tab[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0.65rem;
+  right: 0.65rem;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: cv-apps-tab-line 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+  animation: cv-apps-card-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--primary) 28%, var(--border));
+  box-shadow: 0 10px 28px rgba(16, 24, 40, 0.07);
+}
+
+.cv-apps-card[data-active="true"] {
+  border-color: color-mix(in oklab, #10b981 45%, var(--border));
+  background: linear-gradient(145deg, #ecfdf5 0%, #ffffff 48%, #f0f7ff 100%);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, #10b981 22%, transparent),
+    0 12px 32px rgba(16, 185, 129, 0.1);
+}
+
+.cv-apps-detail {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  animation: cv-apps-detail-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-match {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #6941c6;
+  background: linear-gradient(90deg, rgba(158, 119, 237, 0.16), rgba(34, 90, 234, 0.12));
+  animation: cv-apps-pulse 2.4s ease-in-out infinite;
+}
+
+.cv-apps-step-line {
+  transform-origin: left center;
+  animation: cv-apps-line-grow 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-step-dot {
+  animation: cv-apps-dot-pop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cv-apps-status-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in oklab, currentColor 18%, transparent);
+}
+
+@keyframes cv-apps-shell-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cv-apps-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cv-apps-detail-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cv-apps-tab-line {
+  from {
+    transform: scaleX(0.35);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cv-apps-line-grow {
+  from {
+    transform: scaleX(0);
+    opacity: 0.4;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cv-apps-dot-pop {
+  from {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes cv-apps-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(158, 119, 237, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(158, 119, 237, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-apps-shell,
+  .cv-apps-card,
+  .cv-apps-detail,
+  .cv-apps-tab[data-active="true"]::after,
+  .cv-apps-step-line,
+  .cv-apps-step-dot,
+  .cv-apps-match {
+    animation: none !important;
+  }
+
+  .cv-apps-card:hover {
+    transform: none;
+  }
+}

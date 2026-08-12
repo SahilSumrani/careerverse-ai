@@ -60,8 +60,18 @@ next-env.d.ts
 .tmp-visual-compare/
 .agents/
 .claude/
-.cursor/
 .windsurf/
 tmp-dropship-hero.html
 tmp-marquee.json
 skills-lock.json
+
+# Cursor: keep local settings private; commit shared skills + rules
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/rules/
+!.cursor/rules/**
+
+# Reticle local pairing / workspace state (never commit tokens)
+.reticle/
+!.reticle.json

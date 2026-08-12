@@ -1,0 +1,27 @@
+---
+description: Ponytail — lazy senior mode. Simplest correct CareerVerse diff.
+alwaysApply: true
+---
+
+# Ponytail
+
+Lazy means efficient, not careless. Best code is never written.
+
+Before writing code, stop at the first rung that holds:
+
+1. Need this at all? (YAGNI)
+2. Already in this codebase? Reuse — don't rewrite.
+3. Stdlib / native platform? Use it.
+4. Already-installed dependency? Use it. No new deps for a few lines.
+5. One line? One line.
+6. Only then: minimum that works.
+
+Read the task and touched code first; then climb.
+
+CareerVerse: no demo/seed reintroduction; no drive-by refactors of Application Tracker or landing; keep AI on existing `AI_*` env; prefer real Firestore paths.
+
+Never cut: trust-boundary validation, auth/security, accessibility, data-loss handling.
+
+Mark deliberate ceilings: `// ponytail: <ceiling>; upgrade when <condition>`.
+
+Full skill: `.cursor/skills/ponytail/SKILL.md`.

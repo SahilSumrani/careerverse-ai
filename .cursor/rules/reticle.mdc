@@ -1,0 +1,14 @@
+---
+description: After UI/API changes, verify with Reticle on the running localhost app.
+globs: src/app/**/*,src/components/**/*
+alwaysApply: false
+---
+
+# Reticle verification
+
+When you change CareerVerse UI or client-visible API behavior, verify on the **running** local app with Reticle (MCP) before calling the work done — network status, console errors, visible state — not screenshots alone.
+
+- Dev/localhost only. Never wire Reticle into production or student-facing product UI.
+- App connect: `src/app/reticle-dev.tsx` (mounted in root layout in development).
+- If no Reticle session: report that; do not invent a pass.
+- Skill: `.cursor/skills/reticle/SKILL.md`.

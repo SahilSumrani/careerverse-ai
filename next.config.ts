@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withReticle } from "@reticlehq/next";
 
 const nextConfig: NextConfig = {
   async redirects() {
@@ -6,4 +7,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Dev-only source mapping for Reticle; no-op in production builds.
+export default withReticle(nextConfig);

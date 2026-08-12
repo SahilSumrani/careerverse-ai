@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans, Instrument_Serif } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { ReticleDev } from "./reticle-dev";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${jakarta.variable} ${inter.variable} ${instrument.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
+        {process.env.NODE_ENV === "development" ? <ReticleDev /> : null}
         <Providers>{children}</Providers>
       </body>
     </html>

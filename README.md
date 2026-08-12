@@ -75,3 +75,18 @@ Optionally also set `NEXTAUTH_URL` to the same value. No trailing slash. Redeplo
 
 - Resume binaries: prefers Firebase Storage when Admin + bucket are configured; otherwise stores metadata in Firestore and writes files locally (ephemeral on Vercel).
 - Community, network, events, and application tracker return empty/graceful states until migrated to Firestore.
+
+## Platform admin (`/admin`)
+
+Access is **role-based only** — no secret URL or env backdoor.
+
+1. Sign in once so Firestore has `users/{yourUid}`.
+2. In [Firebase Console](https://console.firebase.google.com/) → **Firestore** → open `users/{uid}`.
+3. Edit the `roles` array to include **`PLATFORM_ADMIN`** (or **`ADMIN`**, which CareerVerse treats as `PLATFORM_ADMIN`).
+4. Sign out and sign back in (JWT must refresh), then open `/admin`.
+
+Server checks: middleware blocks non-admins from `/admin`; every `/api/admin` call re-reads roles from Firestore via `requirePermission(..., ADMIN_ACCESS)`. Non-admins get **403** with no data. Mutations are Zod-validated and rate-limited.
+
+## Copilot limits
+
+Student chat (`/api/ai/chat`) is career/resume-only: **300** char max input, **~40** messages/day, off-topic refused **before** the LLM (no quota burn), shorter chat `max_tokens` via `AI_CHAT_MAX_TOKENS` (default 400). Remaining quota shows on Copilot page + floating widget.

@@ -30,11 +30,12 @@ AI-powered career operating system: Discover → Understand → Prepare → Conn
 
 ## Security
 
-- RBAC via Role + Permission tables
-- Server-side Zod validation on all mutations
+- RBAC via Firestore `users/{uid}.roles` + `src/lib/rbac.ts` permissions
+- Server-side Zod validation on mutations (including `/api/admin` and `/api/ai/chat`)
 - Secure resume upload (type/size/MIME)
 - Secrets via environment variables only
-- Admin routes require `ADMIN` / `PLATFORM_ADMIN` role
+- Admin UI/API require `PLATFORM_ADMIN` (Firestore `ADMIN` alias accepted); never trust client-only role claims
+- Copilot: input cap, daily quota, off-topic refuse before LLM
 
 ## Demo Data
 

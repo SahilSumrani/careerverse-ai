@@ -84,7 +84,9 @@ function asStringArray(value: unknown): string[] {
 }
 
 function asRoles(value: unknown): RoleName[] {
-  const roles = asStringArray(value).filter(isRoleName);
+  // Founders may set "ADMIN" in Console — treat as PLATFORM_ADMIN (no separate role).
+  const raw = asStringArray(value).map((r) => (r === "ADMIN" ? "PLATFORM_ADMIN" : r));
+  const roles = raw.filter(isRoleName);
   return roles.length ? roles : ["STUDENT"];
 }
 

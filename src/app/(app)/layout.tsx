@@ -33,7 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   const roles = session.user.roles ?? cached?.roles ?? [];
-  const isAdmin = roles.includes("PLATFORM_ADMIN") || roles.includes("INSTITUTION_ADMIN");
+  const isAdmin = roles.includes("PLATFORM_ADMIN");
 
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-background">

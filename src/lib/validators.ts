@@ -97,6 +97,44 @@ export const connectionRequestSchema = z.object({
 });
 
 export const aiChatSchema = z.object({
-  message: z.string().min(1).max(4000),
-  sessionId: z.string().cuid().optional(),
+  message: z.string().min(1).max(300),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(300),
+      }),
+    )
+    .max(10)
+    .optional(),
 });
+
+export const adminMutationSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("suspend_user"),
+    id: z.string().min(1).max(128),
+  }),
+  z.object({
+    action: z.literal("unsuspend_user"),
+    id: z.string().min(1).max(128),
+  }),
+  z.object({
+    action: z.literal("set_roles"),
+    id: z.string().min(1).max(128),
+    roles: z
+      .array(
+        z.enum([
+          "STUDENT",
+          "PROFESSIONAL",
+          "MENTOR",
+          "HR",
+          "FOUNDER",
+          "SPEAKER",
+          "INSTITUTION_ADMIN",
+          "PLATFORM_ADMIN",
+        ]),
+      )
+      .min(1)
+      .max(8),
+  }),
+]);

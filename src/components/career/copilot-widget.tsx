@@ -11,11 +11,15 @@ import "@/styles/cv-product.css";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
+const MAX_CHARS = 300;
+
 export function CopilotWidget() {
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limit, setLimit] = useState(40);
   const [log, setLog] = useState<Msg[]>([
     {
       role: "assistant",
@@ -28,13 +32,35 @@ export function CopilotWidget() {
     const q = searchParams.get("copilot");
     if (q) {
       setOpen(true);
-      setMessage(q);
+      setMessage(q.slice(0, MAX_CHARS));
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!open) return;
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/chat");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data.remaining === "number") setRemaining(data.remaining);
+        if (typeof data.limit === "number") setLimit(data.limit);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [open]);
+
   async function send(textIn?: string) {
-    const text = (textIn ?? message).trim();
+    const text = (textIn ?? message).trim().slice(0, MAX_CHARS);
     if (!text || busy) return;
+    if (remaining === 0) {
+      setLog((prev) => [
+        ...prev,
+        { role: "assistant", content: `Daily limit reached (${limit}/day). Try again tomorrow.` },
+      ]);
+      return;
+    }
     const next = [...log, { role: "user" as const, content: text }];
     setLog(next);
     setMessage("");
@@ -49,6 +75,8 @@ export function CopilotWidget() {
         }),
       });
       const data = await res.json();
+      if (typeof data.remaining === "number") setRemaining(data.remaining);
+      if (typeof data.limit === "number") setLimit(data.limit);
       setLog((prev) => [
         ...prev,
         {
@@ -65,6 +93,8 @@ export function CopilotWidget() {
       setBusy(false);
     }
   }
+
+  const charsLeft = MAX_CHARS - message.length;
 
   return (
     <>
@@ -84,7 +114,11 @@ export function CopilotWidget() {
               <div className="flex items-center justify-between border-b border-border bg-white/80 px-4 py-3 backdrop-blur-sm">
                 <div>
                   <p className="text-sm font-semibold">AI Career Copilot</p>
-                  <p className="text-xs text-muted-foreground">Uses your profile when signed in</p>
+                  <p className="text-xs text-muted-foreground">
+                    {remaining != null
+                      ? `${remaining}/${limit} messages today · max ${MAX_CHARS} chars`
+                      : "Career & resume only"}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Link href="/copilot" className="px-2 text-xs font-medium text-primary hover:underline">
@@ -109,20 +143,32 @@ export function CopilotWidget() {
                   <p className="text-xs text-muted-foreground">Thinking with your career context…</p>
                 ) : null}
               </div>
-              <div className="cv-composer">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="What are my skill gaps?"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void send();
-                  }}
-                  aria-label="Copilot message"
-                  className="border-border bg-white"
-                />
-                <Button onClick={() => void send()} disabled={busy || !message.trim()} aria-label="Send">
-                  <Send className="h-4 w-4" />
-                </Button>
+              <div className="cv-composer flex-col gap-1">
+                <div className="flex w-full items-center gap-2">
+                  <Input
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value.slice(0, MAX_CHARS))}
+                    placeholder="What are my skill gaps?"
+                    maxLength={MAX_CHARS}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void send();
+                    }}
+                    disabled={busy || remaining === 0}
+                    aria-label="Copilot message"
+                    className="border-border bg-white"
+                  />
+                  <Button
+                    onClick={() => void send()}
+                    disabled={busy || !message.trim() || remaining === 0}
+                    aria-label="Send"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="w-full text-[10px] text-muted-foreground">
+                  {charsLeft} chars left
+                  {remaining != null ? ` · ${remaining}/${limit} left today` : ""}
+                </p>
               </div>
             </div>
           </div>

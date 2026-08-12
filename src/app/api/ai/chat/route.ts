@@ -1,9 +1,29 @@
 import { getCareerContext, jsonError, jsonOk, requireSession } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
+import {
+  CHAT_INPUT_MAX_CHARS,
+  DAILY_CHAT_CAP,
+  isCareerChatOffTopic,
+  OFF_TOPIC_REPLY,
+} from "@/lib/ai/chat-guard";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
+import { aiChatSchema } from "@/lib/validators";
 
-/** Light per-user daily Copilot message cap (Firestore counter). */
-const DAILY_CHAT_CAP = 40;
+async function peekChatQuota(userId: string): Promise<{ remaining: number; limit: number }> {
+  if (!hasFirebaseAdminCredentials()) {
+    return { remaining: DAILY_CHAT_CAP, limit: DAILY_CHAT_CAP };
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  const ref = getAdminDb().collection("users").doc(userId).collection("rateLimits").doc("aiChat");
+  try {
+    const snap = await ref.get();
+    const data = snap.data() || {};
+    const count = data.day === day ? Number(data.count || 0) : 0;
+    return { remaining: Math.max(0, DAILY_CHAT_CAP - count), limit: DAILY_CHAT_CAP };
+  } catch {
+    return { remaining: DAILY_CHAT_CAP, limit: DAILY_CHAT_CAP };
+  }
+}
 
 async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remaining: number }> {
   if (!hasFirebaseAdminCredentials()) {
@@ -13,7 +33,7 @@ async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remainin
   const day = new Date().toISOString().slice(0, 10);
   const ref = getAdminDb().collection("users").doc(userId).collection("rateLimits").doc("aiChat");
   try {
-    const result = await getAdminDb().runTransaction(async (tx) => {
+    return await getAdminDb().runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const data = snap.data() || {};
       const count = data.day === day ? Number(data.count || 0) : 0;
@@ -23,9 +43,25 @@ async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remainin
       tx.set(ref, { day, count: count + 1, updatedAt: new Date().toISOString() }, { merge: true });
       return { ok: true, remaining: DAILY_CHAT_CAP - count - 1 };
     });
-    return result;
   } catch {
     return { ok: true, remaining: DAILY_CHAT_CAP };
+  }
+}
+
+/** Remaining daily Copilot messages (does not consume quota). */
+export async function GET() {
+  try {
+    const session = await requireSession();
+    const quota = await peekChatQuota(session.user.id);
+    return jsonOk({
+      remaining: quota.remaining,
+      limit: quota.limit,
+      maxInputChars: CHAT_INPUT_MAX_CHARS,
+    });
+  } catch (e) {
+    const status = (e as { status?: number }).status ?? 500;
+    if (status === 401) return jsonError("Unauthorized", 401);
+    return jsonError("Unable to load chat quota", 500);
   }
 }
 
@@ -33,13 +69,33 @@ async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remainin
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const body = (await req.json()) as {
-      message?: string;
-      history?: Array<{ role: "user" | "assistant"; content: string }>;
-      prefill?: string;
-    };
-    const message = (body.message || body.prefill || "").trim();
+    const body = await req.json().catch(() => ({}));
+    const parsed = aiChatSchema.safeParse({
+      message: typeof body.message === "string" ? body.message : body.prefill,
+      history: body.history,
+    });
+    if (!parsed.success) {
+      return jsonError(
+        `Message required (max ${CHAT_INPUT_MAX_CHARS} characters). Keep questions career-focused.`,
+        400,
+        { maxInputChars: CHAT_INPUT_MAX_CHARS },
+      );
+    }
+
+    const message = parsed.data.message.trim();
     if (!message) return jsonError("Message required", 400);
+
+    // Refuse off-topic before quota + LLM (saves tokens and daily cap).
+    if (isCareerChatOffTopic(message)) {
+      const quota = await peekChatQuota(session.user.id);
+      return jsonOk({
+        reply: OFF_TOPIC_REPLY,
+        usedProfile: false,
+        remaining: quota.remaining,
+        limit: DAILY_CHAT_CAP,
+        refused: true,
+      });
+    }
 
     const quota = await consumeChatQuota(session.user.id);
     if (!quota.ok) {
@@ -50,8 +106,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const history = Array.isArray(body.history)
-      ? body.history
+    const history = Array.isArray(parsed.data.history)
+      ? parsed.data.history
           .filter(
             (m) =>
               m &&
@@ -59,8 +115,11 @@ export async function POST(req: Request) {
               typeof m.content === "string" &&
               m.content.trim(),
           )
-          .slice(-10)
-          .map((m) => ({ role: m.role, content: m.content.trim().slice(0, 4000) }))
+          .slice(-8)
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content.trim().slice(0, CHAT_INPUT_MAX_CHARS),
+          }))
       : undefined;
 
     const ctx = await getCareerContext(session.user.id);
@@ -73,6 +132,7 @@ export async function POST(req: Request) {
       reply: result.reply,
       usedProfile: Boolean(ctx),
       remaining: quota.remaining,
+      limit: DAILY_CHAT_CAP,
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

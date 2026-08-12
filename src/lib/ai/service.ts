@@ -1,5 +1,11 @@
 import { clamp } from "@/lib/utils";
 import { parseExperienceEntries, sanitizeExperiences } from "@/lib/experiences";
+import {
+  CHAT_INPUT_MAX_CHARS,
+  CHAT_MAX_OUTPUT_TOKENS,
+  isCareerChatOffTopic,
+  OFF_TOPIC_REPLY,
+} from "@/lib/ai/chat-guard";
 import type {
   AIService,
   CareerAnalysisResult,
@@ -815,12 +821,13 @@ function deterministicResumeAnalysis(resumeText: string, targetRole?: string): R
 async function callOpenAICompatible(
   system: string,
   user: string,
+  opts?: { maxTokens?: number },
 ): Promise<string | null> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) return null;
   const base = (process.env.AI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "");
   const model = process.env.AI_MODEL || "gpt-4o-mini";
-  const maxTokens = Number(process.env.AI_MAX_TOKENS || 1200);
+  const maxTokens = opts?.maxTokens ?? Number(process.env.AI_MAX_TOKENS || 1200);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
@@ -1235,25 +1242,13 @@ class CareerVerseAIService implements AIService {
             careerStage: ctx?.careerStage ?? null,
           }).map((m) => m.title);
 
-    const offTopic = (() => {
-      const q = norm(input.message);
-      const careerHit =
-        /\b(career|job|jobs|resume|cv|interview|skill|skills|gap|gaps|internship|intern|apply|application|applications|mentor|roadmap|profile|portfolio|linkedin|github|offer|salary|role|roles|hiring|ats|cover\s*letter|network|networking|opportunity|opportunities|work|employer|recruiter|experience|goal|goals|onboarding|copilot|hire|hired|promotion|layoff|freelance|startup|college|degree|project|projects|leetcode|dsa|system\s*design|behavioral|star\s*stor)\b/.test(
-          q,
-        );
-      const pureDefn = /^(what\s+is|who\s+is|define|explain|tell\s+me\s+about)\b/.test(q) && !careerHit;
-      const encyclo =
-        /\b(capital of|weather|recipe|movie|lyrics|joke|homework|math problem|translate|news today)\b/.test(q);
-      if (encyclo || pureDefn) return true;
-      return false;
-    })();
-
-    if (offTopic) {
+    // Defense in depth — route should refuse before quota; keep here too.
+    if (isCareerChatOffTopic(input.message)) {
       const skillHint = skills.slice(0, 4).join(", ") || "your listed skills";
       const pathHint = topPaths[0] || "your target role";
       return {
         reply: [
-          "I’m CareerVerse Copilot — I only help with careers, resumes, skills, interviews, and job search.",
+          OFF_TOPIC_REPLY,
           `Want a career angle instead? Ask how this connects to ${pathHint}, how to show ${skillHint} on your resume, or what to do today/this week toward that path.`,
         ].join("\n"),
       };
@@ -1321,28 +1316,30 @@ class CareerVerseAIService implements AIService {
         "Refuse off-topic questions (general encyclopedia, homework, weather, entertainment) politely in 1–2 sentences and redirect to career/resume/skills/interview/job-search.",
         "Ground answers in the provided profile context (skills, gaps, goals, topPaths, experience). Never invent credentials.",
         "Prefer concrete today/this-week actions when advising next steps.",
+        "Keep replies concise (under ~180 words).",
         "Never reply with a generic greeting or capability list if the user asked a specific in-scope question.",
         'Return JSON only: {"reply":"..."}',
       ].join(" "),
       JSON.stringify({
-        message: input.message,
-        history: input.history?.slice(-8),
+        message: input.message.slice(0, CHAT_INPUT_MAX_CHARS),
+        history: input.history?.slice(-6),
         context: ctx
           ? {
               name: ctx.name,
-              skills: ctx.skills,
-              skillGaps,
-              topPaths,
-              interests: ctx.interests,
-              goals: ctx.careerGoals,
+              skills: ctx.skills?.slice(0, 20),
+              skillGaps: skillGaps.slice(0, 10),
+              topPaths: topPaths.slice(0, 4),
+              interests: ctx.interests?.slice(0, 10),
+              goals: ctx.careerGoals?.slice(0, 200) ?? null,
               stage: ctx.careerStage,
               careerScore: ctx.careerScore,
-              experienceSummary: ctx.experienceSummary?.slice(0, 500),
-              resumeExcerpt: ctx.resumeText?.slice(0, 800) || null,
+              experienceSummary: ctx.experienceSummary?.slice(0, 320),
+              resumeExcerpt: ctx.resumeText?.slice(0, 400) || null,
             }
           : null,
-        heuristicHint: heuristicReply,
+        heuristicHint: heuristicReply.slice(0, 600),
       }),
+      { maxTokens: CHAT_MAX_OUTPUT_TOKENS },
     );
 
     const parsed = safeParse(raw, { reply: heuristicReply });

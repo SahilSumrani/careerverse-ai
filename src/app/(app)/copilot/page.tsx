@@ -28,11 +28,15 @@ const COACHING_CARDS = [
   { t: "This week", d: "Get a short action list you can finish in 7 days." },
 ];
 
+const MAX_CHARS = 300;
+
 function CopilotInner() {
   const searchParams = useSearchParams();
   const prefill = searchParams.get("q") || searchParams.get("prefill") || "";
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limit, setLimit] = useState(40);
   const [log, setLog] = useState<Message[]>([{ role: "assistant", content: GREETING }]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentPrefill = useRef(false);
@@ -41,9 +45,30 @@ function CopilotInner() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [log, busy]);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/ai/chat");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data.remaining === "number") setRemaining(data.remaining);
+        if (typeof data.limit === "number") setLimit(data.limit);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
   async function send(textIn?: string, historyOverride?: Message[]) {
-    const text = (textIn ?? message).trim();
+    const text = (textIn ?? message).trim().slice(0, MAX_CHARS);
     if (!text || busy) return;
+    if (remaining === 0) {
+      setLog((prev) => [
+        ...prev,
+        { role: "assistant", content: `Daily Copilot limit reached (${limit}/day). Try again tomorrow.` },
+      ]);
+      return;
+    }
     const base = historyOverride ?? log;
     const nextLog = [...base, { role: "user" as const, content: text }];
     setLog(nextLog);
@@ -59,6 +84,8 @@ function CopilotInner() {
         }),
       });
       const data = await res.json();
+      if (typeof data.remaining === "number") setRemaining(data.remaining);
+      if (typeof data.limit === "number") setLimit(data.limit);
       setLog((prev) => [
         ...prev,
         {
@@ -79,18 +106,28 @@ function CopilotInner() {
   useEffect(() => {
     if (!prefill || sentPrefill.current) return;
     sentPrefill.current = true;
-    void send(prefill, [{ role: "assistant", content: GREETING }]);
+    void send(prefill.slice(0, MAX_CHARS), [{ role: "assistant", content: GREETING }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefill]);
 
   const showEmpty = log.length <= 1 && !busy;
+  const charsLeft = MAX_CHARS - message.length;
 
   return (
     <div className="mx-auto flex h-[calc(100vh-8rem)] w-full max-w-6xl flex-col overflow-x-hidden">
       <PageHeader
         title="AI Career Copilot"
         description="Full-page coaching chat grounded in your CareerVerse profile. Not a guarantee of outcomes."
-        actions={<Badge tone="accent">Career & resume only</Badge>}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="accent">Career & resume only</Badge>
+            {remaining != null ? (
+              <Badge tone="info">
+                {remaining}/{limit} messages today
+              </Badge>
+            ) : null}
+          </div>
+        }
       />
 
       <div className="cv-shell flex min-h-0 flex-1 flex-col">
@@ -103,7 +140,7 @@ function CopilotInner() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={busy}
+                  disabled={busy || remaining === 0}
                   onClick={() => void send(s)}
                 >
                   {s}
@@ -122,7 +159,7 @@ function CopilotInner() {
                     <button
                       key={card.t}
                       type="button"
-                      disabled={busy}
+                      disabled={busy || remaining === 0}
                       onClick={() => void send(`Help me with: ${card.t.toLowerCase()}`)}
                       className="cv-panel cv-panel-interactive p-4 text-left"
                     >
@@ -138,7 +175,7 @@ function CopilotInner() {
                       type="button"
                       size="sm"
                       variant="secondary"
-                      disabled={busy}
+                      disabled={busy || remaining === 0}
                       onClick={() => void send(s)}
                     >
                       {s}
@@ -170,16 +207,27 @@ function CopilotInner() {
               e.preventDefault();
               void send();
             }}
-            className="cv-composer"
+            className="cv-composer flex-col gap-2 sm:flex-row sm:items-center"
           >
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Ask about your next career move…"
-              disabled={busy}
-              className="flex-1 border-border bg-white"
-            />
-            <Button type="submit" disabled={busy || !message.trim()} aria-label="Send message">
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value.slice(0, MAX_CHARS))}
+                placeholder="Ask about your next career move…"
+                disabled={busy || remaining === 0}
+                maxLength={MAX_CHARS}
+                className="flex-1 border-border bg-white"
+              />
+              <p className="px-1 text-[11px] text-muted-foreground">
+                {charsLeft} chars left
+                {remaining != null ? ` · ${remaining}/${limit} messages left today` : ""}
+              </p>
+            </div>
+            <Button
+              type="submit"
+              disabled={busy || !message.trim() || remaining === 0}
+              aria-label="Send message"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </form>

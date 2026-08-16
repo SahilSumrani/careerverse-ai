@@ -64,14 +64,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }
 
-  if (token && pathname.startsWith("/admin")) {
-    const roles = (token.roles as string[] | undefined) || [];
-    // Full console is PLATFORM_ADMIN only (ADMIN in Firestore maps to PLATFORM_ADMIN).
-    if (!roles.includes("PLATFORM_ADMIN")) {
-      return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
-    }
-  }
-
   if (token && pathname.startsWith("/recruiter")) {
     const roles = (token.roles as string[] | undefined) || [];
     if (!roles.includes("HR") && !roles.includes("PLATFORM_ADMIN")) {

@@ -39,8 +39,6 @@ export default function MentorRegisterPage() {
     <RegisterShell
       title="Mentor application"
       lead="Complete your professional profile, mentoring focus, and availability for admin review."
-      panelTitle="Mentors are reviewed"
-      panelBody="CareerVerse verifies experience and profile quality before mentors become discoverable to students."
     >
       <form
         onSubmit={(event) => {

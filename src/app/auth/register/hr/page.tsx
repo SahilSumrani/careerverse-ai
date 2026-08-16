@@ -39,8 +39,6 @@ export default function HrRegisterPage() {
     <RegisterShell
       title="Company / HR registration"
       lead="Register the company and authorised contact before posting any opportunity."
-      panelTitle="Verified companies only"
-      panelBody="CareerVerse reviews legal, company, and contact details. The recruiter console unlocks only after admin approval."
     >
       <form
         onSubmit={(event) => {

@@ -9,18 +9,14 @@ import "@/components/auth/auth-shell.css";
 export function RegisterShell({
   title,
   lead,
-  panelTitle,
-  panelBody,
   children,
 }: {
   title: string;
   lead: string;
-  panelTitle: string;
-  panelBody: string;
   children: ReactNode;
 }) {
   return (
-    <div className="cv-auth-shell">
+    <div className="cv-auth-shell" style={{ gridTemplateColumns: "1fr" }}>
       <div className="cv-auth-form-pane">
         <div className="cv-auth-form-inner cv-auth-form-inner--wide">
           <Link href="/" className="cv-auth-brand">
@@ -38,10 +34,6 @@ export function RegisterShell({
           </p>
         </div>
       </div>
-      <aside className="cv-auth-panel" aria-label="Registration info">
-        <h2>{panelTitle}</h2>
-        <p className="cv-auth-panel-copy">{panelBody}</p>
-      </aside>
     </div>
   );
 }

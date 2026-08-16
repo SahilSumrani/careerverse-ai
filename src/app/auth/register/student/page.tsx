@@ -35,8 +35,6 @@ export default function StudentRegisterPage() {
     <RegisterShell
       title="Student / job seeker registration"
       lead="Complete your contact, education, and career details."
-      panelTitle="One profile for your career"
-      panelBody="Your details improve job matching. You can upload a resume after your account is approved."
     >
       <form
         onSubmit={(event) => {

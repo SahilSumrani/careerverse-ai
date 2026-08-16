@@ -1,6 +1,9 @@
 import { getUserById, updateCareerAnalysis } from "@/lib/firestore-users";
 import { getCareerContext, jsonError, jsonOk, requireSession, trackAnalytics } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
+import { consumeDailyQuota } from "@/lib/rate-limit";
+
+const CAREER_ANALYZE_DAILY_CAP = Number(process.env.AI_CAREER_DAILY_CAP || 8);
 
 export async function GET() {
   try {
@@ -40,6 +43,8 @@ export async function GET() {
 export async function POST() {
   try {
     const session = await requireSession();
+    const quota = await consumeDailyQuota(session.user.id, "careerAnalyze", CAREER_ANALYZE_DAILY_CAP);
+    if (!quota.ok) return jsonError("Daily career analysis limit reached. Try again tomorrow.", 429);
     const ctx = await getCareerContext(session.user.id);
     if (!ctx) return jsonError("Complete onboarding first", 400);
     const analysis = await aiService.careerAnalysis(ctx);
@@ -48,7 +53,7 @@ export async function POST() {
       careerAnalysisJson: JSON.stringify(analysis),
     });
     await trackAnalytics("career_analysis_generated", session.user.id);
-    return jsonOk({ analysis });
+    return jsonOk({ analysis, remaining: quota.remaining });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);

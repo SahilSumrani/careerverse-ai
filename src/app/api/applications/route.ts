@@ -1,5 +1,8 @@
 import { jsonError, jsonOk, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
+import { applicationCreateSchema, applicationPatchSchema } from "@/lib/validators";
+import { getJobById } from "@/lib/jobs-firestore";
+import { consumeDailyQuota } from "@/lib/rate-limit";
 
 const STATUSES = [
   "SAVED",
@@ -13,6 +16,8 @@ const STATUSES = [
 ] as const;
 
 type AppStatus = (typeof STATUSES)[number];
+
+const APP_MUTATION_DAILY_CAP = 60;
 
 function isDemoApp(id: string, data: Record<string, unknown>) {
   if (data.isDemo) return true;
@@ -34,6 +39,7 @@ async function listFromFirestore(userId: string) {
       .map((d) => {
         const data = d.data() as Record<string, unknown>;
         if (isDemoApp(d.id, data)) return null;
+        if (data.userId && data.userId !== userId) return null;
         return {
           id: d.id,
           userId,
@@ -77,36 +83,76 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => ({}));
-    const opportunity = body.opportunity || {
-      id: body.opportunityId || `opp-${Date.now()}`,
-      title: body.title || "Saved opportunity",
-      organizationName: body.organizationName || null,
-      type: body.type || "Full-time",
-      isDemo: false,
-    };
+    const body = await req.json().catch(() => null);
+    const parsed = applicationCreateSchema.safeParse(body);
+    if (!parsed.success) return jsonError("Invalid application payload", 400);
+
+    const quota = await consumeDailyQuota(session.user.id, "applicationMutations", APP_MUTATION_DAILY_CAP);
+    if (!quota.ok) return jsonError("Daily application limit reached", 429);
+
+    let opportunity = parsed.data.opportunity
+      ? {
+          id: parsed.data.opportunity.id,
+          title: parsed.data.opportunity.title,
+          organizationName: parsed.data.opportunity.organizationName ?? null,
+          type: parsed.data.opportunity.type || "Full-time",
+          isDemo: false,
+        }
+      : null;
+
+    const opportunityId = parsed.data.opportunityId || opportunity?.id;
+    if (!opportunityId) return jsonError("opportunityId required", 400);
+
+    if (!opportunity) {
+      const job = await getJobById(opportunityId);
+      if (!job) return jsonError("Opportunity not found", 404);
+      opportunity = {
+        id: job.id,
+        title: job.title,
+        organizationName: job.company,
+        type: job.type,
+        isDemo: false,
+      };
+    }
+
+    if (!hasFirebaseAdminCredentials()) {
+      return jsonError("Applications backend unavailable", 503);
+    }
+
+    // Deduplicate by userId + opportunityId
+    const existing = await getAdminDb()
+      .collection("applications")
+      .where("userId", "==", session.user.id)
+      .where("opportunityId", "==", opportunity.id)
+      .limit(1)
+      .get()
+      .catch(() => null);
+
+    if (existing && !existing.empty) {
+      const doc = existing.docs[0];
+      return jsonOk({
+        application: { id: doc.id, ...doc.data() },
+        source: "firestore",
+        deduped: true,
+      });
+    }
+
     const now = new Date().toISOString();
     const payload = {
       userId: session.user.id,
+      opportunityId: opportunity.id,
       status: "SAVED" as AppStatus,
-      notes: body.notes ?? null,
-      nextAction: body.nextAction ?? "Review JD and tailor resume",
-      matchScore: body.matchScore ?? null,
+      notes: parsed.data.notes ?? null,
+      nextAction: parsed.data.nextAction ?? "Review JD and tailor resume",
+      matchScore: parsed.data.matchScore ?? null,
       updatedAt: now,
       createdAt: now,
-      opportunity: { ...opportunity, isDemo: false },
+      opportunity,
       isDemo: false,
     };
 
-    if (hasFirebaseAdminCredentials()) {
-      const ref = await getAdminDb().collection("applications").add(payload);
-      return jsonOk({ application: { id: ref.id, ...payload }, source: "firestore" });
-    }
-    return jsonOk({
-      application: { id: `local-${Date.now()}`, ...payload },
-      source: "local",
-      note: "Persisted in client localStorage only until Firebase Admin is configured.",
-    });
+    const ref = await getAdminDb().collection("applications").add(payload);
+    return jsonOk({ application: { id: ref.id, ...payload }, source: "firestore" });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
@@ -117,39 +163,33 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => ({}));
-    const id = String(body.id || "");
-    const nextStatus = String(body.status || "SAVED");
-    if (!id) return jsonError("Application id required", 400);
-    if (!STATUSES.includes(nextStatus as AppStatus)) return jsonError("Invalid status", 400);
+    const body = await req.json().catch(() => null);
+    const parsed = applicationPatchSchema.safeParse(body);
+    if (!parsed.success) return jsonError("Invalid application update", 400);
+
+    const { id, status: nextStatus } = parsed.data;
     if (id.startsWith("demo-app-")) return jsonError("Demo applications are disabled", 400);
 
-    const updatedAt = new Date().toISOString();
+    const quota = await consumeDailyQuota(session.user.id, "applicationMutations", APP_MUTATION_DAILY_CAP);
+    if (!quota.ok) return jsonError("Daily application limit reached", 429);
+
     if (!hasFirebaseAdminCredentials()) {
-      return jsonOk({
-        application: {
-          id,
-          status: nextStatus,
-          notes: body.notes ?? null,
-          nextAction: body.nextAction ?? null,
-          updatedAt,
-        },
-        source: "local",
-      });
+      return jsonError("Applications backend unavailable", 503);
     }
 
+    const updatedAt = new Date().toISOString();
     const ref = getAdminDb().collection("applications").doc(id);
     const snap = await ref.get();
     if (!snap.exists) return jsonError("Application not found", 404);
     const data = snap.data() || {};
-    if (data.userId && data.userId !== session.user.id) {
+    if (!data.userId || data.userId !== session.user.id) {
       return jsonError("Forbidden", 403);
     }
     await ref.set(
       {
         status: nextStatus,
-        notes: body.notes ?? data.notes ?? null,
-        nextAction: body.nextAction ?? data.nextAction ?? null,
+        notes: parsed.data.notes ?? data.notes ?? null,
+        nextAction: parsed.data.nextAction ?? data.nextAction ?? null,
         updatedAt,
         isDemo: false,
       },
@@ -160,8 +200,8 @@ export async function PATCH(req: Request) {
         id,
         ...data,
         status: nextStatus,
-        notes: body.notes ?? data.notes ?? null,
-        nextAction: body.nextAction ?? data.nextAction ?? null,
+        notes: parsed.data.notes ?? data.notes ?? null,
+        nextAction: parsed.data.nextAction ?? data.nextAction ?? null,
         updatedAt,
         isDemo: false,
       },

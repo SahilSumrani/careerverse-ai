@@ -18,8 +18,11 @@ export type DummyJob = {
   perks?: string[];
 };
 
-/** Marketing / demo job listings for CareerVerse job-seekers (no DB required). */
-export const DUMMY_JOBS: DummyJob[] = [
+/**
+ * Starter catalog written to Firestore by PLATFORM_ADMIN (`seed_starter_jobs`).
+ * Never render this array as live openings — marketing/app read Firestore only.
+ */
+export const JOB_SEED_CATALOG: DummyJob[] = [
   {
     id: "jv-1",
     title: "Junior Frontend Engineer",
@@ -277,25 +280,25 @@ export function listingHref(job: DummyJob) {
     : `/job/detail/${listingSlug(job)}`;
 }
 
-export function getJobById(id: string) {
-  return DUMMY_JOBS.find((j) => j.id === id) ?? null;
+export function getJobByIdFromList(jobs: DummyJob[], id: string) {
+  return jobs.find((j) => j.id === id) ?? null;
 }
 
-/** Resolve by full slug or trailing id (jv-1). */
-export function getJobBySlug(slug: string) {
-  const exact = DUMMY_JOBS.find((j) => listingSlug(j) === slug);
+/** Resolve by full slug or trailing id from a listing array (Firestore-backed). */
+export function getJobBySlugFromList(jobs: DummyJob[], slug: string) {
+  const exact = jobs.find((j) => listingSlug(j) === slug);
   if (exact) return exact;
-  const idMatch = slug.match(/(jv-\d+)\s*$/i);
-  if (idMatch) return getJobById(idMatch[1].toLowerCase());
+  const idMatch = slug.match(/([a-z0-9_-]+)\s*$/i);
+  if (idMatch) return getJobByIdFromList(jobs, idMatch[1]);
   return null;
 }
 
-export function getHomeJobs(limit = 8) {
-  return DUMMY_JOBS.filter((j) => !isInternshipListing(j)).slice(0, limit);
+export function filterHomeJobs(jobs: DummyJob[], limit = 8) {
+  return jobs.filter((j) => !isInternshipListing(j)).slice(0, limit);
 }
 
-export function getHomeInternships(limit = 8) {
-  return DUMMY_JOBS.filter((j) => isInternshipListing(j)).slice(0, limit);
+export function filterHomeInternships(jobs: DummyJob[], limit = 8) {
+  return jobs.filter((j) => isInternshipListing(j)).slice(0, limit);
 }
 
 export const LOOKING_FOR_CHIPS = [

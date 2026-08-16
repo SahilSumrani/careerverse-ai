@@ -149,7 +149,7 @@ function SignInForm() {
           </button>
 
           <p className="cv-auth-foot">
-            Don&apos;t have an Account? <Link href="/auth/signup">Sign Up</Link>
+            Don&apos;t have an Account? <Link href="/auth/register">Sign Up</Link>
           </p>
         </div>
       </div>

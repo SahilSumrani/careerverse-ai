@@ -8,6 +8,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/states";
 import { createSoftCache } from "@/lib/client-cache";
+import { signOut } from "next-auth/react";
+import { signOutFirebase } from "@/lib/firebase-auth-client";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Overview",
@@ -51,12 +53,10 @@ export function AppTopbar({
   userName,
   userEmail,
   userImage,
-  signOutAction,
 }: {
   userName?: string | null;
   userEmail?: string | null;
   userImage?: string | null;
-  signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
   const title = titleForPath(pathname);
@@ -70,7 +70,15 @@ export function AppTopbar({
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<Notif[]>(cached?.items ?? []);
   const [unread, setUnread] = useState(cached?.unread ?? 0);
+  const [signingOut, setSigningOut] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await Promise.allSettled([signOutFirebase(), signOut({ redirect: false })]);
+    window.location.replace("/");
+  }
 
   const load = useCallback(async (opts?: { soft?: boolean }) => {
     const soft = opts?.soft ?? notifCache.has();
@@ -223,14 +231,14 @@ export function AppTopbar({
           <Avatar name={userName || userEmail} src={userImage} className="h-8 w-8" />
           <span className="hidden max-w-[120px] truncate text-xs font-medium sm:inline">{userName || "Profile"}</span>
         </Link>
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="hidden rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:inline"
-          >
-            Log out
-          </button>
-        </form>
+        <button
+          type="button"
+          disabled={signingOut}
+          onClick={() => void handleSignOut()}
+          className="hidden rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-60 sm:inline"
+        >
+          {signingOut ? "Logging out…" : "Log out"}
+        </button>
       </div>
     </header>
   );

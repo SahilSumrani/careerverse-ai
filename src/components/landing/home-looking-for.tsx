@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { MapPin, IndianRupee } from "lucide-react";
 import {
-  getHomeInternships,
-  getHomeJobs,
   INTERNSHIP_FILTER_CHIPS,
   JOB_FILTER_CHIPS,
   LOOKING_FOR_CHIPS,
@@ -10,6 +8,7 @@ import {
   isWorkFromHome,
   type DummyJob,
 } from "@/data/jobs";
+import { loadHomeListingBuckets } from "@/lib/listings-public";
 import { LookRail } from "@/components/landing/look-rail";
 import { LookFilterChips } from "@/components/landing/look-filter-chips";
 import "./home-looking-for.css";
@@ -55,9 +54,8 @@ function ListingCard({ job, kind }: { job: DummyJob; kind: "job" | "internship" 
   );
 }
 
-export function HomeLookingFor() {
-  const jobs = getHomeJobs(8);
-  const internships = getHomeInternships(8);
+export async function HomeLookingFor() {
+  const { jobs, internships } = await loadHomeListingBuckets();
 
   return (
     <section className="cv-look" aria-labelledby="cv-look-heading">
@@ -82,9 +80,11 @@ export function HomeLookingFor() {
           </div>
           <LookFilterChips chips={JOB_FILTER_CHIPS} basePath="/jobs" ariaLabel="Job filters" />
           <LookRail label="Fresher jobs">
-            {jobs.map((job) => (
-              <ListingCard key={job.id} job={job} kind="job" />
-            ))}
+            {jobs.length ? (
+              jobs.map((job) => <ListingCard key={job.id} job={job} kind="job" />)
+            ) : (
+              <p className="cv-look-company">No published jobs yet — check back soon.</p>
+            )}
           </LookRail>
         </div>
 
@@ -101,9 +101,11 @@ export function HomeLookingFor() {
             ariaLabel="Internship filters"
           />
           <LookRail label="Internships">
-            {internships.map((job) => (
-              <ListingCard key={job.id} job={job} kind="internship" />
-            ))}
+            {internships.length ? (
+              internships.map((job) => <ListingCard key={job.id} job={job} kind="internship" />)
+            ) : (
+              <p className="cv-look-company">No published internships yet — check back soon.</p>
+            )}
           </LookRail>
         </div>
       </div>

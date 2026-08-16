@@ -48,10 +48,12 @@ const mobilePrimary = [
 
 export function AppSidebar({
   isAdmin,
+  isHr,
   userName,
   userEmail,
 }: {
   isAdmin?: boolean;
+  isHr?: boolean;
   userName?: string | null;
   userEmail?: string | null;
 }) {
@@ -105,6 +107,7 @@ export function AppSidebar({
               {moreLinks.map((link) => (
                 <NavItem key={link.href} {...link} />
               ))}
+              {isHr ? <NavItem href="/recruiter" label="Recruiter" icon={Briefcase} /> : null}
               {isAdmin ? <NavItem href="/admin" label="Admin" icon={Shield} /> : null}
             </div>
           </div>

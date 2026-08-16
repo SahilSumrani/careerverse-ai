@@ -48,13 +48,23 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    if (!hasFirebaseAdminCredentials()) {
+      return jsonError("Event registration is not available yet", 503);
+    }
     const body = await req.json().catch(() => ({}));
-    return jsonOk({
-      ok: true,
-      eventId: body.eventId || null,
-      note: "Registration intent saved. Full RSVP collection can be added next.",
+    const eventId = String(body.eventId || "").trim();
+    if (!eventId || eventId.length > 128) {
+      return jsonError("eventId required", 400);
+    }
+    const now = new Date().toISOString();
+    await getAdminDb().collection("eventRsvps").add({
+      eventId,
+      userId: session.user.id,
+      createdAt: now,
+      status: "REGISTERED",
     });
+    return jsonOk({ ok: true, eventId, status: "REGISTERED" });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);

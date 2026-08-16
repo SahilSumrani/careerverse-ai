@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const authPaths = ["/auth/signin", "/auth/signup", "/auth/forgot-password"];
+const authPaths = ["/auth/signin", "/auth/signup", "/auth/register", "/auth/forgot-password"];
 
 function hasSecureSessionCookie(req: NextRequest) {
   return req.cookies
@@ -35,6 +35,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/network") ||
     pathname.startsWith("/mentors") ||
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/recruiter") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/institutions") ||
     pathname.startsWith("/opportunities/") ||
@@ -59,6 +60,13 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  if (token && pathname.startsWith("/recruiter")) {
+    const roles = (token.roles as string[] | undefined) || [];
+    if (!roles.includes("HR") && !roles.includes("PLATFORM_ADMIN")) {
+      return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+    }
+  }
+
   if (
     token &&
     !token.onboardingComplete &&
@@ -73,6 +81,7 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/recruiter") ||
     pathname.startsWith("/onboarding")
   ) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
@@ -92,6 +101,7 @@ export const config = {
     "/network/:path*",
     "/mentors/:path*",
     "/admin/:path*",
+    "/recruiter/:path*",
     "/profile/:path*",
     "/institutions/:path*",
     "/opportunities/:path*",

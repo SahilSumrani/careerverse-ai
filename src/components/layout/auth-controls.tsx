@@ -16,14 +16,9 @@ export function AuthControls({ compact }: AuthControlsProps) {
 
   async function handleSignOut() {
     setBusy(true);
-    try {
-      await signOutFirebase();
-    } catch {
-      // ignore
-    }
-    // Avoid Auth.js resolving `/` against a mis-set AUTH_URL (e.g. localhost on Vercel).
-    await signOut({ redirect: false });
-    window.location.assign("/");
+    // Clear Firebase and Auth.js together so Google logout cannot delay the UI.
+    await Promise.allSettled([signOutFirebase(), signOut({ redirect: false })]);
+    window.location.replace("/");
   }
 
   if (status === "loading") {
@@ -58,7 +53,7 @@ export function AuthControls({ compact }: AuthControlsProps) {
           onClick={() => void handleSignOut()}
           className={`inline-flex h-10 items-center justify-center rounded-xl bg-[#f3f3f3] px-3 text-sm font-medium text-[#1f1f1f] hover:bg-[#e8e8e8] disabled:opacity-60 ${compact ? "w-full" : ""}`}
         >
-          Sign out
+          {busy ? "Signing out…" : "Sign out"}
         </button>
       </div>
     );
@@ -74,7 +69,7 @@ export function AuthControls({ compact }: AuthControlsProps) {
           Sign in
         </Link>
         <Link
-          href="/auth/signup"
+          href="/auth/register"
           className="inline-flex h-11 items-center justify-center rounded-xl bg-[#225aea] text-sm font-semibold text-white"
         >
           Sign up
@@ -88,7 +83,7 @@ export function AuthControls({ compact }: AuthControlsProps) {
       <Link href="/auth/signin" className="cv-btn-wrap is-secondary">
         <span className="cv-btn">Sign in</span>
       </Link>
-      <Link href="/auth/signup" className="cv-btn-wrap">
+      <Link href="/auth/register" className="cv-btn-wrap">
         <span className="cv-btn">Sign up</span>
       </Link>
     </div>

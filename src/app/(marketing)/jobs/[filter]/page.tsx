@@ -1,18 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ListingsBoard } from "@/components/landing/listings-board";
-import {
-  DUMMY_JOBS,
-  JOB_FILTER_CHIPS,
-  getJobById,
-  isInternshipListing,
-  listingHref,
-} from "@/data/jobs";
-import {
-  isLegacyListingId,
-  listingsForKind,
-  parseFilterSlug,
-} from "@/data/listing-filters";
+import { JOB_FILTER_CHIPS, isInternshipListing, listingHref } from "@/data/jobs";
+import { isLegacyListingId, listingsForKind, parseFilterSlug } from "@/data/listing-filters";
+import { loadMarketingListings, resolveListingBySlug } from "@/lib/listings-public";
 
 type Props = {
   params: Promise<{ filter: string }>;
@@ -34,19 +25,24 @@ export default async function JobFilterPage({ params, searchParams }: Props) {
   const { q } = await searchParams;
 
   if (isLegacyListingId(filter)) {
-    const job = getJobById(filter);
+    const job = await resolveListingBySlug(filter);
     if (!job || isInternshipListing(job)) notFound();
     redirect(listingHref(job));
   }
 
   const initialFilters = parseFilterSlug("jobs", filter, q);
-  const items = listingsForKind("jobs", DUMMY_JOBS);
+  const all = await loadMarketingListings();
+  const items = listingsForKind("jobs", all);
 
   return (
     <ListingsBoard
       kind="jobs"
       title="Jobs"
-      subtitle="Fresher and early-career openings with clear salary bands. Sign in for explainable AI match scores."
+      subtitle={
+        items.length
+          ? "Fresher and early-career openings with clear salary bands. Sign in for explainable AI match scores."
+          : "No published jobs yet. Sign in when openings go live."
+      }
       items={items}
       filters={JOB_FILTER_CHIPS}
       initialFilters={initialFilters}

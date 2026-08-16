@@ -96,6 +96,9 @@ export async function GET() {
         name: u.name,
         email: u.email,
         roles: u.roles,
+        recruiterApproved: u.recruiterApproved ?? false,
+        mentorApproved: u.mentorApproved ?? false,
+        registration: u.registration ?? null,
         suspendedAt: u.suspendedAt ?? null,
         onboardingComplete: u.onboardingComplete,
         preferredLocations: u.preferredLocations.slice(0, 5),
@@ -193,9 +196,36 @@ export async function POST(req: Request) {
     }
 
     const adminId = session.user.id;
-    const { action, id } = parsed.data;
+    const { action } = parsed.data;
 
-    if (id === adminId && (action === "suspend_user" || action === "set_roles")) {
+    if (action === "seed_starter_jobs") {
+      const { JOB_SEED_CATALOG } = await import("@/data/jobs");
+      const db = getAdminDb();
+      const batch = db.batch();
+      const now = new Date().toISOString();
+      for (const job of JOB_SEED_CATALOG) {
+        const ref = db.collection("jobs").doc(job.id);
+        batch.set(
+          ref,
+          {
+            ...job,
+            isDemo: false,
+            status: "PUBLISHED",
+            publishedAt: now,
+            updatedAt: now,
+            seededAt: now,
+          },
+          { merge: true },
+        );
+      }
+      await batch.commit();
+      return jsonOk({ ok: true, seeded: JOB_SEED_CATALOG.length });
+    }
+
+    const id = "id" in parsed.data ? parsed.data.id : "";
+    if (!id) return jsonError("Invalid admin action", 400);
+
+    if (id === adminId && (action === "suspend_user" || action === "set_roles" || action === "revoke_recruiter" || action === "revoke_mentor")) {
       return jsonError("You cannot modify your own admin account this way", 400);
     }
 
@@ -215,10 +245,41 @@ export async function POST(req: Request) {
       return jsonOk({ ok: true, id, suspendedAt: null });
     }
 
+    if (action === "approve_recruiter") {
+      const roles = new Set((mapUserDoc(snap.id, snap.data())?.roles ?? []) as string[]);
+      roles.add("HR");
+      await ref.set(
+        { roles: Array.from(roles), recruiterApproved: true, updatedAt: now },
+        { merge: true },
+      );
+      return jsonOk({ ok: true, id, recruiterApproved: true });
+    }
+
+    if (action === "revoke_recruiter") {
+      await ref.set({ recruiterApproved: false, updatedAt: now }, { merge: true });
+      return jsonOk({ ok: true, id, recruiterApproved: false });
+    }
+
+    if (action === "approve_mentor") {
+      const roles = new Set((mapUserDoc(snap.id, snap.data())?.roles ?? []) as string[]);
+      roles.add("MENTOR");
+      await ref.set(
+        { roles: Array.from(roles), mentorApproved: true, updatedAt: now },
+        { merge: true },
+      );
+      return jsonOk({ ok: true, id, mentorApproved: true });
+    }
+
+    if (action === "revoke_mentor") {
+      await ref.set({ mentorApproved: false, updatedAt: now }, { merge: true });
+      return jsonOk({ ok: true, id, mentorApproved: false });
+    }
+
+    if (action !== "set_roles") return jsonError("Invalid admin action", 400);
+
     // set_roles
     const roles = parsed.data.roles.filter(isRoleName) as RoleName[];
     if (!roles.length) return jsonError("At least one valid role required", 400);
-    // Prevent accidental lockout of last PLATFORM_ADMIN via this path (soft check)
     const target = mapUserDoc(snap.id, snap.data());
     const wasAdmin = target?.roles.includes("PLATFORM_ADMIN");
     const staysAdmin = roles.includes("PLATFORM_ADMIN");

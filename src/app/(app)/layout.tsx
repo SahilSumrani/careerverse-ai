@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { AppSidebar, MobileNav } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { CopilotWidget } from "@/components/career/copilot-widget";
@@ -8,13 +8,6 @@ import { rememberShellProfile, peekShellProfile } from "@/lib/shell-profile-cach
 
 /** Session + Firestore pages — skip static generation when env/DB unavailable at build. */
 export const dynamic = "force-dynamic";
-
-async function signOutAction() {
-  "use server";
-  // Clear session without Auth.js Location header (AUTH_URL can be localhost on Vercel).
-  await signOut({ redirect: false });
-  redirect("/");
-}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -34,16 +27,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const roles = session.user.roles ?? cached?.roles ?? [];
   const isAdmin = roles.includes("PLATFORM_ADMIN");
+  const isHr = roles.includes("HR");
 
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-background">
-      <AppSidebar isAdmin={isAdmin} userName={userName} userEmail={userEmail} />
+      <AppSidebar isAdmin={isAdmin} isHr={isHr} userName={userName} userEmail={userEmail} />
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <AppTopbar
           userName={userName}
           userEmail={userEmail}
           userImage={userImage}
-          signOutAction={signOutAction}
         />
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 pb-28 md:px-7 md:pb-8">{children}</main>
       </div>

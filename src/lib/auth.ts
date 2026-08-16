@@ -4,7 +4,7 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { verifyFirebaseIdToken } from "@/lib/firebase-id-token";
 import { upsertUserFromFirebaseClaims } from "@/lib/firebase-user";
-import { getUserByEmail, getUserById } from "@/lib/firestore-users";
+import { getUserByEmailForAuth, getUserById } from "@/lib/firestore-users";
 import { signInSchema } from "@/lib/validators";
 import type { RoleName } from "@/lib/roles";
 
@@ -45,7 +45,7 @@ const providers = [
       const parsed = signInSchema.safeParse(credentials);
       if (!parsed.success) return null;
       const email = parsed.data.email.toLowerCase();
-      const user = await getUserByEmail(email);
+      const user = await getUserByEmailForAuth(email);
       if (!user?.passwordHash || user.suspendedAt) return null;
       const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
       if (!valid) return null;

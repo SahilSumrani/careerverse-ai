@@ -19,6 +19,21 @@ import { Progress, Avatar } from "@/components/ui/avatar";
 import { getCareerContext } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
 import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
+import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
+
+async function countUserApplications(userId: string): Promise<number> {
+  if (!hasFirebaseAdminCredentials()) return 0;
+  try {
+    const snap = await getAdminDb()
+      .collection("applications")
+      .where("userId", "==", userId)
+      .limit(100)
+      .get();
+    return snap.docs.filter((d) => !d.id.startsWith("demo-app-") && !d.data().isDemo).length;
+  } catch {
+    return 0;
+  }
+}
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -53,6 +68,7 @@ export default async function DashboardPage() {
       : resume.fileName;
 
   const { jobs: liveJobs } = await loadJobsFromFirestore(12);
+  const applicationsCount = isStudentFacing ? await countUserApplications(session.user.id) : 0;
   const matched = isStudentFacing
     ? (
         await Promise.all(
@@ -79,31 +95,70 @@ export default async function DashboardPage() {
     : [];
 
   if (isHr) {
+    let openRoles = 0;
+    let applicants = 0;
+    if (hasFirebaseAdminCredentials()) {
+      try {
+        const jobsSnap = await getAdminDb()
+          .collection("jobs")
+          .where("createdBy", "==", session.user.id)
+          .limit(50)
+          .get();
+        openRoles = jobsSnap.size;
+        const ids = jobsSnap.docs.map((d) => d.id);
+        for (let i = 0; i < ids.length; i += 10) {
+          const chunk = ids.slice(i, i + 10);
+          if (!chunk.length) break;
+          const apps = await getAdminDb()
+            .collection("applications")
+            .where("opportunityId", "in", chunk)
+            .limit(100)
+            .get();
+          applicants += apps.size;
+        }
+      } catch {
+        // leave zeros
+      }
+    }
     return (
       <div className="slide-up space-y-6">
         <div>
           <p className="text-sm font-medium text-primary">Recruiter workspace</p>
           <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Welcome, {firstName}</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Post roles, review applicants, and keep hiring pipelines organized.
+            {user?.recruiterApproved
+              ? "Your company recruiter account is approved. Post roles and review applicants."
+              : "Company registration received. Job posting unlocks after admin approval — you cannot publish until then."}
           </p>
+          {!user?.recruiterApproved && user?.registration?.companyName ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Registered company: <strong className="text-foreground">{user.registration.companyName}</strong>
+              {user.registration.jobTitle ? ` · ${user.registration.jobTitle}` : ""}
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <StatCard label="Open roles" value={0} hint="Opportunity posting coming soon" icon={<Briefcase className="h-4 w-4" />} />
-          <StatCard label="Applicants" value={0} hint="Applicant inbox" icon={<Users className="h-4 w-4" />} />
-          <StatCard label="Interviews" value={0} hint="Schedule tracking" icon={<Calendar className="h-4 w-4" />} highlight />
+          <StatCard label="Open roles" value={openRoles} hint="Published by you" icon={<Briefcase className="h-4 w-4" />} />
+          <StatCard label="Applicants" value={applicants} hint="On your roles" icon={<Users className="h-4 w-4" />} />
+          <StatCard
+            label="Status"
+            value={user?.recruiterApproved ? "Approved" : "Pending"}
+            hint="Admin approval"
+            icon={<Calendar className="h-4 w-4" />}
+            highlight
+          />
         </div>
         <Card className="p-5">
           <CardHeader>
-            <CardTitle>Hiring shell</CardTitle>
-            <CardDescription>Your HR dashboard is ready—connect opportunity workflows next.</CardDescription>
+            <CardTitle>Hiring tools</CardTitle>
+            <CardDescription>Publish jobs and track applications in the recruiter console.</CardDescription>
           </CardHeader>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href="/jobs" className="text-sm font-semibold text-primary">
-              Browse jobs →
+            <Link href="/recruiter" className="text-sm font-semibold text-primary">
+              Open recruiter console →
             </Link>
-            <Link href="/network" className="text-sm font-semibold text-primary">
-              Find talent →
+            <Link href="/opportunities/browse" className="text-sm font-semibold text-primary">
+              Browse public jobs →
             </Link>
           </div>
         </Card>
@@ -118,13 +173,26 @@ export default async function DashboardPage() {
           <p className="text-sm font-medium text-primary">Mentor workspace</p>
           <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Hi, {firstName}</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Guide learners with career roadmaps and feedback. Session booking is coming next.
+            {user?.mentorApproved
+              ? "Your mentor profile is approved. Guide learners with roadmaps and feedback."
+              : "Mentor registration received. Features stay limited until an admin approves your profile."}
           </p>
+          {!user?.mentorApproved && user?.registration?.expertise ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Expertise submitted: <strong className="text-foreground">{user.registration.expertise}</strong>
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Mentees" value={0} hint="Assignments coming soon" icon={<Users className="h-4 w-4" />} />
           <StatCard label="Sessions" value={0} hint="No sessions scheduled" icon={<Calendar className="h-4 w-4" />} />
-          <StatCard label="Roadmaps shared" value={0} hint="Share from Roadmap" icon={<Map className="h-4 w-4" />} highlight />
+          <StatCard
+            label="Status"
+            value={user?.mentorApproved ? "Approved" : "Pending"}
+            hint="Admin approval"
+            icon={<Map className="h-4 w-4" />}
+            highlight
+          />
         </div>
         <Card className="p-5">
           <CardHeader>
@@ -156,7 +224,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href="/jobs"
+            href="/opportunities/browse"
             className="inline-flex h-11 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm"
           >
             Explore jobs
@@ -193,15 +261,15 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Applications"
-          value={0}
-          hint="Start from Jobs → tracker"
+          value={applicationsCount}
+          hint={applicationsCount ? "Tracked in Applications" : "Save roles from Explore"}
           icon={<ClipboardList className="h-4 w-4" />}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
-          href="/jobs"
+          href="/opportunities/browse"
           className="rounded-2xl border border-border bg-card px-4 py-3 text-sm font-semibold transition hover:border-primary/40"
         >
           Jobs & matches
@@ -308,7 +376,7 @@ export default async function DashboardPage() {
           <section>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-base font-semibold">Opportunities for you</h2>
-              <Link href="/jobs" className="text-sm font-medium text-primary">
+              <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
                 See all
               </Link>
             </div>
@@ -322,7 +390,7 @@ export default async function DashboardPage() {
                         <Briefcase className="h-5 w-5" />
                       </div>
                       <div>
-                        <Link href="/jobs" className="font-semibold hover:text-primary">
+                        <Link href="/opportunities/browse" className="font-semibold hover:text-primary">
                           {job.title}
                         </Link>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -379,7 +447,7 @@ export default async function DashboardPage() {
               title="No applications yet"
               description="Save roles from Jobs and track status in Applications when you’re ready."
               action={
-                <Link href="/jobs" className="text-sm font-medium text-primary">
+                <Link href="/opportunities/browse" className="text-sm font-medium text-primary">
                   Explore jobs
                 </Link>
               }

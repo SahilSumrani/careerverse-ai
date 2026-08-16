@@ -7,6 +7,7 @@ import { aiService } from "@/lib/ai/service";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getJobById } from "@/lib/jobs-firestore";
+import { SaveOpportunityButton } from "@/components/opportunities/save-button";
 
 export default async function OpportunityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,7 +35,7 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Link
-        href="/jobs"
+        href="/opportunities/browse"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -153,14 +154,23 @@ export default async function OpportunityDetailPage({ params }: { params: Promis
             </Link>
           ) : (
             <div className="flex flex-wrap gap-2">
+              <SaveOpportunityButton
+                opportunity={{
+                  id: job.id,
+                  title: job.title,
+                  organizationName: job.company,
+                  type: job.type,
+                }}
+                matchScore={match?.score ?? null}
+              />
               <Link
                 href="/applications"
-                className="inline-flex h-11 items-center rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground"
+                className="inline-flex h-11 items-center rounded-xl border border-border bg-card px-5 text-sm font-medium"
               >
-                Open application tracker
+                Open tracker
               </Link>
               <Link
-                href="/jobs"
+                href="/opportunities/browse"
                 className="inline-flex h-11 items-center rounded-xl border border-border bg-card px-5 text-sm font-medium"
               >
                 Browse more jobs

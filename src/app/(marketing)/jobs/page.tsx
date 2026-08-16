@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ListingsBoard } from "@/components/landing/listings-board";
-import { DUMMY_JOBS, JOB_FILTER_CHIPS } from "@/data/jobs";
+import { JOB_FILTER_CHIPS } from "@/data/jobs";
 import { listingsForKind, parseFilterSlug } from "@/data/listing-filters";
+import { loadMarketingListings } from "@/lib/listings-public";
 
 export const metadata: Metadata = {
   title: "Jobs | CareerVerse AI",
@@ -16,13 +17,18 @@ type Props = {
 export default async function JobsMarketingPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const initialFilters = parseFilterSlug("jobs", null, q);
-  const items = listingsForKind("jobs", DUMMY_JOBS);
+  const all = await loadMarketingListings();
+  const items = listingsForKind("jobs", all);
 
   return (
     <ListingsBoard
       kind="jobs"
       title="Jobs"
-      subtitle="Fresher and early-career openings with clear salary bands. Sign in for explainable AI match scores."
+      subtitle={
+        items.length
+          ? "Fresher and early-career openings with clear salary bands. Sign in for explainable AI match scores."
+          : "No published jobs yet. Sign in to explore when recruiters post — or check back soon."
+      }
       items={items}
       filters={JOB_FILTER_CHIPS}
       initialFilters={initialFilters}

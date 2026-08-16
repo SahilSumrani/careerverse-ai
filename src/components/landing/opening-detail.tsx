@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Clock3,
   Users,
-  Share2,
   Home,
 } from "lucide-react";
 import {
@@ -14,6 +13,7 @@ import {
   isWorkFromHome,
   type DummyJob,
 } from "@/data/jobs";
+import { ShareOpeningButton } from "@/components/landing/share-opening-button";
 import "./opening-detail.css";
 
 type Props = {
@@ -116,10 +116,7 @@ export function OpeningDetail({ job, kind }: Props) {
               <Link href="/auth/signup" className="cv-od-apply">
                 Apply now
               </Link>
-              <button type="button" className="cv-od-share" aria-label="Share">
-                <Share2 size={16} aria-hidden />
-                Share
-              </button>
+              <ShareOpeningButton title={job.title} company={job.company} />
             </div>
           </header>
 

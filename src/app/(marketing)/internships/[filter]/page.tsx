@@ -1,18 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { ListingsBoard } from "@/components/landing/listings-board";
-import {
-  DUMMY_JOBS,
-  INTERNSHIP_FILTER_CHIPS,
-  getJobById,
-  isInternshipListing,
-  listingHref,
-} from "@/data/jobs";
-import {
-  isLegacyListingId,
-  listingsForKind,
-  parseFilterSlug,
-} from "@/data/listing-filters";
+import { INTERNSHIP_FILTER_CHIPS, isInternshipListing, listingHref } from "@/data/jobs";
+import { isLegacyListingId, listingsForKind, parseFilterSlug } from "@/data/listing-filters";
+import { loadMarketingListings, resolveListingBySlug } from "@/lib/listings-public";
 
 type Props = {
   params: Promise<{ filter: string }>;
@@ -28,25 +19,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** Internshala-style `/internships/{filter-slug}` (+ legacy `/internships/jv-*` redirect). */
 export default async function InternshipFilterPage({ params, searchParams }: Props) {
   const { filter } = await params;
   const { q } = await searchParams;
 
   if (isLegacyListingId(filter)) {
-    const job = getJobById(filter);
+    const job = await resolveListingBySlug(filter);
     if (!job || !isInternshipListing(job)) notFound();
     redirect(listingHref(job));
   }
 
   const initialFilters = parseFilterSlug("internships", filter, q);
-  const items = listingsForKind("internships", DUMMY_JOBS);
+  const all = await loadMarketingListings();
+  const items = listingsForKind("internships", all);
 
   return (
     <ListingsBoard
       kind="internships"
       title="Internships"
-      subtitle="Paid and mentored internships for students. Filter by category and apply with your CareerVerse profile."
+      subtitle={
+        items.length
+          ? "Paid and mentored internships for students. Filter by category and apply with your CareerVerse profile."
+          : "No published internships yet. Sign in when roles go live."
+      }
       items={items}
       filters={INTERNSHIP_FILTER_CHIPS}
       initialFilters={initialFilters}

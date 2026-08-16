@@ -1,11 +1,45 @@
 import { z } from "zod";
 
-export const signUpSchema = z.object({
+const signUpAuthFields = {
   name: z.string().min(2).max(80),
   email: z.string().email(),
   password: z.string().min(8).max(128),
-  role: z.enum(["STUDENT", "PROFESSIONAL", "MENTOR", "HR", "FOUNDER", "SPEAKER"]).default("STUDENT"),
+};
+
+/** Job-seeker / professional registration */
+export const studentSignUpSchema = z.object({
+  track: z.literal("student"),
+  ...signUpAuthFields,
+  role: z.enum(["STUDENT", "PROFESSIONAL"]).default("STUDENT"),
 });
+
+/** Mentor registration — pending until PLATFORM_ADMIN approves */
+export const mentorSignUpSchema = z.object({
+  track: z.literal("mentor"),
+  ...signUpAuthFields,
+  headline: z.string().min(5).max(120),
+  expertise: z.string().min(3).max(200),
+  yearsExperience: z.coerce.number().int().min(0).max(50),
+  bio: z.string().min(40).max(2000),
+  linkedinUrl: z.string().url().optional().or(z.literal("")),
+});
+
+/** Company HR registration — can post jobs only after recruiterApproved */
+export const hrSignUpSchema = z.object({
+  track: z.literal("hr"),
+  ...signUpAuthFields,
+  companyName: z.string().min(2).max(120),
+  companyWebsite: z.string().url().optional().or(z.literal("")),
+  jobTitle: z.string().min(2).max(80),
+  companySize: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]).optional(),
+  phone: z.string().min(7).max(24).optional().or(z.literal("")),
+});
+
+export const signUpSchema = z.discriminatedUnion("track", [
+  studentSignUpSchema,
+  mentorSignUpSchema,
+  hrSignUpSchema,
+]);
 
 export const signInSchema = z.object({
   email: z.string().email(),
@@ -92,7 +126,7 @@ export const postSchema = z.object({
 });
 
 export const connectionRequestSchema = z.object({
-  receiverId: z.string().cuid(),
+  receiverId: z.string().min(1).max(128),
   message: z.string().max(500).optional(),
 });
 
@@ -137,4 +171,66 @@ export const adminMutationSchema = z.discriminatedUnion("action", [
       .min(1)
       .max(8),
   }),
+  z.object({
+    action: z.literal("seed_starter_jobs"),
+  }),
+  z.object({
+    action: z.literal("approve_recruiter"),
+    id: z.string().min(1).max(128),
+  }),
+  z.object({
+    action: z.literal("revoke_recruiter"),
+    id: z.string().min(1).max(128),
+  }),
+  z.object({
+    action: z.literal("approve_mentor"),
+    id: z.string().min(1).max(128),
+  }),
+  z.object({
+    action: z.literal("revoke_mentor"),
+    id: z.string().min(1).max(128),
+  }),
 ]);
+
+export const applicationCreateSchema = z.object({
+  opportunityId: z.string().min(1).max(128).optional(),
+  opportunity: z
+    .object({
+      id: z.string().min(1).max(128),
+      title: z.string().min(1).max(200),
+      organizationName: z.string().max(200).nullable().optional(),
+      type: z.string().max(80).optional(),
+      isDemo: z.boolean().optional(),
+    })
+    .optional(),
+  notes: z.string().max(5000).optional(),
+  nextAction: z.string().max(500).optional(),
+  matchScore: z.number().min(0).max(100).nullable().optional(),
+});
+
+export const applicationPatchSchema = z.object({
+  id: z.string().min(1).max(128),
+  status: z.enum([
+    "SAVED",
+    "PREPARING",
+    "APPLIED",
+    "ASSESSMENT",
+    "INTERVIEW",
+    "OFFER",
+    "REJECTED",
+    "WITHDRAWN",
+  ]),
+  notes: z.string().max(5000).optional(),
+  nextAction: z.string().max(500).optional(),
+});
+
+export const opportunityCreateSchema = z.object({
+  title: z.string().min(3).max(160),
+  company: z.string().min(2).max(120),
+  location: z.string().min(2).max(120),
+  type: z.enum(["Full-time", "Internship", "Contract", "Part-time"]).default("Full-time"),
+  workMode: z.enum(["Remote", "Hybrid", "On-site"]).default("Hybrid"),
+  salary: z.string().max(80).optional(),
+  tags: z.array(z.string().min(1).max(40)).max(20).default([]),
+  blurb: z.string().min(20).max(4000),
+});

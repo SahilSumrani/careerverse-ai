@@ -44,7 +44,7 @@ async function consumeChatQuota(userId: string): Promise<{ ok: boolean; remainin
       return { ok: true, remaining: DAILY_CHAT_CAP - count - 1 };
     });
   } catch {
-    return { ok: true, remaining: DAILY_CHAT_CAP };
+    return { ok: false, remaining: 0 };
   }
 }
 

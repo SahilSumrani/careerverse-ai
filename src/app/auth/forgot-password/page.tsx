@@ -8,8 +8,8 @@ export default function ForgotPasswordPage() {
         <CardHeader>
           <CardTitle className="font-display text-2xl">Password reset</CardTitle>
           <CardDescription>
-            Password reset email delivery is environment-dependent. Configure your email provider to enable production
-            resets. For local demo accounts, use the seeded credentials from the README.
+            Email password reset is not enabled yet. If you signed in with Google, use Google sign-in. For email
+            accounts, contact support or a platform admin to reset access.
           </CardDescription>
         </CardHeader>
         <div className="px-5 pb-5 text-sm">

@@ -19,6 +19,14 @@ type AdminPayload = {
     name?: string | null;
     email: string;
     roles: RoleName[];
+    recruiterApproved: boolean;
+    mentorApproved?: boolean;
+    registration?: {
+      track?: string;
+      companyName?: string | null;
+      jobTitle?: string | null;
+      expertise?: string | null;
+    } | null;
     suspendedAt?: string | null;
     onboardingComplete?: boolean;
     preferredLocations: string[];
@@ -65,6 +73,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial client fetch
     void load();
   }, [load]);
 
@@ -137,6 +146,22 @@ export default function AdminPage() {
               </p>
             </div>
 
+            <div className="cv-panel flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <p className="text-sm font-semibold">Job inventory</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Publish starter roles into Firestore `jobs` (isDemo: false). Safe to re-run — merges by id.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={busyId === "seed-jobs"}
+                onClick={() => void postAction({ action: "seed_starter_jobs" }, "seed-jobs")}
+              >
+                {busyId === "seed-jobs" ? "Seeding…" : "Seed starter jobs"}
+              </Button>
+            </div>
+
             <div className="grid gap-4 lg:grid-cols-2">
               <section className="cv-panel p-4">
                 <h2 className="text-sm font-semibold">Preferred locations</h2>
@@ -204,6 +229,14 @@ export default function AdminPage() {
                       </p>
                       <p className="truncate text-xs text-muted-foreground">
                         {u.email} · {u.roles.join(", ") || "STUDENT"}
+                        {u.roles.includes("HR")
+                          ? ` · Recruiter ${u.recruiterApproved ? "approved" : "pending"}`
+                          : ""}
+                        {u.roles.includes("MENTOR")
+                          ? ` · Mentor ${u.mentorApproved ? "approved" : "pending"}`
+                          : ""}
+                        {u.registration?.companyName ? ` · ${u.registration.companyName}` : ""}
+                        {u.registration?.expertise ? ` · ${u.registration.expertise}` : ""}
                         {u.preferredLocations.length
                           ? ` · ${u.preferredLocations.slice(0, 2).join(", ")}`
                           : ""}
@@ -249,6 +282,46 @@ export default function AdminPage() {
                           Unsuspend
                         </Button>
                       )}
+                      {u.roles.includes("HR") ? (
+                        <>
+                          <Badge tone={u.recruiterApproved ? "success" : "warning"}>
+                            {u.recruiterApproved ? "Recruiter approved" : "Recruiter pending"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busyId === u.id}
+                            onClick={() =>
+                              void postAction(
+                                { action: u.recruiterApproved ? "revoke_recruiter" : "approve_recruiter", id: u.id },
+                                u.id,
+                              )
+                            }
+                          >
+                            {u.recruiterApproved ? "Revoke recruiter" : "Approve recruiter"}
+                          </Button>
+                        </>
+                      ) : null}
+                      {u.roles.includes("MENTOR") ? (
+                        <>
+                          <Badge tone={u.mentorApproved ? "success" : "warning"}>
+                            {u.mentorApproved ? "Mentor approved" : "Mentor pending"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busyId === u.id}
+                            onClick={() =>
+                              void postAction(
+                                { action: u.mentorApproved ? "revoke_mentor" : "approve_mentor", id: u.id },
+                                u.id,
+                              )
+                            }
+                          >
+                            {u.mentorApproved ? "Revoke mentor" : "Approve mentor"}
+                          </Button>
+                        </>
+                      ) : null}
                     </div>
                   </li>
                 ))}

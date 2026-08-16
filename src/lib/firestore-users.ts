@@ -1,6 +1,11 @@
-import { FieldValue, type DocumentData, type Timestamp } from "firebase-admin/firestore";
+import { type DocumentData, type Timestamp } from "firebase-admin/firestore";
 import { nanoid } from "nanoid";
-import { getAdminDb } from "@/lib/firebase-admin";
+import {
+  getAdminDb,
+  getAdminStorage,
+  hasFirebaseAdminCredentials,
+  resolveStorageBucket,
+} from "@/lib/firebase-admin";
 import { sanitizeExperiences, type ExperienceEntry } from "@/lib/experiences";
 import type { RoleName } from "@/lib/roles";
 import { isRoleName } from "@/lib/roles";
@@ -60,6 +65,20 @@ export type CareerVerseUser = {
   resume?: ResumeMeta | null;
   resumes?: ResumeMeta[];
   suspendedAt?: string | null;
+  recruiterApproved?: boolean;
+  mentorApproved?: boolean;
+  /** Role-track registration payload (company / mentor profile). */
+  registration?: {
+    track?: "student" | "mentor" | "hr";
+    companyName?: string | null;
+    companyWebsite?: string | null;
+    jobTitle?: string | null;
+    companySize?: string | null;
+    phone?: string | null;
+    expertise?: string | null;
+    yearsExperience?: number | null;
+    submittedAt?: string | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -98,7 +117,8 @@ export function mapUserDoc(id: string, data: DocumentData | undefined): CareerVe
     name: (data.name as string | null) ?? null,
     image: (data.image as string | null) ?? null,
     emailVerified: tsToIso(data.emailVerified),
-    passwordHash: (data.passwordHash as string | null | undefined) ?? null,
+    // Never expose to API clients — auth compares hash server-side only.
+    passwordHash: null,
     roles: asRoles(data.roles),
     onboardingComplete: Boolean(data.onboardingComplete),
     profileCompleteness: Number(data.profileCompleteness ?? 0),
@@ -123,11 +143,53 @@ export function mapUserDoc(id: string, data: DocumentData | undefined): CareerVe
     careerScore: data.careerScore == null ? null : Number(data.careerScore),
     careerAnalysisJson: (data.careerAnalysisJson as string | null) ?? null,
     analysisUpdatedAt: tsToIso(data.analysisUpdatedAt),
-    resume: (data.resume as ResumeMeta | null) ?? null,
-    resumes: Array.isArray(data.resumes) ? (data.resumes as ResumeMeta[]) : [],
+    resume: sanitizeResumeForClient((data.resume as ResumeMeta | null) ?? null),
+    resumes: Array.isArray(data.resumes)
+      ? (data.resumes as ResumeMeta[]).map(sanitizeResumeForClient).filter(Boolean) as ResumeMeta[]
+      : [],
     suspendedAt: tsToIso(data.suspendedAt),
+    recruiterApproved: Boolean(data.recruiterApproved),
+    mentorApproved: Boolean(data.mentorApproved),
+    registration: sanitizeRegistration(data.registration),
     createdAt: tsToIso(data.createdAt) || new Date().toISOString(),
     updatedAt: tsToIso(data.updatedAt) || new Date().toISOString(),
+  };
+}
+
+function sanitizeRegistration(raw: unknown): CareerVerseUser["registration"] {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const track = r.track === "student" || r.track === "mentor" || r.track === "hr" ? r.track : undefined;
+  return {
+    track,
+    companyName: typeof r.companyName === "string" ? r.companyName : null,
+    companyWebsite: typeof r.companyWebsite === "string" ? r.companyWebsite : null,
+    jobTitle: typeof r.jobTitle === "string" ? r.jobTitle : null,
+    companySize: typeof r.companySize === "string" ? r.companySize : null,
+    phone: typeof r.phone === "string" ? r.phone : null,
+    expertise: typeof r.expertise === "string" ? r.expertise : null,
+    yearsExperience: r.yearsExperience == null ? null : Number(r.yearsExperience),
+    submittedAt: typeof r.submittedAt === "string" ? r.submittedAt : null,
+  };
+}
+
+function sanitizeResumeForClient(resume: ResumeMeta | null): ResumeMeta | null {
+  if (!resume) return null;
+  return {
+    ...resume,
+    extractedText: null,
+  };
+}
+
+/** Server-only: include passwordHash for credential auth. */
+export function mapUserDocWithSecrets(id: string, data: DocumentData | undefined): CareerVerseUser | null {
+  const base = mapUserDoc(id, data);
+  if (!base || !data) return base;
+  return {
+    ...base,
+    passwordHash: (data.passwordHash as string | null | undefined) ?? null,
+    resume: (data.resume as ResumeMeta | null) ?? null,
+    resumes: Array.isArray(data.resumes) ? (data.resumes as ResumeMeta[]) : [],
   };
 }
 
@@ -135,6 +197,19 @@ export async function getUserById(uid: string): Promise<CareerVerseUser | null> 
   const snap = await getAdminDb().collection(USERS_COLLECTION).doc(uid).get();
   if (!snap.exists) return null;
   return mapUserDoc(snap.id, snap.data());
+}
+
+/** Credential sign-in only — includes passwordHash. */
+export async function getUserByEmailForAuth(email: string): Promise<CareerVerseUser | null> {
+  const normalized = email.toLowerCase();
+  const snap = await getAdminDb()
+    .collection(USERS_COLLECTION)
+    .where("email", "==", normalized)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  return mapUserDocWithSecrets(doc.id, doc.data());
 }
 
 export async function getUserByEmail(email: string): Promise<CareerVerseUser | null> {
@@ -154,6 +229,15 @@ export async function createEmailPasswordUser(input: {
   name: string;
   passwordHash: string;
   role: RoleName;
+  onboardingComplete?: boolean;
+  profileCompleteness?: number;
+  recruiterApproved?: boolean;
+  mentorApproved?: boolean;
+  headline?: string | null;
+  about?: string | null;
+  linkedinUrl?: string | null;
+  skills?: string[];
+  registration?: CareerVerseUser["registration"];
 }): Promise<CareerVerseUser> {
   const id = nanoid();
   const now = new Date().toISOString();
@@ -164,9 +248,12 @@ export async function createEmailPasswordUser(input: {
     emailVerified: null,
     passwordHash: input.passwordHash,
     roles: [input.role],
-    onboardingComplete: false,
-    profileCompleteness: 10,
-    skills: [] as string[],
+    onboardingComplete: Boolean(input.onboardingComplete),
+    profileCompleteness: input.profileCompleteness ?? 10,
+    headline: input.headline ?? null,
+    about: input.about ?? null,
+    linkedinUrl: input.linkedinUrl ?? null,
+    skills: input.skills ?? ([] as string[]),
     interests: [] as string[],
     experiences: [] as ExperienceEntry[],
     preferredIndustries: [] as string[],
@@ -174,6 +261,9 @@ export async function createEmailPasswordUser(input: {
     resume: null,
     resumes: [] as ResumeMeta[],
     suspendedAt: null,
+    recruiterApproved: Boolean(input.recruiterApproved),
+    mentorApproved: Boolean(input.mentorApproved),
+    registration: input.registration ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -267,15 +357,40 @@ export async function attachResumeMeta(
   profileCompleteness?: number,
 ): Promise<void> {
   const ref = getAdminDb().collection(USERS_COLLECTION).doc(uid);
+  // Cap extracted text so user docs stay under Firestore 1 MiB.
+  const capped: ResumeMeta = {
+    ...resume,
+    extractedText: resume.extractedText
+      ? resume.extractedText.slice(0, 80_000)
+      : resume.extractedText,
+    analyses: (resume.analyses || []).slice(-3),
+  };
+  // Replace (not arrayUnion) — one active resume + short history.
+  const snap = await ref.get();
+  const prev = snap.data() as { resume?: ResumeMeta; resumes?: ResumeMeta[] } | undefined;
+  const history = [capped, ...(prev?.resumes || []).filter((r) => r.id !== capped.id)].slice(0, 3);
+
   await ref.set(
     {
-      resume,
-      resumes: FieldValue.arrayUnion(resume),
+      resume: capped,
+      resumes: history,
       ...(profileCompleteness != null ? { profileCompleteness } : {}),
       updatedAt: new Date().toISOString(),
     },
     { merge: true },
   );
+}
+
+/** Best-effort delete of a previous Storage object (ignore missing). */
+export async function deleteResumeStorageObject(storagePath: string | null | undefined): Promise<void> {
+  if (!storagePath || storagePath.includes("/tmp") || !hasFirebaseAdminCredentials()) return;
+  const bucketName = resolveStorageBucket();
+  if (!bucketName) return;
+  try {
+    await getAdminStorage().bucket(bucketName).file(storagePath).delete({ ignoreNotFound: true });
+  } catch {
+    // ignore
+  }
 }
 
 export async function listDirectoryUsers(excludeId: string, limit = 4): Promise<CareerVerseUser[]> {

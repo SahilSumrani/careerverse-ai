@@ -1,12 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Server routes use the Admin SDK (bypasses rules).
-    // Client SDK reads/writes should stay limited until more of the app is migrated.
-
+    // All app data access goes through Next.js Admin SDK (bypasses rules).
+    // Client SDK must not read user docs (passwordHash / resume text live there).
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // writes go through Admin SDK / API routes
+      allow read, write: if false;
     }
 
     match /{document=**} {

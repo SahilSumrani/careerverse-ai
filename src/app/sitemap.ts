@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { loadSitemapListingHrefs } from "@/lib/listings-public";
 
 const base = (
   process.env.NEXT_PUBLIC_APP_URL ||
@@ -14,11 +15,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/hiring-flow",
     "/careers",
     "/auth/signin",
+    "/auth/register",
     "/auth/signup",
   ];
 
-  const { DUMMY_JOBS, listingHref } = await import("@/data/jobs");
-  const detailPaths = DUMMY_JOBS.map((job) => listingHref(job));
+  const detailPaths = await loadSitemapListingHrefs();
 
   const filterPaths = [
     "/internships/work-from-home",

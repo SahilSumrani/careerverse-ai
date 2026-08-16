@@ -1,6 +1,7 @@
 import { jsonError, jsonOk, requireSession } from "@/lib/api";
-import { hasFirebaseAdminCredentials } from "@/lib/firebase-admin";
+import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 import { listDirectoryUsers } from "@/lib/firestore-users";
+import { connectionRequestSchema } from "@/lib/validators";
 
 export async function GET() {
   try {
@@ -49,13 +50,27 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    await requireSession();
-    return jsonOk({
-      ok: true,
-      note: "Connection request acknowledged. Full connections collection can persist this next.",
+    const session = await requireSession();
+    if (!hasFirebaseAdminCredentials()) {
+      return jsonError("Network connections are not available yet", 503);
+    }
+    const body = await req.json().catch(() => null);
+    const parsed = connectionRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return jsonError("Provide a valid receiverId to send a connection request", 400);
+    }
+
+    const now = new Date().toISOString();
+    await getAdminDb().collection("connectionRequests").add({
+      fromUserId: session.user.id,
+      toUserId: parsed.data.receiverId,
+      message: parsed.data.message ?? null,
+      status: "PENDING",
+      createdAt: now,
     });
+    return jsonOk({ ok: true, status: "PENDING" });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
@@ -63,6 +78,6 @@ export async function POST() {
   }
 }
 
-export async function PATCH() {
-  return POST();
+export async function PATCH(req: Request) {
+  return POST(req);
 }

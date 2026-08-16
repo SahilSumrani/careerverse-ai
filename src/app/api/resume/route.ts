@@ -1,10 +1,11 @@
 import { nanoid } from "nanoid";
 import {
   attachResumeMeta,
+  deleteResumeStorageObject,
   getUserById,
   type ResumeMeta,
 } from "@/lib/firestore-users";
-import { extractResumeText, validateAndReadResume, writeResumeToTmp } from "@/lib/uploads";
+import { extractResumeText, validateAndReadResume } from "@/lib/uploads";
 import {
   computeProfileCompleteness,
   getCareerContext,
@@ -14,16 +15,15 @@ import {
   trackAnalytics,
 } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
+import { consumeDailyQuota } from "@/lib/rate-limit";
 import {
   hasFirebaseAdminCredentials,
   getAdminStorage,
   resolveStorageBucket,
 } from "@/lib/firebase-admin";
 
-/**
- * Upload to Firebase Storage at resumes/{uid}/{filename}.
- * On failure returns null — caller may fall back to /tmp but must NOT mint Storage URLs for local paths.
- */
+const RESUME_ANALYZE_DAILY_CAP = Number(process.env.AI_RESUME_DAILY_CAP || 10);
+
 async function tryUploadToStorage(
   uid: string,
   fileName: string,
@@ -51,7 +51,6 @@ async function tryUploadToStorage(
       });
       storageUrl = url;
     } catch {
-      // Prefer gs:// reference over a broken HTTP link; client refreshes via /api/resume/file
       storageUrl = `gs://${bucketName}/${storagePath}`;
     }
     return { storagePath, storageUrl };
@@ -70,7 +69,9 @@ export async function GET() {
       : user?.resume
         ? [user.resume]
         : []
-    ).slice().sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1));
+    )
+      .slice()
+      .sort((a, b) => (a.uploadedAt < b.uploadedAt ? 1 : -1));
     return jsonOk({ resumes });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
@@ -87,7 +88,11 @@ export async function POST(req: Request) {
     const targetRole = String(form.get("targetRole") || "") || undefined;
     if (!(file instanceof File)) return jsonError("Resume file required", 400);
 
-    // In-memory validate only — never mkdir under /var/task on Vercel
+    const quota = await consumeDailyQuota(session.user.id, "resumeAnalyze", RESUME_ANALYZE_DAILY_CAP);
+    if (!quota.ok) {
+      return jsonError("Daily resume analysis limit reached. Try again tomorrow.", 429);
+    }
+
     const saved = await validateAndReadResume(file);
     const extractedText = await extractResumeText(saved.buffer, saved.mimeType);
 
@@ -98,15 +103,16 @@ export async function POST(req: Request) {
       saved.mimeType,
     );
 
-    // storageUrl only when bytes actually live in Storage — never for /tmp fallback
-    let storagePath = cloud?.storagePath ?? null;
-    let storageUrl: string | null = cloud?.storageUrl ?? null;
-    let storageBackend: "firebase" | "tmp" = cloud ? "firebase" : "tmp";
     if (!cloud) {
-      const local = await writeResumeToTmp(saved.buffer, saved.fileName, saved.ext);
-      storagePath = local.storagePath;
-      storageUrl = null;
-      storageBackend = "tmp";
+      return jsonError(
+        "Resume storage is not configured. Set FIREBASE_STORAGE_BUCKET and Admin credentials, then retry.",
+        503,
+      );
+    }
+
+    const prev = await getUserById(session.user.id);
+    if (prev?.resume?.storagePath && prev.resume.storagePath !== cloud.storagePath) {
+      await deleteResumeStorageObject(prev.resume.storagePath);
     }
 
     const resumeId = nanoid();
@@ -128,9 +134,9 @@ export async function POST(req: Request) {
       fileName: saved.fileName,
       mimeType: saved.mimeType,
       sizeBytes: saved.sizeBytes,
-      storagePath,
-      storageUrl,
-      extractedText,
+      storagePath: cloud.storagePath,
+      storageUrl: cloud.storageUrl,
+      extractedText: extractedText?.slice(0, 80_000) ?? null,
       uploadedAt,
       analyses: [
         {
@@ -143,27 +149,26 @@ export async function POST(req: Request) {
       ],
     };
 
-    const user = await getUserById(session.user.id);
     const completeness = computeProfileCompleteness({
       name: parsedProfile.name || session.user.name,
-      education: parsedProfile.education || user?.education,
-      degree: parsedProfile.degree || user?.degree,
-      college: parsedProfile.college || user?.college,
-      graduationYear: parsedProfile.graduationYear ?? user?.graduationYear,
-      skillsCount: Math.max(parsedProfile.skills.length, user?.skills.length ?? 0),
-      interestsCount: Math.max(parsedProfile.interests.length, user?.interests.length ?? 0),
-      careerGoals: parsedProfile.careerGoals || user?.careerGoals,
-      experienceSummary: parsedProfile.experienceSummary || user?.experienceSummary,
+      education: parsedProfile.education || prev?.education,
+      degree: parsedProfile.degree || prev?.degree,
+      college: parsedProfile.college || prev?.college,
+      graduationYear: parsedProfile.graduationYear ?? prev?.graduationYear,
+      skillsCount: Math.max(parsedProfile.skills.length, prev?.skills.length ?? 0),
+      interestsCount: Math.max(parsedProfile.interests.length, prev?.interests.length ?? 0),
+      careerGoals: parsedProfile.careerGoals || prev?.careerGoals,
+      experienceSummary: parsedProfile.experienceSummary || prev?.experienceSummary,
       preferredIndustriesCount: Math.max(
         parsedProfile.preferredIndustries.length,
-        user?.preferredIndustries.length ?? 0,
+        prev?.preferredIndustries.length ?? 0,
       ),
       preferredLocationsCount: Math.max(
         parsedProfile.preferredLocations.length,
-        user?.preferredLocations.length ?? 0,
+        prev?.preferredLocations.length ?? 0,
       ),
-      workPreference: user?.workPreference,
-      careerStage: user?.careerStage,
+      workPreference: prev?.workPreference,
+      careerStage: prev?.careerStage,
       hasResume: true,
     });
 
@@ -176,11 +181,8 @@ export async function POST(req: Request) {
       analysis,
       analysisId,
       parsedProfile,
-      storage: storageBackend,
-      note:
-        storageBackend === "firebase"
-          ? undefined
-          : "Stored under /tmp fallback (ephemeral on Vercel). Set FIREBASE_STORAGE_BUCKET (e.g. careerverse-ai-3f969.appspot.com or *.firebasestorage.app from Console) + Admin credentials — do not generate Storage download URLs for /tmp files.",
+      storage: "firebase" as const,
+      remainingAnalyses: quota.remaining,
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

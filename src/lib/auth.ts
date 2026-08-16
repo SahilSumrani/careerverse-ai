@@ -44,7 +44,10 @@ const providers = [
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials, request) {
-      const parsed = signInSchema.safeParse(credentials);
+      const parsed = signInSchema.safeParse({
+        email: credentials?.email,
+        password: credentials?.password,
+      });
       if (!parsed.success) return null;
       const email = parsed.data.email.toLowerCase();
       const hour = new Date().toISOString().slice(0, 13);

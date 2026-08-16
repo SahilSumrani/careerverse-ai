@@ -4,6 +4,7 @@ import { signUpSchema } from "@/lib/validators";
 import { jsonError, jsonOk, readJsonBody, trackAnalytics } from "@/lib/api";
 import type { RoleName } from "@/lib/roles";
 import { consumeWindowQuota } from "@/lib/rate-limit";
+import { sendWaitlistEmail } from "@/lib/email/waitlist";
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +61,9 @@ export async function POST(req: Request) {
         },
       });
       void trackAnalytics("signup", user.id, { track: "student", role });
+      void sendWaitlistEmail({ to: email, name }).catch((error) =>
+        console.error("Unable to send waitlist email", error),
+      );
       return jsonOk({ id: user.id, email: user.email, track: "student", next: nextPath });
     }
 
@@ -101,6 +105,9 @@ export async function POST(req: Request) {
         },
       });
       void trackAnalytics("signup", user.id, { track: "mentor", role });
+      void sendWaitlistEmail({ to: email, name }).catch((error) =>
+        console.error("Unable to send waitlist email", error),
+      );
       return jsonOk({
         id: user.id,
         email: user.email,
@@ -143,6 +150,9 @@ export async function POST(req: Request) {
       },
     });
     void trackAnalytics("signup", user.id, { track: "hr", role });
+    void sendWaitlistEmail({ to: email, name }).catch((error) =>
+      console.error("Unable to send waitlist email", error),
+    );
     return jsonOk({
       id: user.id,
       email: user.email,

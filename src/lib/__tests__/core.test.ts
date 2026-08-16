@@ -15,12 +15,49 @@ describe("utils", () => {
 describe("validators", () => {
   it("validates signup", () => {
     const ok = signUpSchema.safeParse({
-      name: "Sahil",
+      track: "student",
+      firstName: "Sahil",
+      lastName: "Sumrani",
       email: "sahil@example.com",
       password: "password123",
       role: "STUDENT",
+      phone: "+91 98765 43210",
+      city: "Mumbai",
+      state: "Maharashtra",
+      educationLevel: "BACHELORS",
+      institution: "Example University",
+      course: "Computer Science",
+      graduationYear: 2026,
+      skills: "TypeScript, React",
+      preferredRole: "Software Engineer",
+      linkedinUrl: "",
+      hasResume: false,
     });
     expect(ok.success).toBe(true);
+  });
+
+  it("rejects client-controlled privilege fields", () => {
+    const result = signUpSchema.safeParse({
+      track: "student",
+      firstName: "Sahil",
+      lastName: "Sumrani",
+      email: "sahil@example.com",
+      password: "password123",
+      role: "STUDENT",
+      roles: ["PLATFORM_ADMIN"],
+      phone: "+91 98765 43210",
+      city: "Mumbai",
+      state: "Maharashtra",
+      educationLevel: "BACHELORS",
+      institution: "Example University",
+      course: "Computer Science",
+      graduationYear: 2026,
+      skills: "TypeScript, React",
+      preferredRole: "Software Engineer",
+      linkedinUrl: "",
+      hasResume: false,
+    });
+    expect(result.success).toBe(false);
   });
 
   it("requires onboarding essentials", () => {

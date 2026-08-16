@@ -2,17 +2,21 @@ import { jsonOk } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 
 function mapMentor(id: string, data: Record<string, unknown>) {
-  if (data.isDemo) return null;
+  if (data.isDemo || data.mentorApproved !== true) return null;
   const name = String(data.name || "Mentor");
   const skills = Array.isArray(data.skills) ? data.skills.map(String) : [];
+  const registration = (data.registration || {}) as Record<string, unknown>;
   return {
     id,
-    expertise: (data.focus as string) || skills.slice(0, 3).join(", ") || null,
+    expertise: (registration.expertise as string) || skills.slice(0, 3).join(", ") || null,
     industry: (data.industry as string) || null,
-    experienceYears: data.experienceYears == null ? null : Number(data.experienceYears),
-    mentoringTopics: skills.length ? skills.join(", ") : (data.focus as string) || null,
-    availability: (data.availability as string) || "Flexible",
-    preferredAudience: (data.preferredAudience as string) || "Students & early career",
+    experienceYears:
+      registration.yearsExperience == null ? null : Number(registration.yearsExperience),
+    mentoringTopics:
+      skills.length ? skills.join(", ") : (registration.expertise as string) || null,
+    availability: (registration.availabilityDays as string) || "Flexible",
+    preferredAudience:
+      (registration.menteeAudience as string) || "Students & early career",
     isDemo: false,
     user: {
       id,
@@ -27,7 +31,11 @@ export async function GET() {
     return jsonOk({ mentors: [], source: "unconfigured" });
   }
   try {
-    const snap = await getAdminDb().collection("mentors").limit(40).get();
+    const snap = await getAdminDb()
+      .collection("users")
+      .where("mentorApproved", "==", true)
+      .limit(40)
+      .get();
     const mentors = snap.docs
       .map((d) => mapMentor(d.id, d.data() as Record<string, unknown>))
       .filter(Boolean);

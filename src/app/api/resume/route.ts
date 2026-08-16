@@ -11,6 +11,7 @@ import {
   getCareerContext,
   jsonError,
   jsonOk,
+  readRequestBody,
   requireSession,
   trackAnalytics,
 } from "@/lib/api";
@@ -83,10 +84,19 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const form = await req.formData();
+    const maxUploadBytes = Number(process.env.MAX_UPLOAD_BYTES || 5_242_880);
+    const body = await readRequestBody(req, maxUploadBytes + 65_536);
+    const bodyBuffer = new ArrayBuffer(body.byteLength);
+    new Uint8Array(bodyBuffer).set(body);
+    const form = await new Request(req.url, {
+      method: "POST",
+      headers: req.headers,
+      body: bodyBuffer,
+    }).formData();
     const file = form.get("file");
     const targetRole = String(form.get("targetRole") || "") || undefined;
     if (!(file instanceof File)) return jsonError("Resume file required", 400);
+    if (targetRole && targetRole.length > 160) return jsonError("Target role is too long", 400);
 
     const quota = await consumeDailyQuota(session.user.id, "resumeAnalyze", RESUME_ANALYZE_DAILY_CAP);
     if (!quota.ok) {

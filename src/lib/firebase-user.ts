@@ -35,6 +35,9 @@ export async function upsertUserFromFirebaseClaims(
   if (!email) {
     throw new Error("Google account has no email");
   }
+  if (claims.email_verified !== true) {
+    throw new Error("Google email is not verified");
+  }
 
   const uid = firebaseUid(claims);
   const now = new Date().toISOString();

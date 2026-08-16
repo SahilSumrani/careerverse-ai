@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireSession, getCareerContext } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession, getCareerContext } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { aiService } from "@/lib/ai/service";
 import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
@@ -6,12 +6,14 @@ import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 import { getUserById } from "@/lib/firestore-users";
 import { requirePermission, PERMISSIONS } from "@/lib/rbac";
 import { opportunityCreateSchema } from "@/lib/validators";
+import { consumeDailyQuota } from "@/lib/rate-limit";
 
 const MATCH_TOP_N = 8;
+const MATCH_DAILY_CAP = Number(process.env.AI_MATCH_DAILY_CAP || 10);
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const q = (searchParams.get("q") || "").toLowerCase();
+  const q = (searchParams.get("q") || "").slice(0, 120).toLowerCase();
   const mine = searchParams.get("mine") === "1";
   const { jobs, source } = await loadJobsFromFirestore(50);
 
@@ -72,7 +74,11 @@ export async function GET(req: Request) {
 
   const session = await auth();
   const ctx = !mine && session?.user?.id ? await getCareerContext(session.user.id) : null;
-  const withMatch = ctx
+  const matchQuota =
+    ctx && items.length
+      ? await consumeDailyQuota(session!.user.id, "jobMatching", MATCH_DAILY_CAP)
+      : { ok: false, remaining: 0 };
+  const withMatch = ctx && matchQuota.ok
     ? await Promise.all(
         items.map(async (o, index) => {
           if (index >= MATCH_TOP_N) return o;
@@ -99,7 +105,8 @@ export async function GET(req: Request) {
     page: 1,
     pageSize: withMatch.length,
     source: mine ? "firestore" : source,
-    matchedTopN: ctx ? Math.min(MATCH_TOP_N, items.length) : 0,
+    matchedTopN: ctx && matchQuota.ok ? Math.min(MATCH_TOP_N, items.length) : 0,
+    matchRemaining: ctx ? matchQuota.remaining : null,
   });
 }
 
@@ -116,7 +123,7 @@ export async function POST(req: Request) {
     }
     if (!hasFirebaseAdminCredentials()) return jsonError("Jobs backend unavailable", 503);
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = opportunityCreateSchema.safeParse(body);
     if (!parsed.success) return jsonError("Invalid job payload", 400);
 
@@ -135,6 +142,8 @@ export async function POST(req: Request) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
     if (status === 403) return jsonError("Forbidden", 403);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to create job", 500);
   }
 }

@@ -1,5 +1,8 @@
-import { jsonError, jsonOk, requireSession } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
+import { consumeDailyQuota } from "@/lib/rate-limit";
+
+const EVENT_RSVP_DAILY_CAP = 20;
 
 async function listEvents() {
   if (!hasFirebaseAdminCredentials()) {
@@ -52,11 +55,23 @@ export async function POST(req: Request) {
     if (!hasFirebaseAdminCredentials()) {
       return jsonError("Event registration is not available yet", 503);
     }
-    const body = await req.json().catch(() => ({}));
-    const eventId = String(body.eventId || "").trim();
+    const body = (await readJsonBody(req)) as Record<string, unknown> | null;
+    const eventId = String(body?.eventId || "").trim();
     if (!eventId || eventId.length > 128) {
       return jsonError("eventId required", 400);
     }
+    const event = await getAdminDb().collection("events").doc(eventId).get();
+    if (!event.exists || event.data()?.isDemo) return jsonError("Event not found", 404);
+    const quota = await consumeDailyQuota(session.user.id, "eventRsvps", EVENT_RSVP_DAILY_CAP);
+    if (!quota.ok) return jsonError("Daily event registration limit reached", 429);
+    const existing = await getAdminDb()
+      .collection("eventRsvps")
+      .where("eventId", "==", eventId)
+      .where("userId", "==", session.user.id)
+      .limit(1)
+      .get();
+    if (!existing.empty) return jsonOk({ ok: true, eventId, status: "REGISTERED" });
+
     const now = new Date().toISOString();
     await getAdminDb().collection("eventRsvps").add({
       eventId,
@@ -68,6 +83,8 @@ export async function POST(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to register", 500);
   }
 }

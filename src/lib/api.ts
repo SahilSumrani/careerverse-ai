@@ -13,11 +13,57 @@ export function jsonError(message: string, status = 400, extra?: Record<string, 
   return NextResponse.json({ error: message, ...extra }, { status });
 }
 
+export async function readRequestBody(req: Request, maxBytes: number): Promise<Uint8Array> {
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw Object.assign(new Error("Request body too large"), { status: 413 });
+  }
+
+  const reader = req.body?.getReader();
+  if (!reader) return new Uint8Array();
+
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw Object.assign(new Error("Request body too large"), { status: 413 });
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+export async function readJsonBody(req: Request, maxBytes = 32_768): Promise<unknown> {
+  const bytes = await readRequestBody(req, maxBytes);
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    throw Object.assign(new Error("Invalid JSON body"), { status: 400 });
+  }
+}
+
 export async function requireSession() {
   const session = await auth();
   if (!session?.user?.id) {
     throw Object.assign(new Error("Unauthorized"), { status: 401 });
   }
+  const user = await getUserById(session.user.id);
+  if (!user || user.suspendedAt) {
+    throw Object.assign(new Error("Unauthorized"), { status: 401 });
+  }
+  session.user.roles = user.roles;
+  session.user.onboardingComplete = user.onboardingComplete;
   return session;
 }
 

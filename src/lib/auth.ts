@@ -7,6 +7,7 @@ import { upsertUserFromFirebaseClaims } from "@/lib/firebase-user";
 import { getUserByEmailForAuth, getUserById } from "@/lib/firestore-users";
 import { signInSchema } from "@/lib/validators";
 import type { RoleName } from "@/lib/roles";
+import { consumeWindowQuota } from "@/lib/rate-limit";
 
 declare module "next-auth" {
   interface Session {
@@ -42,10 +43,18 @@ const providers = [
       email: { label: "Email", type: "email" },
       password: { label: "Password", type: "password" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       const parsed = signInSchema.safeParse(credentials);
       if (!parsed.success) return null;
       const email = parsed.data.email.toLowerCase();
+      const hour = new Date().toISOString().slice(0, 13);
+      const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      const ip = (forwarded || request.headers.get("x-real-ip") || "unknown").slice(0, 128).replaceAll("/", "_");
+      const [emailAllowed, ipAllowed] = await Promise.all([
+        consumeWindowQuota("signin-email", email, 10, hour),
+        consumeWindowQuota("signin-ip", ip, 50, hour),
+      ]);
+      if (!emailAllowed || !ipAllowed) return null;
       const user = await getUserByEmailForAuth(email);
       if (!user?.passwordHash || user.suspendedAt) return null;
       const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
@@ -122,17 +131,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.onboardingComplete = session.onboardingComplete ?? token.onboardingComplete;
         token.name = session.name ?? token.name;
       }
-      if (
-        token.id &&
-        (user || trigger === "update" || !token.roles || token.onboardingComplete === undefined)
-      ) {
+      if (token.id) {
         try {
           const dbUser = await getUserById(token.id as string);
-          if (dbUser) {
-            token.roles = dbUser.roles;
-            token.onboardingComplete = dbUser.onboardingComplete;
-            token.name = dbUser.name;
-          }
+          if (!dbUser || dbUser.suspendedAt) return null;
+          token.roles = dbUser.roles;
+          token.onboardingComplete = dbUser.onboardingComplete;
+          token.name = dbUser.name;
         } catch (error) {
           console.error("Firestore session refresh failed", error);
         }
@@ -148,6 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
+  useSecureCookies: process.env.NODE_ENV === "production",
   trustHost: true,
   secret: process.env.AUTH_SECRET,
 });

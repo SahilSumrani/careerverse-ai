@@ -42,10 +42,10 @@ export default async function DashboardPage() {
   const firstName = session.user.name?.split(" ")[0] || "there";
   const roles = session.user.roles ?? ["STUDENT"];
   const isHr = roles.includes("HR");
-  const isMentor = roles.includes("MENTOR");
-  const isStudentFacing = !isHr && !isMentor;
 
   const user = await getUserById(session.user.id).catch(() => null);
+  const isMentor = roles.includes("MENTOR") || user?.registration?.track === "mentor";
+  const isStudentFacing = !isHr && !isMentor;
   const people = await listDirectoryUsers(session.user.id, 4).catch(() => []);
   const analysis = user?.careerAnalysisJson ? JSON.parse(user.careerAnalysisJson) : null;
   const ctx = await getCareerContext(session.user.id).catch(() => null);

@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireSession } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { requirePermission, PERMISSIONS } from "@/lib/rbac";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 import { mapUserDoc, USERS_COLLECTION } from "@/lib/firestore-users";
@@ -27,7 +27,7 @@ async function consumeAdminMutationQuota(adminId: string): Promise<boolean> {
       return true;
     });
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -189,7 +189,7 @@ export async function POST(req: Request) {
       return jsonError("Admin mutation rate limit exceeded. Try again later.", 429);
     }
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = adminMutationSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError("Invalid admin action", 400);
@@ -271,7 +271,8 @@ export async function POST(req: Request) {
     }
 
     if (action === "revoke_mentor") {
-      await ref.set({ mentorApproved: false, updatedAt: now }, { merge: true });
+      const roles = (mapUserDoc(snap.id, snap.data())?.roles ?? []).filter((role) => role !== "MENTOR");
+      await ref.set({ roles, mentorApproved: false, updatedAt: now }, { merge: true });
       return jsonOk({ ok: true, id, mentorApproved: false });
     }
 
@@ -300,6 +301,8 @@ export async function POST(req: Request) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
     if (status === 403) return jsonError("Forbidden", 403);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     console.error(e);
     return jsonError("Unable to update", 500);
   }

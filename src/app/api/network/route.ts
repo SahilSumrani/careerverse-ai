@@ -1,7 +1,10 @@
-import { jsonError, jsonOk, requireSession } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
-import { listDirectoryUsers } from "@/lib/firestore-users";
+import { getUserById, listDirectoryUsers } from "@/lib/firestore-users";
 import { connectionRequestSchema } from "@/lib/validators";
+import { consumeDailyQuota } from "@/lib/rate-limit";
+
+const CONNECTION_REQUEST_DAILY_CAP = 30;
 
 export async function GET() {
   try {
@@ -56,11 +59,22 @@ export async function POST(req: Request) {
     if (!hasFirebaseAdminCredentials()) {
       return jsonError("Network connections are not available yet", 503);
     }
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = connectionRequestSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError("Provide a valid receiverId to send a connection request", 400);
     }
+    if (parsed.data.receiverId === session.user.id) {
+      return jsonError("You cannot connect with yourself", 400);
+    }
+    const receiver = await getUserById(parsed.data.receiverId);
+    if (!receiver || receiver.suspendedAt) return jsonError("User not found", 404);
+    const quota = await consumeDailyQuota(
+      session.user.id,
+      "connectionRequests",
+      CONNECTION_REQUEST_DAILY_CAP,
+    );
+    if (!quota.ok) return jsonError("Daily connection request limit reached", 429);
 
     const now = new Date().toISOString();
     await getAdminDb().collection("connectionRequests").add({
@@ -74,6 +88,8 @@ export async function POST(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to update network", 500);
   }
 }

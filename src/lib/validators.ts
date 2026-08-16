@@ -26,7 +26,7 @@ export const studentSignUpSchema = z.object({
   preferredRole: z.string().trim().min(2).max(120),
   linkedinUrl: optionalUrl,
   hasResume: z.boolean().default(false),
-});
+}).strict();
 
 /** Mentor registration — pending until PLATFORM_ADMIN approves */
 export const mentorSignUpSchema = z.object({
@@ -48,7 +48,7 @@ export const mentorSignUpSchema = z.object({
   languages: z.string().min(2).max(200),
   menteeAudience: z.string().min(10).max(500),
   consent: z.literal(true),
-});
+}).strict();
 
 /** Company HR registration — can post jobs only after recruiterApproved */
 export const hrSignUpSchema = z.object({
@@ -70,7 +70,7 @@ export const hrSignUpSchema = z.object({
   pinCode: z.string().trim().regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit PIN code"),
   companyDescription: z.string().trim().min(40).max(2000),
   consent: z.literal(true),
-});
+}).strict();
 
 export const signUpSchema = z.discriminatedUnion("track", [
   studentSignUpSchema,
@@ -81,7 +81,7 @@ export const signUpSchema = z.discriminatedUnion("track", [
 export const signInSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-});
+}).strict();
 
 export const onboardingSchema = z.object({
   name: z.string().min(2).max(80),
@@ -89,8 +89,8 @@ export const onboardingSchema = z.object({
   degree: z.string().min(1).max(120),
   college: z.string().min(1).max(160),
   graduationYear: z.coerce.number().int().min(1980).max(2040),
-  skills: z.array(z.string().min(1)).min(1).max(40),
-  interests: z.array(z.string().min(1)).min(1).max(20),
+  skills: z.array(z.string().trim().min(1).max(80)).min(1).max(40),
+  interests: z.array(z.string().trim().min(1).max(120)).min(1).max(20),
   careerGoals: z.string().min(10).max(2000),
   experienceSummary: z.string().max(2000).optional().or(z.literal("")),
   experiences: z
@@ -106,8 +106,8 @@ export const onboardingSchema = z.object({
     .max(20)
     .optional()
     .default([]),
-  preferredIndustries: z.array(z.string()).max(15).default([]),
-  preferredLocations: z.array(z.string()).max(15).default([]),
+  preferredIndustries: z.array(z.string().trim().min(1).max(120)).max(15).default([]),
+  preferredLocations: z.array(z.string().trim().min(1).max(120)).max(15).default([]),
   workPreference: z
     .enum(["FULL_TIME", "PART_TIME", "INTERNSHIP", "FREELANCE", "CONTRACT", "FLEXIBLE"])
     .optional(),
@@ -178,7 +178,7 @@ export const aiChatSchema = z.object({
     )
     .max(10)
     .optional(),
-});
+}).strict();
 
 export const adminMutationSchema = z.discriminatedUnion("action", [
   z.object({

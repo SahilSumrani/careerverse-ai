@@ -1,11 +1,10 @@
-import { auth } from "@/lib/auth";
 import { getUserById } from "@/lib/firestore-users";
-import { jsonError, jsonOk } from "@/lib/api";
+import { jsonError, jsonOk, requireSession } from "@/lib/api";
 
 /** Session probe used after Google auth to route new vs returning users. */
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return jsonError("Unauthorized", 401);
+  const session = await requireSession().catch(() => null);
+  if (!session) return jsonError("Unauthorized", 401);
 
   const user = await getUserById(session.user.id);
   if (!user) return jsonError("Unauthorized", 401);
@@ -23,7 +22,7 @@ export async function GET() {
       onboardingComplete,
       isNewUser,
       hasResume,
-      roles: session.user.roles,
+      roles: user.roles,
     },
   });
 }

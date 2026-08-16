@@ -7,6 +7,7 @@ import {
   getCareerContext,
   jsonError,
   jsonOk,
+  readJsonBody,
   requireSession,
   trackAnalytics,
   computeProfileCompleteness,
@@ -14,11 +15,14 @@ import {
 import { sanitizeExperiences } from "@/lib/experiences";
 import { onboardingSchema } from "@/lib/validators";
 import { aiService } from "@/lib/ai/service";
+import { consumeDailyQuota } from "@/lib/rate-limit";
+
+const CAREER_ANALYZE_DAILY_CAP = Number(process.env.AI_CAREER_DAILY_CAP || 8);
 
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json();
+    const body = await readJsonBody(req);
     const parsed = onboardingSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError("Please complete required onboarding fields", 400, {
@@ -68,7 +72,10 @@ export async function POST(req: Request) {
     });
 
     const ctx = await getCareerContext(session.user.id);
-    const analysis = ctx ? await aiService.careerAnalysis(ctx) : null;
+    const quota = ctx
+      ? await consumeDailyQuota(session.user.id, "careerAnalyze", CAREER_ANALYZE_DAILY_CAP)
+      : { ok: false, remaining: 0 };
+    const analysis = ctx && quota.ok ? await aiService.careerAnalysis(ctx) : null;
     if (analysis) {
       await updateCareerAnalysis(session.user.id, {
         careerScore: analysis.careerScore,
@@ -83,6 +90,8 @@ export async function POST(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     console.error(e);
     return jsonError("Unable to complete onboarding", 500);
   }

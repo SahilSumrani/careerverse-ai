@@ -1,13 +1,13 @@
 import bcrypt from "bcryptjs";
 import { createEmailPasswordUser, getUserByEmail } from "@/lib/firestore-users";
 import { signUpSchema } from "@/lib/validators";
-import { jsonError, jsonOk, trackAnalytics } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, trackAnalytics } from "@/lib/api";
 import type { RoleName } from "@/lib/roles";
 import { consumeWindowQuota } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await readJsonBody(req);
     const parsed = signUpSchema.safeParse(body);
     if (!parsed.success) return jsonError("Invalid signup data", 400, { details: parsed.error.flatten() });
 
@@ -15,11 +15,16 @@ export async function POST(req: Request) {
     const email = data.email.toLowerCase();
     const name = `${data.firstName} ${data.lastName}`.trim();
     const hour = new Date().toISOString().slice(0, 13);
-    const [allowed, existing] = await Promise.all([
+    const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const ip = (forwarded || req.headers.get("x-real-ip") || "unknown").slice(0, 128).replaceAll("/", "_");
+    const [emailAllowed, ipAllowed, existing] = await Promise.all([
       consumeWindowQuota("signup", email, 5, hour),
+      consumeWindowQuota("signup-ip", ip, 20, hour),
       getUserByEmail(email),
     ]);
-    if (!allowed) return jsonError("Too many signup attempts. Try again later.", 429);
+    if (!emailAllowed || !ipAllowed) {
+      return jsonError("Too many signup attempts. Try again later.", 429);
+    }
     if (existing) return jsonError("An account with this email already exists", 409);
 
     // ponytail: bcrypt cost 10 balances password security and signup latency; upgrade when native hashing is available.
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
     }
 
     if (data.track === "mentor") {
-      role = "MENTOR";
+      role = "PROFESSIONAL";
       nextPath = "/dashboard";
       const skills = data.expertise
         .split(/[,|]/)
@@ -146,6 +151,9 @@ export async function POST(req: Request) {
       pendingApproval: true,
     });
   } catch (e) {
+    const status = (e as { status?: number }).status ?? 500;
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     console.error(e);
     return jsonError("Unable to create account", 500);
   }

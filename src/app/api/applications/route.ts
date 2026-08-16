@@ -1,4 +1,4 @@
-import { jsonError, jsonOk, requireSession } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 import { applicationCreateSchema, applicationPatchSchema } from "@/lib/validators";
 import { getJobById } from "@/lib/jobs-firestore";
@@ -83,37 +83,24 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = applicationCreateSchema.safeParse(body);
     if (!parsed.success) return jsonError("Invalid application payload", 400);
 
     const quota = await consumeDailyQuota(session.user.id, "applicationMutations", APP_MUTATION_DAILY_CAP);
     if (!quota.ok) return jsonError("Daily application limit reached", 429);
 
-    let opportunity = parsed.data.opportunity
-      ? {
-          id: parsed.data.opportunity.id,
-          title: parsed.data.opportunity.title,
-          organizationName: parsed.data.opportunity.organizationName ?? null,
-          type: parsed.data.opportunity.type || "Full-time",
-          isDemo: false,
-        }
-      : null;
-
-    const opportunityId = parsed.data.opportunityId || opportunity?.id;
+    const opportunityId = parsed.data.opportunityId || parsed.data.opportunity?.id;
     if (!opportunityId) return jsonError("opportunityId required", 400);
-
-    if (!opportunity) {
-      const job = await getJobById(opportunityId);
-      if (!job) return jsonError("Opportunity not found", 404);
-      opportunity = {
-        id: job.id,
-        title: job.title,
-        organizationName: job.company,
-        type: job.type,
-        isDemo: false,
-      };
-    }
+    const job = await getJobById(opportunityId);
+    if (!job) return jsonError("Opportunity not found", 404);
+    const opportunity = {
+      id: job.id,
+      title: job.title,
+      organizationName: job.company,
+      type: job.type,
+      isDemo: false,
+    };
 
     if (!hasFirebaseAdminCredentials()) {
       return jsonError("Applications backend unavailable", 503);
@@ -156,6 +143,8 @@ export async function POST(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to create application", 500);
   }
 }
@@ -163,7 +152,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = applicationPatchSchema.safeParse(body);
     if (!parsed.success) return jsonError("Invalid application update", 400);
 
@@ -210,6 +199,8 @@ export async function PATCH(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to update application", 500);
   }
 }

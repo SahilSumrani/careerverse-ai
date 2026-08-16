@@ -1,5 +1,5 @@
 import type { DocumentReference } from "firebase-admin/firestore";
-import { jsonError, jsonOk, requireSession } from "@/lib/api";
+import { jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 
 type Notif = {
@@ -120,9 +120,9 @@ export async function GET() {
 export async function PATCH(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => ({}));
-    const id = body.id ? String(body.id) : "";
-    const markAll = Boolean(body.markAll);
+    const body = (await readJsonBody(req)) as Record<string, unknown> | null;
+    const id = body?.id ? String(body.id) : "";
+    const markAll = body?.markAll === true;
 
     if (!hasFirebaseAdminCredentials()) {
       return jsonOk({ ok: true, local: true });
@@ -137,21 +137,26 @@ export async function PATCH(req: Request) {
       return jsonOk({ ok: true });
     }
 
-    if (!id) return jsonError("Notification id required", 400);
+    if (!id || id.length > 128) return jsonError("Notification id required", 400);
     if (id.startsWith("seed-notif") || id.startsWith("demo-")) {
       await sub.doc(id).delete().catch(() => undefined);
       return jsonOk({ ok: true });
     }
-    await sub.doc(id).set({ read: true }, { merge: true });
-    try {
-      await getAdminDb().collection("notifications").doc(id).set({ read: true }, { merge: true });
-    } catch {
-      // ignore
+    const subRef = sub.doc(id);
+    const topRef = getAdminDb().collection("notifications").doc(id);
+    const [ownedSub, top] = await Promise.all([subRef.get(), topRef.get()]);
+    const ownsTop = top.exists && top.data()?.userId === session.user.id;
+    if (!ownedSub.exists && !ownsTop) return jsonError("Notification not found", 404);
+    if (ownedSub.exists) await subRef.set({ read: true }, { merge: true });
+    if (ownsTop) {
+      await topRef.set({ read: true }, { merge: true });
     }
     return jsonOk({ ok: true });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     return jsonError("Unable to update notifications", 500);
   }
 }

@@ -1,4 +1,4 @@
-import { getCareerContext, jsonError, jsonOk, requireSession } from "@/lib/api";
+import { getCareerContext, jsonError, jsonOk, readJsonBody, requireSession } from "@/lib/api";
 import { aiService } from "@/lib/ai/service";
 import {
   CHAT_INPUT_MAX_CHARS,
@@ -69,10 +69,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
-    const body = await req.json().catch(() => ({}));
+    const body = (await readJsonBody(req)) as Record<string, unknown> | null;
     const parsed = aiChatSchema.safeParse({
-      message: typeof body.message === "string" ? body.message : body.prefill,
-      history: body.history,
+      message: typeof body?.message === "string" ? body.message : body?.prefill,
+      history: body?.history,
     });
     if (!parsed.success) {
       return jsonError(
@@ -137,6 +137,8 @@ export async function POST(req: Request) {
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;
     if (status === 401) return jsonError("Unauthorized", 401);
+    if (status === 400) return jsonError("Invalid JSON body", 400);
+    if (status === 413) return jsonError("Request body too large", 413);
     console.error(e);
     return jsonError("Unable to chat", 500);
   }

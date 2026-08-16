@@ -232,7 +232,7 @@ export default function AdminPage() {
                         {u.roles.includes("HR")
                           ? ` · Recruiter ${u.recruiterApproved ? "approved" : "pending"}`
                           : ""}
-                        {u.roles.includes("MENTOR")
+                        {u.registration?.track === "mentor" || u.roles.includes("MENTOR")
                           ? ` · Mentor ${u.mentorApproved ? "approved" : "pending"}`
                           : ""}
                         {u.registration?.companyName ? ` · ${u.registration.companyName}` : ""}
@@ -302,7 +302,7 @@ export default function AdminPage() {
                           </Button>
                         </>
                       ) : null}
-                      {u.roles.includes("MENTOR") ? (
+                      {u.registration?.track === "mentor" || u.roles.includes("MENTOR") ? (
                         <>
                           <Badge tone={u.mentorApproved ? "success" : "warning"}>
                             {u.mentorApproved ? "Mentor approved" : "Mentor pending"}

@@ -8,6 +8,7 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { signOut as authjsSignOut } from "next-auth/react";
 import { getFirebaseAuth, getFirebaseAnalytics, getFirebaseDb } from "@/lib/firebase";
 
 const googleProvider = new GoogleAuthProvider();
@@ -43,6 +44,20 @@ export async function signInWithGooglePopup(): Promise<{ user: User; idToken: st
 export async function signOutFirebase(): Promise<void> {
   const auth = getFirebaseAuth();
   await firebaseSignOut(auth);
+}
+
+/**
+ * Clear Firebase + Auth.js, then hard-navigate to a public page. The navigation is deliberately
+ * not gated on the network so a hung sign-out request cannot leave the user parked on a protected
+ * route with a dead session.
+ */
+export async function signOutEverywhere(destination = "/"): Promise<void> {
+  // ponytail: fixed 4s ceiling instead of per-provider retries; upgrade when sign-out must report failures.
+  await Promise.race([
+    Promise.allSettled([signOutFirebase(), authjsSignOut({ redirect: false })]),
+    new Promise((resolve) => setTimeout(resolve, 4000)),
+  ]);
+  window.location.replace(destination);
 }
 
 export function subscribeFirebaseAuth(callback: (user: User | null) => void) {

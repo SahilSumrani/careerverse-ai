@@ -8,8 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/states";
 import { createSoftCache } from "@/lib/client-cache";
-import { signOut } from "next-auth/react";
-import { signOutFirebase } from "@/lib/firebase-auth-client";
+import { signOutEverywhere } from "@/lib/firebase-auth-client";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Overview",
@@ -76,8 +75,7 @@ export function AppTopbar({
   async function handleSignOut() {
     if (signingOut) return;
     setSigningOut(true);
-    await Promise.allSettled([signOutFirebase(), signOut({ redirect: false })]);
-    window.location.replace("/");
+    await signOutEverywhere();
   }
 
   const load = useCallback(async (opts?: { soft?: boolean }) => {

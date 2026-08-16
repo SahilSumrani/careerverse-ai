@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
-import { signOutFirebase } from "@/lib/firebase-auth-client";
+import { useSession } from "next-auth/react";
+import { signOutEverywhere } from "@/lib/firebase-auth-client";
 import { useState } from "react";
 
 type AuthControlsProps = {
@@ -15,10 +15,9 @@ export function AuthControls({ compact }: AuthControlsProps) {
   const [busy, setBusy] = useState(false);
 
   async function handleSignOut() {
+    if (busy) return;
     setBusy(true);
-    // Clear Firebase and Auth.js together so Google logout cannot delay the UI.
-    await Promise.allSettled([signOutFirebase(), signOut({ redirect: false })]);
-    window.location.replace("/");
+    await signOutEverywhere();
   }
 
   if (status === "loading") {

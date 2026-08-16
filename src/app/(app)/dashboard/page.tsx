@@ -37,7 +37,7 @@ async function countUserApplications(userId: string): Promise<number> {
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirect("/auth/signin?stale=1");
 
   const firstName = session.user.name?.split(" ")[0] || "there";
   const roles = session.user.roles ?? ["STUDENT"];

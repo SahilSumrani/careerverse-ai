@@ -30,6 +30,11 @@ export async function middleware(req: NextRequest) {
         : 0;
   const token = decodedToken && authExpiresAt > Date.now() ? decodedToken : null;
 
+  // A protected route already rejected this session server-side (deleted/suspended user, or a
+  // token the Edge check still accepts). Bouncing back would loop until the browser gives up on a
+  // blank page, so let the sign-in page render instead.
+  const isStaleBounce = req.nextUrl.searchParams.get("stale") === "1";
+
   const isAuthPage = authPaths.some((p) => pathname.startsWith(p));
   const isProtected =
     pathname.startsWith("/dashboard") ||
@@ -54,7 +59,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (token && isAuthPage) {
+  if (token && isAuthPage && !isStaleBounce) {
     const dest = token.onboardingComplete ? "/dashboard" : "/onboarding";
     return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }

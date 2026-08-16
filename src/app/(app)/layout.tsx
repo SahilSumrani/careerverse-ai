@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user) redirect("/auth/signin");
+  if (!session?.user) redirect("/auth/signin?stale=1");
 
   const cached = peekShellProfile(session.user.id);
   const userName = session.user.name ?? cached?.name ?? null;

@@ -146,9 +146,12 @@ export function AppTopbar({
         <p className="truncate text-lg font-semibold tracking-tight text-foreground">{title}</p>
       </div>
       <div className="flex items-center gap-2 sm:gap-3">
-        <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex">
+        <div
+          className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex"
+          suppressHydrationWarning
+        >
           <CalendarDays className="h-3.5 w-3.5" />
-          {today}
+          <span suppressHydrationWarning>{today}</span>
         </div>
         <div className="relative" ref={panelRef}>
           <button

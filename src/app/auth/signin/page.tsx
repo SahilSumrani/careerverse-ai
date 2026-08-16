@@ -39,10 +39,9 @@ function SignInForm() {
     prefetchGoogleAuth();
   }, []);
 
-  async function routeAfterAuth(onboardingComplete: boolean) {
+  function routeAfterAuth() {
     const callback = params.get("callbackUrl");
-    const dest = onboardingComplete ? callback || "/dashboard" : "/onboarding";
-    window.location.assign(dest);
+    window.location.assign(callback || "/dashboard");
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -55,9 +54,7 @@ function SignInForm() {
         setError("Invalid email or password.");
         return;
       }
-      const me = await fetch("/api/auth/me", { cache: "no-store", credentials: "same-origin" });
-      const data = me.ok ? await me.json() : null;
-      await routeAfterAuth(Boolean(data?.user?.onboardingComplete));
+      routeAfterAuth();
     } catch {
       setError("Unable to sign in. Try again.");
     } finally {

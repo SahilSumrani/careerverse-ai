@@ -34,6 +34,111 @@ type Props = {
   searchPlaceholder?: string;
 };
 
+function FiltersBody({
+  idPrefix,
+  draft,
+  filterCount,
+  categoryChips,
+  onClearAll,
+  onToggleWfh,
+  onTogglePartTime,
+  onSetCategory,
+  onSetLocation,
+}: {
+  idPrefix: string;
+  draft: ListingFilters;
+  filterCount: number;
+  categoryChips: readonly string[];
+  onClearAll: () => void;
+  onToggleWfh: () => void;
+  onTogglePartTime: () => void;
+  onSetCategory: (category: string | null) => void;
+  onSetLocation: (location: string | null) => void;
+}) {
+  return (
+    <>
+      <div className="cv-board-filter-actions">
+        <h2>Filters</h2>
+        {filterCount > 0 ? (
+          <button type="button" className="cv-board-clear" onClick={onClearAll}>
+            Clear all
+          </button>
+        ) : null}
+      </div>
+
+      <label className="cv-board-check">
+        <input id={`${idPrefix}-wfh`} type="checkbox" checked={draft.wfh} onChange={onToggleWfh} />
+        Work from home
+      </label>
+      <label className="cv-board-check">
+        <input
+          id={`${idPrefix}-pt`}
+          type="checkbox"
+          checked={draft.partTime}
+          onChange={onTogglePartTime}
+        />
+        Part-time
+      </label>
+
+      <div className="cv-board-filter-group">
+        <p>Popular categories</p>
+        <div className="cv-board-chips">
+          {categoryChips.map((chip) => {
+            const normalized = chip === "Big brands" ? "Engineering" : chip;
+            const selected = draft.category === normalized;
+            return (
+              <button
+                key={chip}
+                type="button"
+                className={`cv-board-chip${selected ? " is-active" : ""}`}
+                onClick={() => onSetCategory(chip)}
+                aria-pressed={selected}
+              >
+                {chip}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="cv-board-filter-group">
+        <p>Location</p>
+        <div className="cv-board-chips">
+          {LISTING_CITIES.slice(0, 8).map((city) => {
+            const selected = draft.location === city;
+            return (
+              <button
+                key={city}
+                type="button"
+                className={`cv-board-chip${selected ? " is-active" : ""}`}
+                onClick={() => onSetLocation(city)}
+                aria-pressed={selected}
+              >
+                {city}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="cv-board-filter-group">
+        <p>Quick links</p>
+        <ul className="cv-board-links">
+          <li>
+            <Link href="/internships">Internships</Link>
+          </li>
+          <li>
+            <Link href="/jobs">Fresher jobs</Link>
+          </li>
+          <li>
+            <Link href="/auth/signup">Get started</Link>
+          </li>
+        </ul>
+      </div>
+    </>
+  );
+}
+
 export function ListingsBoard({
   kind,
   title,
@@ -102,95 +207,19 @@ export function ListingsBoard({
     navigate({ ...draft, q: search.trim() });
   }
 
-  function FiltersBody({ idPrefix }: { idPrefix: string }) {
-    return (
-      <>
-        <div className="cv-board-filter-actions">
-          <h2>Filters</h2>
-          {filterCount > 0 ? (
-            <button type="button" className="cv-board-clear" onClick={clearAll}>
-              Clear all
-            </button>
-          ) : null}
-        </div>
-
-        <label className="cv-board-check">
-          <input
-            id={`${idPrefix}-wfh`}
-            type="checkbox"
-            checked={draft.wfh}
-            onChange={toggleWfh}
-          />
-          Work from home
-        </label>
-        <label className="cv-board-check">
-          <input
-            id={`${idPrefix}-pt`}
-            type="checkbox"
-            checked={draft.partTime}
-            onChange={togglePartTime}
-          />
-          Part-time
-        </label>
-
-        <div className="cv-board-filter-group">
-          <p>Popular categories</p>
-          <div className="cv-board-chips">
-                        {categoryChips.map((chip) => {
-              const normalized = chip === "Big brands" ? "Engineering" : chip;
-              const selected = draft.category === normalized;
-              return (
-                <button
-                  key={chip}
-                  type="button"
-                  className={`cv-board-chip${selected ? " is-active" : ""}`}
-                  onClick={() => setCategory(chip)}
-                  aria-pressed={selected}
-                >
-                  {chip}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="cv-board-filter-group">
-          <p>Location</p>
-          <div className="cv-board-chips">
-            {LISTING_CITIES.slice(0, 8).map((city) => {
-              const selected = draft.location === city;
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  className={`cv-board-chip${selected ? " is-active" : ""}`}
-                  onClick={() => setLocation(city)}
-                  aria-pressed={selected}
-                >
-                  {city}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="cv-board-filter-group">
-          <p>Quick links</p>
-          <ul className="cv-board-links">
-            <li>
-              <Link href="/internships">Internships</Link>
-            </li>
-            <li>
-              <Link href="/jobs">Fresher jobs</Link>
-            </li>
-            <li>
-              <Link href="/auth/signup">Get started</Link>
-            </li>
-          </ul>
-        </div>
-      </>
-    );
-  }
+  const filtersBody = (idPrefix: string) => (
+    <FiltersBody
+      idPrefix={idPrefix}
+      draft={draft}
+      filterCount={filterCount}
+      categoryChips={categoryChips}
+      onClearAll={clearAll}
+      onToggleWfh={toggleWfh}
+      onTogglePartTime={togglePartTime}
+      onSetCategory={setCategory}
+      onSetLocation={setLocation}
+    />
+  );
 
   return (
     <div className={`cv-board${pending ? " is-pending" : ""}`}>
@@ -231,7 +260,7 @@ export function ListingsBoard({
 
       <div className="cv-board-body">
         <aside className="cv-board-filters cv-board-filters-desktop" aria-label="Filters">
-          <FiltersBody idPrefix="desk" />
+          {filtersBody("desk")}
         </aside>
 
         <section className="cv-board-list" aria-label={`${countLabel} list`}>
@@ -281,9 +310,7 @@ export function ListingsBoard({
                 <X size={18} />
               </button>
             </div>
-            <div className="cv-board-drawer-body">
-              <FiltersBody idPrefix="mob" />
-            </div>
+            <div className="cv-board-drawer-body">{filtersBody("mob")}</div>
             <div className="cv-board-drawer-foot">
               <button type="button" className="cv-board-clear" onClick={clearAll}>
                 Clear all

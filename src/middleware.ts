@@ -15,13 +15,20 @@ export async function middleware(req: NextRequest) {
   const secret = process.env.AUTH_SECRET;
 
   // Edge-safe JWT read only — do not import @/lib/auth (Prisma / Node deps).
-  const token = secret
+  const decodedToken = secret
     ? await getToken({
         req,
         secret,
         secureCookie: hasSecureSessionCookie(req),
       })
     : null;
+  const authExpiresAt =
+    typeof decodedToken?.authExpiresAt === "number"
+      ? decodedToken.authExpiresAt
+      : typeof decodedToken?.iat === "number"
+        ? decodedToken.iat * 1000 + 86_400_000
+        : 0;
+  const token = decodedToken && authExpiresAt > Date.now() ? decodedToken : null;
 
   const isAuthPage = authPaths.some((p) => pathname.startsWith(p));
   const isProtected =

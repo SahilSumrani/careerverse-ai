@@ -392,7 +392,7 @@ function cleanDegreeCandidate(raw: string | null | undefined): string | null {
 
 function cleanCollegeCandidate(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let s = raw.replace(/\s+/g, " ").trim();
+  const s = raw.replace(/\s+/g, " ").trim();
   if (s.length < 6 || s.length > 120) return null;
   if (PROSE_NOISE.test(s)) return null;
   if (/^(the|a|an|i|we|my|some|any|your|this|that)\b/i.test(s)) return null;

@@ -54,29 +54,47 @@ export function AuthCredentialsFields({
   setShowPass,
   emailPlaceholder = "you@example.com",
 }: {
-  form: { name: string; email: string; password: string };
-  setForm: (next: { name: string; email: string; password: string }) => void;
+  form: { firstName: string; lastName: string; email: string; password: string };
+  setForm: (next: { firstName: string; lastName: string; email: string; password: string }) => void;
   showPass: boolean;
   setShowPass: (v: boolean) => void;
   emailPlaceholder?: string;
 }) {
   return (
     <>
-      <div className="cv-auth-field">
-        <label htmlFor="name">Full name</label>
-        <div className="cv-auth-input-wrap">
-          <User size={18} />
-          <input
-            id="name"
-            name="name"
-            autoComplete="name"
-            placeholder="Enter your name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-            minLength={2}
-            maxLength={80}
-          />
+      <div className="cv-auth-grid">
+        <div className="cv-auth-field">
+          <label htmlFor="firstName">First name</label>
+          <div className="cv-auth-input-wrap">
+            <User size={18} />
+            <input
+              id="firstName"
+              name="given-name"
+              autoComplete="given-name"
+              placeholder="First name"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              required
+              minLength={2}
+              maxLength={50}
+            />
+          </div>
+        </div>
+        <div className="cv-auth-field">
+          <label htmlFor="lastName">Last name</label>
+          <div className="cv-auth-input-wrap">
+            <input
+              id="lastName"
+              name="family-name"
+              autoComplete="family-name"
+              placeholder="Last name"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              required
+              minLength={1}
+              maxLength={50}
+            />
+          </div>
         </div>
       </div>
       <div className="cv-auth-field">
@@ -130,7 +148,12 @@ export function useRegisterSubmit() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(payload: Record<string, unknown>, password: string, email: string) {
+  async function submit(
+    payload: Record<string, unknown>,
+    password: string,
+    email: string,
+    options?: { resume?: File | null; successMessage?: string },
+  ) {
     setBusy(true);
     setError("");
     const res = await fetch("/api/auth/signup", {
@@ -148,12 +171,26 @@ export function useRegisterSubmit() {
       return;
     }
     const login = await signIn("credentials", { email, password, redirect: false });
-    setBusy(false);
     if (login?.error) {
+      setBusy(false);
       setError("Account created. Please sign in.");
       router.push("/auth/signin");
       return;
     }
+
+    let resumeWarning = "";
+    if (options?.resume) {
+      const resumeForm = new FormData();
+      resumeForm.append("file", options.resume);
+      const resumeRes = await fetch("/api/resume", { method: "POST", body: resumeForm });
+      if (!resumeRes.ok) {
+        const resumeData = (await resumeRes.json().catch(() => ({}))) as { error?: string };
+        resumeWarning = ` Account created, but resume upload failed: ${resumeData.error || "please upload it from Resume later"}.`;
+      }
+    }
+
+    setBusy(false);
+    window.alert(`${options?.successMessage || "Registration submitted successfully."}${resumeWarning}`);
     router.push(data.next || "/dashboard");
     router.refresh();
   }

@@ -18,12 +18,14 @@ async function loadEvent(id: string) {
     if (!doc.exists) return null;
     const data = doc.data() || {};
     if (data.isDemo) return null;
+    const startsAt = String(data.startsAt || new Date().toISOString());
     return {
       id: doc.id,
       title: String(data.title || "Event"),
       organizationName: (data.organizationName as string) || null,
       location: (data.location as string) || "TBA",
-      startsAt: String(data.startsAt || new Date().toISOString()),
+      startsAt,
+      upcoming: new Date(startsAt).getTime() >= Date.now() - 1000 * 60 * 60 * 3,
       type: (data.type as string) || "Meetup",
       blurb: (data.blurb as string) || "",
       isDemo: false,
@@ -39,7 +41,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   if (!event) notFound();
 
   const when = new Date(event.startsAt);
-  const upcoming = when.getTime() >= Date.now() - 1000 * 60 * 60 * 3;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -73,7 +74,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             <MapPin className="h-4 w-4 text-primary" />
             {event.location}
           </p>
-          {upcoming ? (
+          {event.upcoming ? (
             <RegisterButton eventId={event.id} />
           ) : (
             <p className="text-sm text-muted-foreground">This event has ended.</p>

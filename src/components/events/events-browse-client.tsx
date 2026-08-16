@@ -103,13 +103,15 @@ export function EventsBrowseClient({ items }: { items: EventItem[] }) {
                   <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                     <p className="flex items-center gap-2 font-medium text-foreground">
                       <CalendarDays className="h-3.5 w-3.5 text-primary" />
-                      {when.toLocaleString(undefined, {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      <span suppressHydrationWarning>
+                        {when.toLocaleString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </span>
                     </p>
                     <p className="flex items-center gap-2">
                       <MapPin className="h-3.5 w-3.5 text-primary" />

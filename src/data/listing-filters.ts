@@ -221,7 +221,7 @@ export function parseFilterSlug(
   }
 
   // Category: strip known suffixes/prefixes
-  let catProbe = raw
+  const catProbe = raw
     .replace(/^part-time-/, "")
     .replace(/^work-from-home-/, "")
     .replace(/-work-from-home$/, "")

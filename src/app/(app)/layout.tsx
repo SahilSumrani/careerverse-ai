@@ -30,9 +30,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isHr = roles.includes("HR");
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-background">
+    <div className="flex min-h-screen overflow-x-clip bg-background">
       <AppSidebar isAdmin={isAdmin} isHr={isHr} userName={userName} userEmail={userEmail} />
-      <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
         <AppTopbar
           userName={userName}
           userEmail={userEmail}

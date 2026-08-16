@@ -31,6 +31,7 @@ declare module "@auth/core/jwt" {
     id?: string;
     roles?: RoleName[];
     onboardingComplete?: boolean;
+    authExpiresAt?: number;
   }
 }
 
@@ -100,7 +101,8 @@ if (process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   // JWT only — no Prisma adapter (Edge middleware stays Prisma-free)
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 86_400 },
+  jwt: { maxAge: 86_400 },
   pages: {
     signIn: "/auth/signin",
     newUser: "/onboarding",
@@ -112,7 +114,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         token.roles = user.roles ?? ["STUDENT"];
         token.onboardingComplete = user.onboardingComplete ?? false;
+        token.authExpiresAt = Date.now() + 86_400_000;
       }
+      token.authExpiresAt ??= typeof token.iat === "number" ? token.iat * 1000 + 86_400_000 : 0;
+      if (token.authExpiresAt <= Date.now()) return null;
       if (trigger === "update" && session) {
         token.onboardingComplete = session.onboardingComplete ?? token.onboardingComplete;
         token.name = session.name ?? token.name;

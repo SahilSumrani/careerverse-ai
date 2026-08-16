@@ -71,12 +71,36 @@ export type CareerVerseUser = {
   registration?: {
     track?: "student" | "mentor" | "hr";
     companyName?: string | null;
+    companyType?: string | null;
+    registrationNumber?: string | null;
+    gstNumber?: string | null;
+    industry?: string | null;
     companyWebsite?: string | null;
     jobTitle?: string | null;
     companySize?: string | null;
     phone?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    pinCode?: string | null;
+    companyDescription?: string | null;
+    educationLevel?: string | null;
+    institution?: string | null;
+    course?: string | null;
+    graduationYear?: number | null;
+    preferredRole?: string | null;
+    hasResume?: boolean;
+    currentOrganization?: string | null;
     expertise?: string | null;
     yearsExperience?: number | null;
+    mentoringExperience?: string | null;
+    motivation?: string | null;
+    achievements?: string | null;
+    availabilityDays?: string | null;
+    hoursPerWeek?: number | null;
+    languages?: string | null;
+    menteeAudience?: string | null;
     submittedAt?: string | null;
   } | null;
   createdAt: string;
@@ -163,12 +187,36 @@ function sanitizeRegistration(raw: unknown): CareerVerseUser["registration"] {
   return {
     track,
     companyName: typeof r.companyName === "string" ? r.companyName : null,
+    companyType: typeof r.companyType === "string" ? r.companyType : null,
+    registrationNumber: typeof r.registrationNumber === "string" ? r.registrationNumber : null,
+    gstNumber: typeof r.gstNumber === "string" ? r.gstNumber : null,
+    industry: typeof r.industry === "string" ? r.industry : null,
     companyWebsite: typeof r.companyWebsite === "string" ? r.companyWebsite : null,
     jobTitle: typeof r.jobTitle === "string" ? r.jobTitle : null,
     companySize: typeof r.companySize === "string" ? r.companySize : null,
     phone: typeof r.phone === "string" ? r.phone : null,
+    address1: typeof r.address1 === "string" ? r.address1 : null,
+    address2: typeof r.address2 === "string" ? r.address2 : null,
+    city: typeof r.city === "string" ? r.city : null,
+    state: typeof r.state === "string" ? r.state : null,
+    pinCode: typeof r.pinCode === "string" ? r.pinCode : null,
+    companyDescription: typeof r.companyDescription === "string" ? r.companyDescription : null,
+    educationLevel: typeof r.educationLevel === "string" ? r.educationLevel : null,
+    institution: typeof r.institution === "string" ? r.institution : null,
+    course: typeof r.course === "string" ? r.course : null,
+    graduationYear: r.graduationYear == null ? null : Number(r.graduationYear),
+    preferredRole: typeof r.preferredRole === "string" ? r.preferredRole : null,
+    hasResume: Boolean(r.hasResume),
+    currentOrganization: typeof r.currentOrganization === "string" ? r.currentOrganization : null,
     expertise: typeof r.expertise === "string" ? r.expertise : null,
     yearsExperience: r.yearsExperience == null ? null : Number(r.yearsExperience),
+    mentoringExperience: typeof r.mentoringExperience === "string" ? r.mentoringExperience : null,
+    motivation: typeof r.motivation === "string" ? r.motivation : null,
+    achievements: typeof r.achievements === "string" ? r.achievements : null,
+    availabilityDays: typeof r.availabilityDays === "string" ? r.availabilityDays : null,
+    hoursPerWeek: r.hoursPerWeek == null ? null : Number(r.hoursPerWeek),
+    languages: typeof r.languages === "string" ? r.languages : null,
+    menteeAudience: typeof r.menteeAudience === "string" ? r.menteeAudience : null,
     submittedAt: typeof r.submittedAt === "string" ? r.submittedAt : null,
   };
 }

@@ -1,27 +1,53 @@
 import { z } from "zod";
 
 const signUpAuthFields = {
-  name: z.string().min(2).max(80),
+  firstName: z.string().trim().min(2).max(50),
+  lastName: z.string().trim().min(1).max(50),
   email: z.string().email(),
   password: z.string().min(8).max(128),
 };
+
+const phoneSchema = z.string().trim().regex(/^[+0-9()\-\s]{7,24}$/, "Enter a valid phone number");
+const optionalUrl = z.string().url().optional().or(z.literal(""));
 
 /** Job-seeker / professional registration */
 export const studentSignUpSchema = z.object({
   track: z.literal("student"),
   ...signUpAuthFields,
   role: z.enum(["STUDENT", "PROFESSIONAL"]).default("STUDENT"),
+  phone: phoneSchema,
+  city: z.string().trim().min(2).max(80),
+  state: z.string().trim().min(2).max(80),
+  educationLevel: z.enum(["SCHOOL", "DIPLOMA", "BACHELORS", "MASTERS", "DOCTORATE", "OTHER"]),
+  institution: z.string().trim().min(2).max(160),
+  course: z.string().trim().min(2).max(120),
+  graduationYear: z.coerce.number().int().min(1980).max(2040),
+  skills: z.string().trim().min(2).max(500),
+  preferredRole: z.string().trim().min(2).max(120),
+  linkedinUrl: optionalUrl,
+  hasResume: z.boolean().default(false),
 });
 
 /** Mentor registration — pending until PLATFORM_ADMIN approves */
 export const mentorSignUpSchema = z.object({
   track: z.literal("mentor"),
   ...signUpAuthFields,
+  phone: phoneSchema,
+  jobTitle: z.string().trim().min(2).max(100),
+  currentOrganization: z.string().trim().min(2).max(120),
   headline: z.string().min(5).max(120),
   expertise: z.string().min(3).max(200),
   yearsExperience: z.coerce.number().int().min(0).max(50),
   bio: z.string().min(40).max(2000),
-  linkedinUrl: z.string().url().optional().or(z.literal("")),
+  linkedinUrl: z.string().url(),
+  mentoringExperience: z.string().max(2000).optional().or(z.literal("")),
+  motivation: z.string().min(40).max(2000),
+  achievements: z.string().min(20).max(2000),
+  availabilityDays: z.string().min(2).max(120),
+  hoursPerWeek: z.coerce.number().int().min(1).max(40),
+  languages: z.string().min(2).max(200),
+  menteeAudience: z.string().min(10).max(500),
+  consent: z.literal(true),
 });
 
 /** Company HR registration — can post jobs only after recruiterApproved */
@@ -29,10 +55,21 @@ export const hrSignUpSchema = z.object({
   track: z.literal("hr"),
   ...signUpAuthFields,
   companyName: z.string().min(2).max(120),
-  companyWebsite: z.string().url().optional().or(z.literal("")),
+  companyType: z.enum(["LLP", "PARTNERSHIP", "PRIVATE_LIMITED", "PUBLIC_LIMITED", "SOLE_PROPRIETORSHIP", "NON_PROFIT", "OTHER"]),
+  registrationNumber: z.string().trim().min(2).max(80),
+  gstNumber: z.string().trim().max(20).optional().or(z.literal("")),
+  industry: z.string().trim().min(2).max(100),
+  companyWebsite: optionalUrl,
   jobTitle: z.string().min(2).max(80),
-  companySize: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]).optional(),
-  phone: z.string().min(7).max(24).optional().or(z.literal("")),
+  companySize: z.enum(["1-10", "11-50", "51-200", "201-1000", "1000+"]),
+  phone: phoneSchema,
+  address1: z.string().trim().min(5).max(160),
+  address2: z.string().trim().max(160).optional().or(z.literal("")),
+  city: z.string().trim().min(2).max(80),
+  state: z.string().trim().min(2).max(80),
+  pinCode: z.string().trim().regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit PIN code"),
+  companyDescription: z.string().trim().min(40).max(2000),
+  consent: z.literal(true),
 });
 
 export const signUpSchema = z.discriminatedUnion("track", [

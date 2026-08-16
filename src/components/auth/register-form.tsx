@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import "@/components/auth/auth-shell.css";
 
@@ -148,12 +147,7 @@ export function useRegisterSubmit() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(
-    payload: Record<string, unknown>,
-    password: string,
-    email: string,
-    options?: { resume?: File | null; successMessage?: string },
-  ) {
+  async function submit(payload: Record<string, unknown>) {
     setBusy(true);
     setError("");
     const res = await fetch("/api/auth/signup", {
@@ -170,29 +164,7 @@ export function useRegisterSubmit() {
       setError(data.error || "Unable to create account");
       return;
     }
-    const login = await signIn("credentials", { email, password, redirect: false });
-    if (login?.error) {
-      setBusy(false);
-      setError("Account created. Please sign in.");
-      router.push("/auth/signin");
-      return;
-    }
-
-    let resumeWarning = "";
-    if (options?.resume) {
-      const resumeForm = new FormData();
-      resumeForm.append("file", options.resume);
-      const resumeRes = await fetch("/api/resume", { method: "POST", body: resumeForm });
-      if (!resumeRes.ok) {
-        const resumeData = (await resumeRes.json().catch(() => ({}))) as { error?: string };
-        resumeWarning = ` Account created, but resume upload failed: ${resumeData.error || "please upload it from Resume later"}.`;
-      }
-    }
-
-    setBusy(false);
-    window.alert(`${options?.successMessage || "Registration submitted successfully."}${resumeWarning}`);
-    router.push(data.next || "/dashboard");
-    router.refresh();
+    router.replace(data.next || "/auth/waitlist");
   }
 
   return { error, busy, setError, submit };

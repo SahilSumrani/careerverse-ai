@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-const authPaths = ["/auth/signin", "/auth/signup", "/auth/register", "/auth/forgot-password"];
+const authPaths = ["/auth/signin", "/auth/signup", "/auth/register", "/auth/waitlist", "/auth/forgot-password"];
 
 function hasSecureSessionCookie(req: NextRequest) {
   return req.cookies

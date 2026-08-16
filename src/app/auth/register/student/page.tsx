@@ -29,40 +29,25 @@ export default function StudentRegisterPage() {
     linkedinUrl: "",
   });
   const [hasResume, setHasResume] = useState(true);
-  const [resume, setResume] = useState<File | null>(null);
   const { error, busy, submit } = useRegisterSubmit();
 
   return (
     <RegisterShell
       title="Student / job seeker registration"
-      lead="Complete your contact, education, career, and optional resume details."
+      lead="Complete your contact, education, and career details."
       panelTitle="One profile for your career"
-      panelBody="Your details improve job matching. If you do not have a resume, choose “I don’t have a resume” and continue."
+      panelBody="Your details improve job matching. You can upload a resume after your account is approved."
     >
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (hasResume && !resume) {
-            window.alert("Please select your resume, or choose “I don’t have a resume”.");
-            return;
-          }
-          void submit(
-            {
-              track: "student",
-              ...creds,
-              ...details,
-              graduationYear: Number(details.graduationYear),
-              hasResume,
-            },
-            creds.password,
-            creds.email,
-            {
-              resume: hasResume ? resume : null,
-              successMessage: hasResume
-                ? "Student registration submitted and resume uploaded successfully."
-                : "Student registration submitted successfully. You can create or upload a resume later.",
-            },
-          );
+          void submit({
+            track: "student",
+            ...creds,
+            ...details,
+            graduationYear: Number(details.graduationYear),
+            hasResume,
+          });
         }}
       >
         <fieldset className="cv-auth-section">
@@ -216,29 +201,12 @@ export default function StudentRegisterPage() {
                 type="radio"
                 name="resumeChoice"
                 checked={!hasResume}
-                onChange={() => {
-                  setHasResume(false);
-                  setResume(null);
-                }}
+                onChange={() => setHasResume(false)}
               />
               I don&apos;t have a resume
             </label>
           </div>
-          {hasResume ? (
-            <div className="cv-auth-field">
-              <label htmlFor="resume">Upload resume (PDF or DOCX, max 5MB)</label>
-              <input
-                id="resume"
-                className="cv-auth-file"
-                type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                onChange={(e) => setResume(e.target.files?.[0] ?? null)}
-                required
-              />
-            </div>
-          ) : (
-            <p className="cv-auth-note">No problem—you can build or upload your resume after registration.</p>
-          )}
+          <p className="cv-auth-note">You can create or upload your resume after your account is approved.</p>
         </fieldset>
 
         {error ? <p className="cv-auth-error" role="alert">{error}</p> : null}

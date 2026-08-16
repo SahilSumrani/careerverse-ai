@@ -45,22 +45,14 @@ export default function MentorRegisterPage() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void submit(
-            {
-              track: "mentor",
-              ...creds,
-              ...profile,
-              yearsExperience: Number(profile.yearsExperience),
-              hoursPerWeek: Number(profile.hoursPerWeek),
-              consent,
-            },
-            creds.password,
-            creds.email,
-            {
-              successMessage:
-                "Mentor application submitted successfully. CareerVerse will review your profile before activation.",
-            },
-          );
+          void submit({
+            track: "mentor",
+            ...creds,
+            ...profile,
+            yearsExperience: Number(profile.yearsExperience),
+            hoursPerWeek: Number(profile.hoursPerWeek),
+            consent,
+          });
         }}
       >
         <fieldset className="cv-auth-section">

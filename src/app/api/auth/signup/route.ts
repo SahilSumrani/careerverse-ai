@@ -33,7 +33,6 @@ export async function POST(req: Request) {
     const now = new Date().toISOString();
 
     let role: RoleName = "STUDENT";
-    let nextPath = "/onboarding";
 
     if (data.track === "student") {
       role = data.role;
@@ -61,15 +60,19 @@ export async function POST(req: Request) {
         },
       });
       void trackAnalytics("signup", user.id, { track: "student", role });
-      void sendWaitlistEmail({ to: email, name }).catch((error) =>
-        console.error("Unable to send waitlist email", error),
-      );
-      return jsonOk({ id: user.id, email: user.email, track: "student", next: nextPath });
+      await sendWaitlistEmail({ to: email, name });
+      return jsonOk({
+        ok: true,
+        waitlist: true,
+        id: user.id,
+        email: user.email,
+        track: "student",
+        next: "/auth/waitlist",
+      });
     }
 
     if (data.track === "mentor") {
       role = "PROFESSIONAL";
-      nextPath = "/dashboard";
       const skills = data.expertise
         .split(/[,|]/)
         .map((s) => s.trim())
@@ -105,21 +108,20 @@ export async function POST(req: Request) {
         },
       });
       void trackAnalytics("signup", user.id, { track: "mentor", role });
-      void sendWaitlistEmail({ to: email, name }).catch((error) =>
-        console.error("Unable to send waitlist email", error),
-      );
+      await sendWaitlistEmail({ to: email, name });
       return jsonOk({
+        ok: true,
+        waitlist: true,
         id: user.id,
         email: user.email,
         track: "mentor",
-        next: nextPath,
+        next: "/auth/waitlist",
         pendingApproval: true,
       });
     }
 
     // Company HR — role granted, posting locked until recruiterApproved
     role = "HR";
-    nextPath = "/dashboard";
     const user = await createEmailPasswordUser({
       email,
       name,
@@ -150,14 +152,14 @@ export async function POST(req: Request) {
       },
     });
     void trackAnalytics("signup", user.id, { track: "hr", role });
-    void sendWaitlistEmail({ to: email, name }).catch((error) =>
-      console.error("Unable to send waitlist email", error),
-    );
+    await sendWaitlistEmail({ to: email, name });
     return jsonOk({
+      ok: true,
+      waitlist: true,
       id: user.id,
       email: user.email,
       track: "hr",
-      next: nextPath,
+      next: "/auth/waitlist",
       pendingApproval: true,
     });
   } catch (e) {

@@ -45,15 +45,7 @@ export default function HrRegisterPage() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          void submit(
-            { track: "hr", ...creds, ...company, consent },
-            creds.password,
-            creds.email,
-            {
-              successMessage:
-                "Company registration submitted successfully. Your recruiter account is pending admin verification.",
-            },
-          );
+          void submit({ track: "hr", ...creds, ...company, consent });
         }}
       >
         <fieldset className="cv-auth-section">

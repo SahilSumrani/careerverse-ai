@@ -41,6 +41,7 @@ export default async function DashboardPage() {
 
   const firstName = session.user.name?.split(" ")[0] || "there";
   const roles = session.user.roles ?? ["STUDENT"];
+  if (roles.includes("PLATFORM_ADMIN")) redirect("/admin");
   const isHr = roles.includes("HR");
 
   const user = await getUserById(session.user.id).catch(() => null);

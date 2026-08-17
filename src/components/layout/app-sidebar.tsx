@@ -86,11 +86,14 @@ export function AppSidebar({
   userEmail?: string | null;
 }) {
   const pathname = usePathname();
+  const primaryLinks = isAdmin
+    ? [{ href: "/admin", label: "Admin", icon: Shield }, ...mainLinks]
+    : mainLinks;
 
   return (
     <aside className="hidden w-[248px] shrink-0 overflow-clip bg-sidebar text-white md:block">
       <div className="sticky top-0 flex h-screen flex-col px-3 py-4">
-        <Link href="/dashboard" className="px-2 font-display text-xl tracking-tight text-white">
+        <Link href={isAdmin ? "/admin" : "/dashboard"} className="px-2 font-display text-xl tracking-tight text-white">
           CareerVerse <span className="text-blue-300">AI</span>
         </Link>
 
@@ -106,7 +109,7 @@ export function AppSidebar({
           <div>
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">Main</p>
             <div className="space-y-0.5">
-              {mainLinks.map((link) => (
+              {primaryLinks.map((link) => (
                 <NavItem key={link.href} {...link} pathname={pathname} />
               ))}
             </div>
@@ -120,7 +123,6 @@ export function AppSidebar({
               {isHr ? (
                 <NavItem href="/recruiter" label="Recruiter" icon={Briefcase} pathname={pathname} />
               ) : null}
-              {isAdmin ? <NavItem href="/admin" label="Admin" icon={Shield} pathname={pathname} /> : null}
             </div>
           </div>
         </nav>
@@ -142,7 +144,7 @@ export function AppSidebar({
 export function MobileNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const items = isAdmin
-    ? [...mobilePrimary.slice(0, 4), { href: "/admin", label: "Admin", icon: Shield }]
+    ? [{ href: "/admin", label: "Admin", icon: Shield }, ...mobilePrimary.slice(0, 4)]
     : mobilePrimary;
   return (
     <nav className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-border bg-card/95 p-2 shadow-lg backdrop-blur md:hidden">

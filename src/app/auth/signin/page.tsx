@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import {
@@ -39,9 +39,15 @@ function SignInForm() {
     prefetchGoogleAuth();
   }, []);
 
-  function routeAfterAuth() {
+  async function routeAfterAuth() {
     const callback = params.get("callbackUrl");
-    window.location.assign(callback || "/dashboard");
+    if (callback && callback !== "/dashboard") {
+      window.location.assign(callback);
+      return;
+    }
+    const session = await getSession();
+    const roles = session?.user?.roles ?? [];
+    window.location.assign(roles.includes("PLATFORM_ADMIN") ? "/admin" : "/dashboard");
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -54,7 +60,7 @@ function SignInForm() {
         setError("Invalid email or password.");
         return;
       }
-      routeAfterAuth();
+      await routeAfterAuth();
     } catch {
       setError("Unable to sign in. Try again.");
     } finally {

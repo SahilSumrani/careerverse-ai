@@ -53,7 +53,7 @@ function locationKey(raw: string): string | null {
 }
 
 /** Platform admin console data from Firestore. */
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await requireSession();
     await requirePermission(session.user.id, PERMISSIONS.ADMIN_ACCESS);
@@ -64,21 +64,30 @@ export async function GET() {
         recentUsers: [],
         locationBreakdown: [],
         aiUsage: [],
+        registrationBreakdown: { students: 0, mentors: 0, recruiters: 0, pendingMentors: 0, pendingRecruiters: 0 },
+        recentRegistrations: [],
+        recentActivity: [],
+        flags: [],
+        focusedUser: null,
         chatLimits: { dailyCap: DAILY_CHAT_CAP, maxInputChars: CHAT_INPUT_MAX_CHARS },
         note: "Firebase Admin credentials required for live metrics.",
+        serverTime: new Date().toISOString(),
       });
     }
 
     const db = getAdminDb();
     const day = new Date().toISOString().slice(0, 10);
 
-    const [usersCount, appsCount, jobsResult, usersSnap, aiSnap] = await Promise.all([
+    const url = new URL(req.url);
+    const focusUserId = url.searchParams.get("userId")?.trim() || "";
+
+    const [usersCount, appsCount, jobsResult, usersSnap, aiSnap, analyticsSnap] = await Promise.all([
       safeCount(USERS_COLLECTION),
       safeCount("applications"),
       loadJobsFromFirestore(100),
-      db.collection(USERS_COLLECTION).orderBy("createdAt", "desc").limit(40).get().catch(async () => {
+      db.collection(USERS_COLLECTION).orderBy("createdAt", "desc").limit(80).get().catch(async () => {
         // Fallback if createdAt index/order missing
-        return db.collection(USERS_COLLECTION).limit(40).get();
+        return db.collection(USERS_COLLECTION).limit(80).get();
       }),
       db
         .collection("aiUsage")
@@ -86,6 +95,12 @@ export async function GET() {
         .limit(40)
         .get()
         .catch(async () => db.collection("aiUsage").limit(40).get()),
+      db
+        .collection("analyticsEvents")
+        .orderBy("createdAt", "desc")
+        .limit(60)
+        .get()
+        .catch(async () => db.collection("analyticsEvents").limit(60).get()),
     ]);
 
     const recentUsers = usersSnap.docs
@@ -104,6 +119,123 @@ export async function GET() {
         preferredLocations: u.preferredLocations.slice(0, 5),
         createdAt: u.createdAt,
       }));
+
+    const registrationBreakdown = { students: 0, mentors: 0, recruiters: 0, pendingMentors: 0, pendingRecruiters: 0 };
+    for (const u of recentUsers) {
+      const track = u.registration?.track;
+      if (track === "mentor" || u.roles.includes("MENTOR")) {
+        registrationBreakdown.mentors += 1;
+        if (!u.mentorApproved) registrationBreakdown.pendingMentors += 1;
+      } else if (track === "hr" || u.roles.includes("HR")) {
+        registrationBreakdown.recruiters += 1;
+        if (!u.recruiterApproved) registrationBreakdown.pendingRecruiters += 1;
+      } else {
+        registrationBreakdown.students += 1;
+      }
+    }
+
+    const recentRegistrations = recentUsers.slice(0, 25).map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      track:
+        u.registration?.track === "mentor" || u.roles.includes("MENTOR")
+          ? "mentor"
+          : u.registration?.track === "hr" || u.roles.includes("HR")
+            ? "recruiter"
+            : "student",
+      createdAt: u.createdAt ?? null,
+      pending:
+        (u.registration?.track === "mentor" || u.roles.includes("MENTOR")) && !u.mentorApproved
+          ? true
+          : (u.registration?.track === "hr" || u.roles.includes("HR")) && !u.recruiterApproved
+            ? true
+            : false,
+    }));
+
+    const recentActivity = analyticsSnap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        id: d.id,
+        name: String(data.name || "event"),
+        userId: data.userId == null ? null : String(data.userId),
+        props: (data.props as Record<string, unknown> | null) ?? null,
+        createdAt: typeof data.createdAt === "string" ? data.createdAt : null,
+      };
+    });
+
+    // ponytail: heuristic flags only; upgrade when a dedicated abuse pipeline exists
+    const flags: Array<{ id: string; severity: "warning" | "critical"; label: string; userId?: string }> = [];
+    for (const u of recentUsers) {
+      if (u.suspendedAt) {
+        flags.push({ id: `sus-${u.id}`, severity: "critical", label: `Suspended: ${u.email}`, userId: u.id });
+      }
+      if ((u.registration?.track === "hr" || u.roles.includes("HR")) && !u.recruiterApproved) {
+        flags.push({ id: `hr-${u.id}`, severity: "warning", label: `Recruiter pending: ${u.email}`, userId: u.id });
+      }
+      if ((u.registration?.track === "mentor" || u.roles.includes("MENTOR")) && !u.mentorApproved) {
+        flags.push({ id: `men-${u.id}`, severity: "warning", label: `Mentor pending: ${u.email}`, userId: u.id });
+      }
+    }
+    const failedAi = aiSnap.docs.filter((d) => d.data()?.success === false).length;
+    if (failedAi >= 5) {
+      flags.push({ id: "ai-fail", severity: "warning", label: `${failedAi} recent AI failures` });
+    }
+
+    let focusedUser: {
+      id: string;
+      name?: string | null;
+      email: string;
+      roles: string[];
+      activity: typeof recentActivity;
+      aiUsage: Array<{ id: string; operation: string; createdAt: string | null; success: boolean }>;
+    } | null = null;
+
+    if (focusUserId) {
+      const focus = recentUsers.find((u) => u.id === focusUserId);
+      const focusDoc = focus ? null : await db.collection(USERS_COLLECTION).doc(focusUserId).get().catch(() => null);
+      const mapped = focus || (focusDoc?.exists ? mapUserDoc(focusDoc.id, focusDoc.data()) : null);
+      if (mapped) {
+        focusedUser = {
+          id: mapped.id,
+          name: mapped.name,
+          email: mapped.email,
+          roles: mapped.roles,
+          activity: recentActivity.filter((a) => a.userId === mapped.id),
+          aiUsage: aiSnap.docs
+            .filter((d) => String(d.data()?.userId || "") === mapped.id)
+            .map((d) => {
+              const data = d.data() as Record<string, unknown>;
+              return {
+                id: d.id,
+                operation: String(data.operation || "unknown"),
+                createdAt: typeof data.createdAt === "string" ? data.createdAt : null,
+                success: Boolean(data.success),
+              };
+            }),
+        };
+        if (focusedUser.activity.length === 0) {
+          const userEvents = await db
+            .collection("analyticsEvents")
+            .where("userId", "==", mapped.id)
+            .limit(40)
+            .get()
+            .catch(() => null);
+          if (userEvents) {
+            focusedUser.activity = userEvents.docs.map((d) => {
+              const data = d.data() as Record<string, unknown>;
+              return {
+                id: d.id,
+                name: String(data.name || "event"),
+                userId: mapped.id,
+                props: (data.props as Record<string, unknown> | null) ?? null,
+                createdAt: typeof data.createdAt === "string" ? data.createdAt : null,
+              };
+            });
+          }
+        }
+      }
+    }
 
     const locCounts = new Map<string, number>();
     for (const u of recentUsers) {
@@ -162,8 +294,14 @@ export async function GET() {
       recentUsers,
       locationBreakdown,
       aiUsage,
+      registrationBreakdown,
+      recentRegistrations,
+      recentActivity,
+      flags: flags.slice(0, 40),
+      focusedUser,
       chatLimits: { dailyCap: DAILY_CHAT_CAP, maxInputChars: CHAT_INPUT_MAX_CHARS },
       jobsSource: jobsResult.source,
+      serverTime: new Date().toISOString(),
     });
   } catch (e) {
     const status = (e as { status?: number }).status ?? 500;

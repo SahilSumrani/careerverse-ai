@@ -31,7 +31,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen overflow-x-clip bg-background">
-      <AppSidebar isAdmin={isAdmin} isHr={isHr} userName={userName} userEmail={userEmail} />
+      <Suspense
+        fallback={<aside className="hidden w-[248px] shrink-0 bg-sidebar md:block" aria-hidden />}
+      >
+        <AppSidebar isAdmin={isAdmin} isHr={isHr} userName={userName} userEmail={userEmail} />
+      </Suspense>
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
         <AppTopbar
           userName={userName}
@@ -41,9 +45,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 pb-28 md:px-7 md:pb-8">{children}</main>
       </div>
       <MobileNav isAdmin={isAdmin} />
-      <Suspense fallback={null}>
-        <CopilotWidget />
-      </Suspense>
+      {!isAdmin ? (
+        <Suspense fallback={null}>
+          <CopilotWidget />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

@@ -1,26 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Activity,
   Briefcase,
   Calendar,
+  ClipboardList,
   Compass,
   FileText,
   Home,
+  LayoutDashboard,
   Network,
   Route,
-  Sparkles,
-  Users,
-  ClipboardList,
-  Shield,
   Search,
+  Settings2,
+  Shield,
+  Sparkles,
+  UserPlus,
   UserRound,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 
-const mainLinks = [
+const studentMain = [
   { href: "/dashboard", label: "Overview", icon: Home },
   { href: "/opportunities/browse", label: "Explore", icon: Briefcase },
   { href: "/applications", label: "Applications", icon: ClipboardList },
@@ -28,7 +32,7 @@ const mainLinks = [
   { href: "/resume", label: "Resume", icon: FileText },
 ];
 
-const moreLinks = [
+const studentGrow = [
   { href: "/roadmap", label: "Roadmaps", icon: Route },
   { href: "/copilot", label: "Copilot", icon: Compass },
   { href: "/network", label: "Network", icon: Network },
@@ -37,7 +41,20 @@ const moreLinks = [
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
-/** Primary tabs for the mobile bottom bar (student job-seeker flow). */
+const adminPrimary = [
+  { href: "/admin", tab: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin?tab=users", tab: "users", label: "Users", icon: Users },
+  { href: "/admin?tab=registrations", tab: "registrations", label: "Registrations", icon: UserPlus },
+  { href: "/admin?tab=activity", tab: "activity", label: "Activity", icon: Activity },
+  { href: "/admin?tab=ops", tab: "ops", label: "Ops", icon: Settings2 },
+];
+
+const adminPlatform = [
+  { href: "/opportunities/browse", label: "Browse jobs", icon: Briefcase },
+  { href: "/recruiter", label: "Recruiter", icon: ClipboardList },
+  { href: "/profile", label: "Profile", icon: UserRound },
+];
+
 const mobilePrimary = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/opportunities/browse", label: "Jobs", icon: Briefcase },
@@ -50,14 +67,13 @@ function NavItem({
   href,
   label,
   icon: Icon,
-  pathname,
+  active,
 }: {
   href: string;
   label: string;
   icon: typeof Home;
-  pathname: string;
+  active: boolean;
 }) {
-  const active = pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
@@ -74,6 +90,10 @@ function NavItem({
   );
 }
 
+function pathActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppSidebar({
   isAdmin,
   isHr,
@@ -86,9 +106,8 @@ export function AppSidebar({
   userEmail?: string | null;
 }) {
   const pathname = usePathname();
-  const primaryLinks = isAdmin
-    ? [{ href: "/admin", label: "Admin", icon: Shield }, ...mainLinks]
-    : mainLinks;
+  const searchParams = useSearchParams();
+  const adminTab = searchParams.get("tab") || "dashboard";
 
   return (
     <aside className="hidden w-[248px] shrink-0 overflow-clip bg-sidebar text-white md:block">
@@ -97,34 +116,96 @@ export function AppSidebar({
           CareerVerse <span className="text-blue-300">AI</span>
         </Link>
 
-        <Link
-          href="/opportunities/browse"
-          className="mt-4 flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm text-sidebar-foreground transition hover:bg-white/10 hover:text-white"
-        >
-          <Search className="h-4 w-4 shrink-0" />
-          <span className="truncate">Search jobs…</span>
-        </Link>
+        {!isAdmin ? (
+          <Link
+            href="/opportunities/browse"
+            className="mt-4 flex items-center gap-2 rounded-2xl bg-white/5 px-3 py-2 text-sm text-sidebar-foreground transition hover:bg-white/10 hover:text-white"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="truncate">Search jobs…</span>
+          </Link>
+        ) : (
+          <p className="mt-4 rounded-2xl bg-blue-500/15 px-3 py-2 text-xs font-medium text-blue-200">
+            Platform admin console
+          </p>
+        )}
 
         <nav className="no-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-2">
-          <div>
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">Main</p>
-            <div className="space-y-0.5">
-              {primaryLinks.map((link) => (
-                <NavItem key={link.href} {...link} pathname={pathname} />
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">Grow</p>
-            <div className="space-y-0.5">
-              {moreLinks.map((link) => (
-                <NavItem key={link.href} {...link} pathname={pathname} />
-              ))}
-              {isHr ? (
-                <NavItem href="/recruiter" label="Recruiter" icon={Briefcase} pathname={pathname} />
-              ) : null}
-            </div>
-          </div>
+          {isAdmin ? (
+            <>
+              <div>
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                  Admin
+                </p>
+                <div className="space-y-0.5">
+                  {adminPrimary.map((link) => (
+                    <NavItem
+                      key={link.tab}
+                      href={link.href}
+                      label={link.label}
+                      icon={link.icon}
+                      active={pathname.startsWith("/admin") && adminTab === link.tab}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">
+                  Platform
+                </p>
+                <div className="space-y-0.5">
+                  {adminPlatform.map((link) => (
+                    <NavItem
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      icon={link.icon}
+                      active={pathActive(pathname, link.href)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">Main</p>
+                <div className="space-y-0.5">
+                  {studentMain.map((link) => (
+                    <NavItem
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      icon={link.icon}
+                      active={pathActive(pathname, link.href)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/35">Grow</p>
+                <div className="space-y-0.5">
+                  {studentGrow.map((link) => (
+                    <NavItem
+                      key={link.href}
+                      href={link.href}
+                      label={link.label}
+                      icon={link.icon}
+                      active={pathActive(pathname, link.href)}
+                    />
+                  ))}
+                  {isHr ? (
+                    <NavItem
+                      href="/recruiter"
+                      label="Recruiter"
+                      icon={Briefcase}
+                      active={pathActive(pathname, "/recruiter")}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </>
+          )}
         </nav>
 
         <Link href="/profile" className="mt-2 shrink-0 rounded-2xl bg-white/5 p-2.5 transition hover:bg-white/10">
@@ -144,7 +225,13 @@ export function AppSidebar({
 export function MobileNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
   const items = isAdmin
-    ? [{ href: "/admin", label: "Admin", icon: Shield }, ...mobilePrimary.slice(0, 4)]
+    ? [
+        { href: "/admin", label: "Admin", icon: Shield },
+        { href: "/admin?tab=users", label: "Users", icon: Users },
+        { href: "/admin?tab=registrations", label: "Regs", icon: UserPlus },
+        { href: "/admin?tab=activity", label: "Live", icon: Activity },
+        { href: "/profile", label: "You", icon: UserRound },
+      ]
     : mobilePrimary;
   return (
     <nav className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-border bg-card/95 p-2 shadow-lg backdrop-blur md:hidden">
@@ -154,7 +241,7 @@ export function MobileNav({ isAdmin }: { isAdmin?: boolean }) {
           const active =
             link.href === "/dashboard"
               ? pathname === "/dashboard"
-              : pathname === link.href || pathname.startsWith(`${link.href}/`);
+              : pathname === link.href.split("?")[0] || pathname.startsWith(`${link.href.split("?")[0]}/`);
           return (
             <li key={link.href}>
               <Link

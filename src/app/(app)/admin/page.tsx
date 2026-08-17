@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { PageHeader, EmptyState, Skeleton } from "@/components/ui/states";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ROLE_NAMES, type RoleName } from "@/lib/roles";
 import "@/styles/admin-console.css";
 
@@ -589,6 +590,12 @@ function AdminConsoleInner() {
                 <p className="text-sm text-muted-foreground">No AI usage for this user.</p>
               ) : null}
             </div>
+            <Link
+              href={`/admin/users/${encodeURIComponent(data.focusedUser.id)}`}
+              className={buttonVariants({ variant: "outline", size: "sm", className: "mt-5" })}
+            >
+              View full profile
+            </Link>
           </aside>
         </>
       ) : null}

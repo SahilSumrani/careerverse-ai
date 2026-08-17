@@ -6,6 +6,7 @@ import { adminMutationSchema } from "@/lib/validators";
 import { isRoleName, type RoleName } from "@/lib/roles";
 import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
 import { CHAT_INPUT_MAX_CHARS, DAILY_CHAT_CAP } from "@/lib/ai/chat-guard";
+import { sendApprovalEmail } from "@/lib/email/waitlist";
 
 const ADMIN_MUTATION_CAP = 60; // per hour
 
@@ -370,6 +371,8 @@ export async function POST(req: Request) {
     const ref = getAdminDb().collection(USERS_COLLECTION).doc(id);
     const snap = await ref.get();
     if (!snap.exists) return jsonError("User not found", 404);
+    const target = mapUserDoc(snap.id, snap.data());
+    if (!target) return jsonError("User not found", 404);
 
     const now = new Date().toISOString();
 
@@ -384,12 +387,18 @@ export async function POST(req: Request) {
     }
 
     if (action === "approve_recruiter") {
-      const roles = new Set((mapUserDoc(snap.id, snap.data())?.roles ?? []) as string[]);
+      if (target.recruiterApproved) return jsonOk({ ok: true, id, recruiterApproved: true, idempotent: true });
+      const roles = new Set(target.roles as string[]);
       roles.add("HR");
       await ref.set(
         { roles: Array.from(roles), recruiterApproved: true, updatedAt: now },
         { merge: true },
       );
+      await sendApprovalEmail({
+        to: target.email,
+        name: target.name?.trim() || "there",
+        role: "recruiter",
+      });
       return jsonOk({ ok: true, id, recruiterApproved: true });
     }
 
@@ -399,12 +408,18 @@ export async function POST(req: Request) {
     }
 
     if (action === "approve_mentor") {
-      const roles = new Set((mapUserDoc(snap.id, snap.data())?.roles ?? []) as string[]);
+      if (target.mentorApproved) return jsonOk({ ok: true, id, mentorApproved: true, idempotent: true });
+      const roles = new Set(target.roles as string[]);
       roles.add("MENTOR");
       await ref.set(
         { roles: Array.from(roles), mentorApproved: true, updatedAt: now },
         { merge: true },
       );
+      await sendApprovalEmail({
+        to: target.email,
+        name: target.name?.trim() || "there",
+        role: "mentor",
+      });
       return jsonOk({ ok: true, id, mentorApproved: true });
     }
 
@@ -419,8 +434,7 @@ export async function POST(req: Request) {
     // set_roles
     const roles = parsed.data.roles.filter(isRoleName) as RoleName[];
     if (!roles.length) return jsonError("At least one valid role required", 400);
-    const target = mapUserDoc(snap.id, snap.data());
-    const wasAdmin = target?.roles.includes("PLATFORM_ADMIN");
+    const wasAdmin = target.roles.includes("PLATFORM_ADMIN");
     const staysAdmin = roles.includes("PLATFORM_ADMIN");
     if (wasAdmin && !staysAdmin) {
       const admins = await getAdminDb()

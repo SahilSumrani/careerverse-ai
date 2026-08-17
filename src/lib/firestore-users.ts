@@ -448,3 +448,72 @@ export async function listDirectoryUsers(excludeId: string, limit = 4): Promise<
     .filter((u): u is CareerVerseUser => u != null && u.id !== excludeId && !u.suspendedAt)
     .slice(0, limit);
 }
+
+export type TopTalentStudent = {
+  id: string;
+  name: string | null;
+  careerScore: number;
+  skills: string[];
+  percentileBand: "top_20";
+};
+
+export function isScoredStudent(user: CareerVerseUser): boolean {
+  if (user.suspendedAt) return false;
+  if (user.roles.includes("PLATFORM_ADMIN")) return false;
+  const track = user.registration?.track;
+  if (track === "hr" || track === "mentor") return false;
+  if (user.roles.includes("HR") && !user.roles.includes("STUDENT")) return false;
+  if (user.roles.includes("MENTOR") && !user.roles.includes("STUDENT")) return false;
+  return typeof user.careerScore === "number" && Number.isFinite(user.careerScore);
+}
+
+/** Intersection of topFraction by score, then minScore. Pure so tests can pin the 90+ ∩ top 20% rule. */
+export function selectTopTalent<T extends { careerScore: number }>(
+  scored: T[],
+  opts?: { minScore?: number; topFraction?: number; limit?: number },
+): T[] {
+  const minScore = opts?.minScore ?? 90;
+  const topFraction = opts?.topFraction ?? 0.2;
+  const limit = opts?.limit ?? 50;
+  const sorted = [...scored].sort((a, b) => b.careerScore - a.careerScore);
+  const n = sorted.length;
+  if (!n) return [];
+  const k = Math.max(1, Math.ceil(topFraction * n));
+  return sorted.slice(0, k).filter((row) => row.careerScore >= minScore).slice(0, limit);
+}
+
+// ponytail: scan ceiling 500 scored users; upgrade when a careerScore index + pagination exists
+const TOP_TALENT_SCAN = 500;
+
+export async function listTopTalentStudents(opts?: {
+  minScore?: number;
+  topFraction?: number;
+  limit?: number;
+}): Promise<{ items: TopTalentStudent[]; scoredCount: number; cutoffK: number }> {
+  const minScore = opts?.minScore ?? 90;
+  const topFraction = opts?.topFraction ?? 0.2;
+  const limit = opts?.limit ?? 50;
+  const db = getAdminDb();
+  let snap;
+  try {
+    snap = await db.collection(USERS_COLLECTION).orderBy("careerScore", "desc").limit(TOP_TALENT_SCAN).get();
+  } catch {
+    snap = await db.collection(USERS_COLLECTION).limit(TOP_TALENT_SCAN).get();
+  }
+  const scored = snap.docs
+    .map((d) => mapUserDoc(d.id, d.data()))
+    .filter((u): u is CareerVerseUser => u != null && isScoredStudent(u));
+  const n = scored.length;
+  const cutoffK = n ? Math.max(1, Math.ceil(topFraction * n)) : 0;
+  const picked = selectTopTalent(
+    scored.map((u) => ({
+      id: u.id,
+      name: u.name,
+      careerScore: Number(u.careerScore),
+      skills: u.skills.slice(0, 12),
+      percentileBand: "top_20" as const,
+    })),
+    { minScore, topFraction, limit },
+  );
+  return { items: picked, scoredCount: n, cutoffK };
+}

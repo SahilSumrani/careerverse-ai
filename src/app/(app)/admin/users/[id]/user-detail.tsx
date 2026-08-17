@@ -25,6 +25,7 @@ type DetailPayload = {
     college: string | null;
     graduationYear: number | null;
     careerGoals: string | null;
+    careerScore: number | null;
     skills: string[];
     interests: string[];
     preferredIndustries: string[];
@@ -250,6 +251,7 @@ export function AdminUserDetail({ id, currentAdminId }: { id: string; currentAdm
             ["Roles", user.roles.join(", ")],
             ["Registration track", track],
             ["Onboarding complete", user.onboardingComplete],
+            ["Career score", user.careerScore],
             ["Created", date(user.createdAt)],
             ["Updated", date(user.updatedAt)],
             ["Suspended", date(user.suspendedAt)],

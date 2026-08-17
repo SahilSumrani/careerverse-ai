@@ -177,7 +177,7 @@ function deterministicCareerAnalysis(ctx: UserCareerContext): CareerAnalysisResu
   };
 }
 
-function deterministicJobMatch(
+export function deterministicJobMatch(
   ctx: UserCareerContext,
   opportunity: { title: string; description: string; skills: string[]; eligibility?: string | null; type: string },
 ): OpportunityMatchResult {

@@ -1,0 +1,16 @@
+.cv-recruiter-gate {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.cv-recruiter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.cv-recruiter-score {
+  font-variant-numeric: tabular-nums;
+}

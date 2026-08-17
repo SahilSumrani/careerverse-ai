@@ -11,6 +11,7 @@ const STATUSES = [
   "ASSESSMENT",
   "INTERVIEW",
   "OFFER",
+  "HIRED",
   "REJECTED",
   "WITHDRAWN",
 ] as const;
@@ -173,6 +174,9 @@ export async function PATCH(req: Request) {
     const data = snap.data() || {};
     if (!data.userId || data.userId !== session.user.id) {
       return jsonError("Forbidden", 403);
+    }
+    if (data.status === "HIRED") {
+      return jsonError("Hired applications can only be updated by the recruiter", 403);
     }
     await ref.set(
       {

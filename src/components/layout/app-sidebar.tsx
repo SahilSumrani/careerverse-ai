@@ -7,6 +7,7 @@ import {
   Briefcase,
   Calendar,
   ClipboardList,
+  Clock3,
   Compass,
   FileText,
   Home,
@@ -44,6 +45,7 @@ const studentGrow = [
 const adminPrimary = [
   { href: "/admin", tab: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin?tab=users", tab: "users", label: "Users", icon: Users },
+  { href: "/admin?tab=pending", tab: "pending", label: "Pending", icon: Clock3 },
   { href: "/admin?tab=registrations", tab: "registrations", label: "Registrations", icon: UserPlus },
   { href: "/admin?tab=activity", tab: "activity", label: "Activity", icon: Activity },
   { href: "/admin?tab=ops", tab: "ops", label: "Ops", icon: Settings2 },
@@ -228,7 +230,7 @@ export function MobileNav({ isAdmin }: { isAdmin?: boolean }) {
     ? [
         { href: "/admin", label: "Admin", icon: Shield },
         { href: "/admin?tab=users", label: "Users", icon: Users },
-        { href: "/admin?tab=registrations", label: "Regs", icon: UserPlus },
+        { href: "/admin?tab=pending", label: "Pending", icon: Clock3 },
         { href: "/admin?tab=activity", label: "Live", icon: Activity },
         { href: "/profile", label: "You", icon: UserRound },
       ]

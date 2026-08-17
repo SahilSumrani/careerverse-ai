@@ -124,6 +124,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         preferredLocations: user.preferredLocations,
         workPreference: user.workPreference ?? null,
         careerStage: user.careerStage ?? null,
+        careerScore: user.careerScore ?? null,
         resumes,
       },
       applications,

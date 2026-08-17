@@ -17,7 +17,7 @@ import { Card, CardDescription, CardHeader, CardTitle, StatCard } from "@/compon
 import { Badge } from "@/components/ui/badge";
 import { Progress, Avatar } from "@/components/ui/avatar";
 import { getCareerContext } from "@/lib/api";
-import { aiService } from "@/lib/ai/service";
+import { deterministicJobMatch } from "@/lib/ai/service";
 import { loadJobsFromFirestore } from "@/lib/jobs-firestore";
 import { hasFirebaseAdminCredentials, getAdminDb } from "@/lib/firebase-admin";
 
@@ -71,29 +71,24 @@ export default async function DashboardPage() {
   const { jobs: liveJobs } = await loadJobsFromFirestore(12);
   const applicationsCount = isStudentFacing ? await countUserApplications(session.user.id) : 0;
   const matched = isStudentFacing
-    ? (
-        await Promise.all(
-          liveJobs.slice(0, 8).map(async (job) => ({
-            job,
-            match: ctx
-              ? await aiService.jobMatching({
-                  ctx,
-                  opportunity: {
-                    title: job.title,
-                    description: job.blurb,
-                    skills: job.tags,
-                    eligibility: null,
-                    type: job.type,
-                  },
-                })
-              : null,
-          })),
-        )
-      )
-        .filter((row) => (row.match?.score ?? 0) >= 40)
+    ? liveJobs
+        .slice(0, 12)
+        .map((job) => ({
+          job,
+          match: ctx
+            ? deterministicJobMatch(ctx, {
+                title: job.title,
+                description: job.blurb,
+                skills: job.tags,
+                eligibility: null,
+                type: job.type,
+              })
+            : null,
+        }))
         .sort((a, b) => (b.match?.score ?? 0) - (a.match?.score ?? 0))
         .slice(0, 4)
     : [];
+  const missingCareerScore = isStudentFacing && (user?.careerScore == null || user.careerScore === 0);
 
   if (isHr) {
     let openRoles = 0;
@@ -168,21 +163,46 @@ export default async function DashboardPage() {
   }
 
   if (isMentor) {
+    if (!user?.mentorApproved) {
+      return (
+        <div className="slide-up space-y-6">
+          <div>
+            <p className="text-sm font-medium text-primary">Mentor workspace</p>
+            <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Hi, {firstName}</h1>
+          </div>
+          <Card className="p-5">
+            <CardHeader>
+              <CardTitle>Waiting for admin approval</CardTitle>
+              <CardDescription>
+                Mentor tools stay limited until an admin approves your profile. Students will not see you in Discover
+                until then.
+              </CardDescription>
+            </CardHeader>
+            {user?.registration?.expertise ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Expertise submitted: <strong className="text-foreground">{user.registration.expertise}</strong>
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs text-muted-foreground">
+              You can still browse the public mentor directory of approved mentors.
+            </p>
+            <div className="mt-4">
+              <Link href="/mentors" className="text-sm font-semibold text-primary">
+                View approved mentors →
+              </Link>
+            </div>
+          </Card>
+        </div>
+      );
+    }
     return (
       <div className="slide-up space-y-6">
         <div>
           <p className="text-sm font-medium text-primary">Mentor workspace</p>
           <h1 className="mt-1 font-display text-3xl tracking-tight md:text-4xl">Hi, {firstName}</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            {user?.mentorApproved
-              ? "Your mentor profile is approved. Guide learners with roadmaps and feedback."
-              : "Mentor registration received. Features stay limited until an admin approves your profile."}
+            Your mentor profile is approved. Guide learners with roadmaps and feedback.
           </p>
-          {!user?.mentorApproved && user?.registration?.expertise ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Expertise submitted: <strong className="text-foreground">{user.registration.expertise}</strong>
-            </p>
-          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <StatCard label="Mentees" value={0} hint="Assignments coming soon" icon={<Users className="h-4 w-4" />} />
@@ -381,6 +401,14 @@ export default async function DashboardPage() {
                 See all
               </Link>
             </div>
+            {missingCareerScore ? (
+              <p className="mb-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+                Generate a career score to enter recruiter Top Talent (90+ and top 20%).{" "}
+                <Link href={user?.onboardingComplete ? "/career" : "/onboarding"} className="font-semibold text-primary">
+                  {user?.onboardingComplete ? "Open Career Intelligence" : "Complete onboarding"}
+                </Link>
+              </p>
+            ) : null}
             <div className="grid gap-3">
               {matched.length ? (
                 matched.map(({ job, match }) => (
@@ -425,11 +453,15 @@ export default async function DashboardPage() {
               ))
               ) : (
                 <EmptyState
-                  title="No strong matches yet"
-                  description="Broaden your skills or preferences to see roles with clearer fit (40%+)."
+                  title={liveJobs.length ? "Add skills to rank these roles" : "No live jobs yet"}
+                  description={
+                    liveJobs.length
+                      ? "Matches use your profile skills against posted job tags. Update your profile or generate a career score."
+                      : "When recruiters publish roles, ranked matches will appear here."
+                  }
                   action={
-                    <Link href="/profile" className="text-sm font-semibold text-primary">
-                      Update profile →
+                    <Link href={missingCareerScore ? "/career" : "/profile"} className="text-sm font-semibold text-primary">
+                      {missingCareerScore ? "Generate career score →" : "Update profile →"}
                     </Link>
                   }
                 />

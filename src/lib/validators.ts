@@ -137,6 +137,7 @@ export const applicationUpdateSchema = z.object({
     "ASSESSMENT",
     "INTERVIEW",
     "OFFER",
+    "HIRED",
     "REJECTED",
     "WITHDRAWN",
   ]),
@@ -245,6 +246,7 @@ export const applicationCreateSchema = z.object({
   matchScore: z.number().min(0).max(100).nullable().optional(),
 });
 
+/** Student-owned status changes — HIRED is recruiter-only. */
 export const applicationPatchSchema = z.object({
   id: z.string().min(1).max(128),
   status: z.enum([
@@ -259,6 +261,11 @@ export const applicationPatchSchema = z.object({
   ]),
   notes: z.string().max(5000).optional(),
   nextAction: z.string().max(500).optional(),
+});
+
+export const recruiterApplicantPatchSchema = z.object({
+  applicationId: z.string().min(1).max(128),
+  status: z.enum(["APPLIED", "ASSESSMENT", "INTERVIEW", "OFFER", "HIRED", "REJECTED"]),
 });
 
 export const opportunityCreateSchema = z.object({

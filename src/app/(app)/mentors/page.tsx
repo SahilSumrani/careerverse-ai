@@ -56,6 +56,7 @@ export default function MentorsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial client fetch
     void load({ soft: mentorsCache.has() });
   }, [load]);
 
@@ -63,7 +64,7 @@ export default function MentorsPage() {
     <div>
       <PageHeader
         title="Mentors"
-        description="Find mentors by expertise and industry. Request a connection from real directory profiles."
+        description="Approved mentors only — find people by expertise and industry, then request a connection."
       />
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 
@@ -75,8 +76,8 @@ export default function MentorsPage() {
         </div>
       ) : !mentors.length ? (
         <EmptyState
-          title="No mentors listed yet"
-          description="Mentor profiles will appear here when available."
+          title="No approved mentors yet"
+          description="Mentor profiles appear here after admin approval."
           action={
             <Link href="/network" className="text-sm text-primary">
               Browse network

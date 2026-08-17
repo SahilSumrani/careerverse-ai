@@ -67,6 +67,7 @@ export async function GET(req: Request) {
         aiUsage: [],
         registrationBreakdown: { students: 0, mentors: 0, recruiters: 0, pendingMentors: 0, pendingRecruiters: 0 },
         recentRegistrations: [],
+        pendingQueue: [],
         recentActivity: [],
         flags: [],
         focusedUser: null,
@@ -117,9 +118,79 @@ export async function GET(req: Request) {
         registration: u.registration ?? null,
         suspendedAt: u.suspendedAt ?? null,
         onboardingComplete: u.onboardingComplete,
+        careerScore: u.careerScore ?? null,
         preferredLocations: u.preferredLocations.slice(0, 5),
         createdAt: u.createdAt,
       }));
+
+    const [hrSnap, mentorSnap] = await Promise.all([
+      db.collection(USERS_COLLECTION).where("roles", "array-contains", "HR").limit(80).get().catch(() => null),
+      db.collection(USERS_COLLECTION).where("roles", "array-contains", "MENTOR").limit(80).get().catch(() => null),
+    ]);
+    const pendingSeen = new Set<string>();
+    const pendingQueue: Array<{
+      id: string;
+      name: string | null;
+      email: string;
+      kind: "mentor" | "recruiter";
+      companyName: string | null;
+      expertise: string | null;
+      careerScore: number | null;
+      createdAt: string | null;
+    }> = [];
+    const considerPending = (u: (typeof recentUsers)[number]) => {
+      if (pendingSeen.has(u.id) || u.suspendedAt) return;
+      const isMentor = u.registration?.track === "mentor" || u.roles.includes("MENTOR");
+      const isHr = u.registration?.track === "hr" || u.roles.includes("HR");
+      if (isMentor && !u.mentorApproved) {
+        pendingSeen.add(u.id);
+        pendingQueue.push({
+          id: u.id,
+          name: u.name ?? null,
+          email: u.email,
+          kind: "mentor",
+          companyName: u.registration?.currentOrganization ?? null,
+          expertise: u.registration?.expertise ?? null,
+          careerScore: u.careerScore ?? null,
+          createdAt: u.createdAt ?? null,
+        });
+      } else if (isHr && !u.recruiterApproved) {
+        pendingSeen.add(u.id);
+        pendingQueue.push({
+          id: u.id,
+          name: u.name ?? null,
+          email: u.email,
+          kind: "recruiter",
+          companyName: u.registration?.companyName ?? null,
+          expertise: u.registration?.jobTitle ?? null,
+          careerScore: u.careerScore ?? null,
+          createdAt: u.createdAt ?? null,
+        });
+      }
+    };
+    for (const u of recentUsers) considerPending(u);
+    for (const snap of [hrSnap, mentorSnap]) {
+      if (!snap) continue;
+      for (const d of snap.docs) {
+        const mapped = mapUserDoc(d.id, d.data());
+        if (!mapped) continue;
+        considerPending({
+          id: mapped.id,
+          name: mapped.name,
+          email: mapped.email,
+          roles: mapped.roles,
+          recruiterApproved: mapped.recruiterApproved ?? false,
+          mentorApproved: mapped.mentorApproved ?? false,
+          registration: mapped.registration ?? null,
+          suspendedAt: mapped.suspendedAt ?? null,
+          onboardingComplete: mapped.onboardingComplete,
+          careerScore: mapped.careerScore ?? null,
+          preferredLocations: mapped.preferredLocations.slice(0, 5),
+          createdAt: mapped.createdAt,
+        });
+      }
+    }
+    pendingQueue.sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
 
     const registrationBreakdown = { students: 0, mentors: 0, recruiters: 0, pendingMentors: 0, pendingRecruiters: 0 };
     for (const u of recentUsers) {
@@ -297,6 +368,7 @@ export async function GET(req: Request) {
       aiUsage,
       registrationBreakdown,
       recentRegistrations,
+      pendingQueue: pendingQueue.slice(0, 50),
       recentActivity,
       flags: flags.slice(0, 40),
       focusedUser,

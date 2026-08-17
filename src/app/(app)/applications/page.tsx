@@ -27,6 +27,7 @@ const STATUSES = [
   "ASSESSMENT",
   "INTERVIEW",
   "OFFER",
+  "HIRED",
   "REJECTED",
   "WITHDRAWN",
 ] as const;
@@ -39,11 +40,22 @@ const TIMELINE: Array<{ key: AppStatus; label: string; hint: string }> = [
   { key: "APPLIED", label: "Applied", hint: "Submitted" },
   { key: "INTERVIEW", label: "Interview", hint: "In progress" },
   { key: "OFFER", label: "Offer", hint: "Decision" },
+  { key: "HIRED", label: "Hired", hint: "Recruiter" },
 ];
 
 const TERMINAL: AppStatus[] = ["REJECTED", "WITHDRAWN"];
+const STUDENT_LOCKED: AppStatus[] = ["HIRED"];
 
-const FILTER_STATUSES: AppStatus[] = ["SAVED", "PREPARING", "APPLIED", "INTERVIEW", "OFFER", "REJECTED", "WITHDRAWN"];
+const FILTER_STATUSES: AppStatus[] = [
+  "SAVED",
+  "PREPARING",
+  "APPLIED",
+  "INTERVIEW",
+  "OFFER",
+  "HIRED",
+  "REJECTED",
+  "WITHDRAWN",
+];
 
 type TabKey = "all" | "active" | "offers" | "closed";
 
@@ -119,6 +131,7 @@ function statusLabel(status: AppStatus) {
   if (status === "APPLIED") return "Applied";
   if (status === "INTERVIEW") return "Interview";
   if (status === "OFFER") return "Offer";
+  if (status === "HIRED") return "Hired";
   if (status === "WITHDRAWN") return "Withdrawn";
   if (status === "REJECTED") return "Closed";
   if (status === "SAVED") return "Saved";
@@ -126,6 +139,9 @@ function statusLabel(status: AppStatus) {
 }
 
 function statusMeta(status: AppStatus) {
+  if (status === "HIRED") {
+    return { tone: "accent" as const, icon: CheckCircle2, className: "text-emerald-700" };
+  }
   if (status === "OFFER") {
     return { tone: "accent" as const, icon: Sparkles, className: "text-emerald-700" };
   }
@@ -155,10 +171,11 @@ function ApplicationTimeline({
 }) {
   const current = statusIndex(item.status);
   const isTerminal = TERMINAL.includes(item.status);
+  const isHired = item.status === "HIRED";
 
   return (
     <div>
-      <ol className="relative grid grid-cols-5 gap-1">
+      <ol className="relative grid grid-cols-6 gap-1">
         {TIMELINE.map((stage, index) => {
           const done = !isTerminal && index < current;
           const active = !isTerminal && index === current;
@@ -177,7 +194,7 @@ function ApplicationTimeline({
               ) : null}
               <button
                 type="button"
-                disabled={updating}
+                disabled={updating || isHired || stage.key === "HIRED"}
                 onClick={() => onUpdate(stage.key)}
                 className="relative z-[1] flex flex-col items-center gap-1.5 disabled:opacity-60"
               >
@@ -211,7 +228,9 @@ function ApplicationTimeline({
       </ol>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {isTerminal ? (
+        {isHired ? (
+          <Badge tone="success">Hired</Badge>
+        ) : isTerminal ? (
           <>
             <Badge tone="warning">{statusLabel(item.status)}</Badge>
             <Button size="sm" variant="outline" disabled={updating} onClick={() => onUpdate("SAVED")}>
@@ -288,6 +307,7 @@ export default function ApplicationsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial client fetch
     void load({ soft: appsCache.has() });
   }, [load]);
 
@@ -297,16 +317,16 @@ export default function ApplicationsPage() {
   }, [items]);
 
   const tabCounts = useMemo(() => {
-    const active = items.filter((i) => !TERMINAL.includes(i.status) && i.status !== "OFFER").length;
-    const offers = items.filter((i) => i.status === "OFFER").length;
+    const active = items.filter((i) => !TERMINAL.includes(i.status) && i.status !== "OFFER" && i.status !== "HIRED").length;
+    const offers = items.filter((i) => i.status === "OFFER" || i.status === "HIRED").length;
     const closed = items.filter((i) => TERMINAL.includes(i.status)).length;
     return { all: items.length, active, offers, closed };
   }, [items]);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
-      if (tab === "active" && (TERMINAL.includes(item.status) || item.status === "OFFER")) return false;
-      if (tab === "offers" && item.status !== "OFFER") return false;
+      if (tab === "active" && (TERMINAL.includes(item.status) || item.status === "OFFER" || item.status === "HIRED")) return false;
+      if (tab === "offers" && item.status !== "OFFER" && item.status !== "HIRED") return false;
       if (tab === "closed" && !TERMINAL.includes(item.status)) return false;
       if (statusFilters.length && !statusFilters.includes(item.status)) return false;
       if (typeFilters.length && !typeFilters.includes(item.opportunity.type)) return false;
@@ -323,6 +343,7 @@ export default function ApplicationsPage() {
   useEffect(() => {
     if (!filtered.length) return;
     if (!selectedId || !filtered.some((i) => i.id === selectedId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- keep selection inside the filtered list
       setSelectedId(filtered[0].id);
     }
   }, [filtered, selectedId]);
@@ -355,6 +376,8 @@ export default function ApplicationsPage() {
   }
 
   async function updateStatus(id: string, status: AppStatus) {
+    const current = items.find((item) => item.id === id);
+    if (STUDENT_LOCKED.includes(status) || current?.status === "HIRED") return;
     setUpdatingId(id);
     setError("");
     setSelectedId(id);
@@ -664,8 +687,8 @@ export default function ApplicationsPage() {
         </div>
       ) : (
         <div className="cv-apps-shell p-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-            {(["SAVED", "PREPARING", "APPLIED", "INTERVIEW", "OFFER"] as AppStatus[]).map((status, colIndex) => (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            {(["SAVED", "PREPARING", "APPLIED", "INTERVIEW", "OFFER", "HIRED"] as AppStatus[]).map((status, colIndex) => (
               <div
                 key={status}
                 className="min-w-0"

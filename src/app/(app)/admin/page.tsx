@@ -33,6 +33,7 @@ type AdminPayload = {
     } | null;
     suspendedAt?: string | null;
     onboardingComplete?: boolean;
+    careerScore?: number | null;
     preferredLocations: string[];
     createdAt?: string;
   }>;
@@ -61,6 +62,16 @@ type AdminPayload = {
     track: Track;
     createdAt: string | null;
     pending: boolean;
+  }>;
+  pendingQueue: Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    kind: "mentor" | "recruiter";
+    companyName: string | null;
+    expertise: string | null;
+    careerScore: number | null;
+    createdAt: string | null;
   }>;
   recentActivity: Array<{
     id: string;
@@ -269,6 +280,57 @@ function AdminConsoleInner() {
             ))}
           </div>
 
+          {(tab === "dashboard" || tab === "pending") && (
+            <section className="cv-admin-card">
+              <h2>Pending approvals</h2>
+              <p className="sub">Mentors and recruiters waiting for one-click approval.</p>
+              <ul className="mt-4 space-y-3">
+                {(data.pendingQueue || []).map((row) => (
+                  <li
+                    key={`${row.kind}-${row.id}`}
+                    className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <button type="button" className="min-w-0 text-left" onClick={() => void openUser(row.id)}>
+                      <p className="font-medium">
+                        {row.name || row.email}{" "}
+                        <Badge tone={row.kind === "mentor" ? "warning" : "success"}>{row.kind}</Badge>
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {row.email}
+                        {row.companyName ? ` · ${row.companyName}` : ""}
+                        {row.expertise ? ` · ${row.expertise}` : ""}
+                        {row.careerScore != null ? ` · score ${row.careerScore}` : ""}
+                      </p>
+                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/admin/users/${encodeURIComponent(row.id)}`}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        Profile
+                      </Link>
+                      <Button
+                        size="sm"
+                        disabled={busyId === row.id}
+                        onClick={() =>
+                          void postAction(
+                            { action: row.kind === "mentor" ? "approve_mentor" : "approve_recruiter", id: row.id },
+                            row.id,
+                          )
+                        }
+                      >
+                        {busyId === row.id ? "Approving…" : "Approve"}
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {!(data.pendingQueue || []).length ? (
+                <p className="mt-3 text-sm text-muted-foreground">No pending mentors or recruiters.</p>
+              ) : null}
+            </section>
+          )}
+
           {(tab === "dashboard" || tab === "registrations") && (
             <div className="cv-admin-grid cv-admin-grid-main">
               <section className="cv-admin-card">
@@ -460,6 +522,7 @@ function AdminConsoleInner() {
                         {u.email} · {u.roles.join(", ") || "STUDENT"}
                         {u.registration?.track ? ` · ${u.registration.track}` : ""}
                         {u.registration?.companyName ? ` · ${u.registration.companyName}` : ""}
+                        {u.careerScore != null ? ` · score ${u.careerScore}` : ""}
                       </p>
                     </button>
                     <div className="flex flex-wrap items-center gap-2">

@@ -52,7 +52,7 @@ const adminPrimary = [
 const adminPlatform = [
   { href: "/opportunities/browse", label: "Browse jobs", icon: Briefcase },
   { href: "/recruiter", label: "Recruiter", icon: ClipboardList },
-  { href: "/profile", label: "Profile", icon: UserRound },
+  { href: "/profile", label: "Account", icon: UserRound },
 ];
 
 const mobilePrimary = [

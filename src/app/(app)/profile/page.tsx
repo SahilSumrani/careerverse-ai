@@ -22,6 +22,70 @@ export default async function ProfilePage() {
   const user = await getUserById(session.user.id);
   if (!user) redirect("/auth/signin");
 
+  const isAdmin = user.roles.includes("PLATFORM_ADMIN");
+  // ponytail: admin account page only; resume/career profile stays for non-admins
+  if (isAdmin) {
+    return (
+      <div className="mx-auto w-full max-w-3xl overflow-x-hidden">
+        <PageHeader
+          title={user.name || "Admin account"}
+          description="Platform administrator account — not a student career profile."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              {user.roles.map((role) => (
+                <Badge key={role}>{role}</Badge>
+              ))}
+              <Link
+                href="/admin"
+                className="inline-flex h-9 items-center rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground"
+              >
+                Open admin console
+              </Link>
+            </div>
+          }
+        />
+
+        <div className="cv-shell">
+          <div className="cv-shell-inner space-y-4 p-4 md:p-5">
+            <section className="cv-panel flex items-center gap-4 p-5">
+              <Avatar name={user.name} className="h-14 w-14 text-sm" />
+              <div className="min-w-0">
+                <p className="font-semibold tracking-tight">{user.name || "Admin"}</p>
+                <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+              </div>
+            </section>
+
+            <section className="cv-panel p-5">
+              <h2 className="text-[15px] font-semibold tracking-tight">Account</h2>
+              <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+                {[
+                  { label: "Role", value: user.roles.join(", ") || "PLATFORM_ADMIN" },
+                  { label: "Account type", value: "Platform administrator" },
+                  { label: "Email", value: user.email },
+                  {
+                    label: "Status",
+                    value: user.suspendedAt ? "Suspended" : "Active",
+                  },
+                ].map((row) => (
+                  <div key={row.label} className="rounded-2xl border border-border bg-muted/25 p-3.5">
+                    <dt className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                      {row.label}
+                    </dt>
+                    <dd className="mt-1 font-medium">{row.value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-4 text-sm text-muted-foreground">
+                Student career fields (stage, education, goals, resume matching) are hidden here because this
+                account manages the platform. Use the admin console for users, registrations, and approvals.
+              </p>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const completeness = user.profileCompleteness ?? 0;
   const links = [
     { label: "LinkedIn", href: user.linkedinUrl },

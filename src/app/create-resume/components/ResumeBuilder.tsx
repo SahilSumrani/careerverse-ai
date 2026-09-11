@@ -1,8 +1,8 @@
 "use client";
 
 import { useForm, useFieldArray } from "react-hook-form";
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, Plus, Trash2, Download } from "lucide-react";
 
 export interface ResumeData {
   personalInfo: {
@@ -46,6 +46,8 @@ export function ResumeBuilder({
   onBack: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"personal" | "education" | "experience" | "projects" | "skills">("personal");
+  const [isExporting, setIsExporting] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const defaultValues: ResumeData = initialData || {
     personalInfo: { fullName: "", email: "", phone: "", linkedin: "", github: "" },
@@ -59,23 +61,63 @@ export function ResumeBuilder({
     defaultValues,
   });
 
+  const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "education" });
+  const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control, name: "experience" });
+  const { fields: projFields, append: appendProj, remove: removeProj } = useFieldArray({ control, name: "projects" });
+
   const formData = watch();
 
-  // We could save formData to localStorage here on change
   useEffect(() => {
     localStorage.setItem("cv_resume_draft", JSON.stringify(formData));
   }, [formData]);
 
+  const exportPDF = () => {
+    // ATS systems need selectable text, not canvas images.
+    // The browser's native print-to-PDF is the best way to get a clean, text-based PDF.
+    window.print();
+  };
+
+  // Helper function to handle string array inputs (comma separated)
+  const renderStringArrayInput = (label: string, fieldPath: any, placeholder: string) => {
+    // We register a simple text input but the underlying value is array of strings.
+    // For simplicity in this demo, we'll let user type comma separated strings.
+    const val = (watch(fieldPath) as string[])?.join(", ") || "";
+    return (
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+        <input 
+          type="text"
+          value={val}
+          onChange={(e) => {
+            const arr = e.target.value.split(",").map(s => s.trim());
+            // This is a hacky way to update. For production, use Controller.
+            register(fieldPath).onChange({ target: { name: fieldPath, value: arr }});
+          }}
+          placeholder={placeholder}
+          className="w-full p-2 border border-slate-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+        />
+        <p className="text-xs text-slate-500 mt-1">Separate with commas</p>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-50">
       {/* LEFT: Editor */}
-      <div className="w-full md:w-1/2 h-full flex flex-col border-r border-slate-200 bg-white">
+      <div className="w-full md:w-1/2 h-full flex flex-col border-r border-slate-200 bg-white print:hidden">
         <div className="flex items-center justify-between p-4 border-b border-slate-200">
            <button onClick={onBack} className="text-slate-600 hover:text-slate-900 font-medium">
              &larr; Back
            </button>
            <h2 className="font-bold text-lg text-slate-800">Editor</h2>
-           <div className="w-16"></div>
+           <button 
+             onClick={exportPDF} 
+             disabled={isExporting}
+             className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-md hover:bg-blue-700 disabled:opacity-50"
+           >
+             {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+             <span className="text-sm font-medium">Export PDF</span>
+           </button>
         </div>
         
         {/* Tabs */}
@@ -121,51 +163,191 @@ export function ResumeBuilder({
                </div>
              </div>
            )}
-           {/* We will add other tabs (Education, Experience, etc.) in a fuller implementation */}
-           {activeTab !== "personal" && (
-             <div className="text-slate-500 italic mt-8 text-center">
-               This section ({activeTab}) will contain dynamic fields to add multiple items using react-hook-form field arrays.
+
+           {activeTab === "education" && (
+             <div className="space-y-6 animate-in fade-in">
+               {eduFields.map((field, index) => (
+                 <div key={field.id} className="p-4 border border-slate-200 rounded-lg relative bg-slate-50">
+                   <button type="button" onClick={() => removeEdu(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1">
+                     <Trash2 size={18} />
+                   </button>
+                   <div className="grid gap-4 mt-2">
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Institution</label>
+                       <input {...register(`education.${index}.institution`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Degree / Field of Study</label>
+                       <input {...register(`education.${index}.degree`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                     </div>
+                     <div className="grid grid-cols-3 gap-2">
+                       <div>
+                         <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
+                         <input {...register(`education.${index}.startDate`)} placeholder="e.g. Aug 2020" className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                       </div>
+                       <div>
+                         <label className="block text-xs font-medium text-slate-700 mb-1">End Date</label>
+                         <input {...register(`education.${index}.endDate`)} placeholder="e.g. May 2024" className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                       </div>
+                       <div>
+                         <label className="block text-xs font-medium text-slate-700 mb-1">CGPA / Score</label>
+                         <input {...register(`education.${index}.score`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               <button type="button" onClick={() => appendEdu({ institution: "", degree: "", startDate: "", endDate: "", score: "" })} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                 <Plus size={18} /> Add Education
+               </button>
+             </div>
+           )}
+
+           {activeTab === "experience" && (
+             <div className="space-y-6 animate-in fade-in">
+               {expFields.map((field, index) => (
+                 <div key={field.id} className="p-4 border border-slate-200 rounded-lg relative bg-slate-50">
+                   <button type="button" onClick={() => removeExp(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1">
+                     <Trash2 size={18} />
+                   </button>
+                   <div className="grid gap-4 mt-2">
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Company</label>
+                       <input {...register(`experience.${index}.company`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Position / Title</label>
+                       <input {...register(`experience.${index}.position`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                     </div>
+                     <div className="grid grid-cols-2 gap-2">
+                       <div>
+                         <label className="block text-xs font-medium text-slate-700 mb-1">Start Date</label>
+                         <input {...register(`experience.${index}.startDate`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                       </div>
+                       <div>
+                         <label className="block text-xs font-medium text-slate-700 mb-1">End Date</label>
+                         <input {...register(`experience.${index}.endDate`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                       </div>
+                     </div>
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Description (Bullets, separated by new lines)</label>
+                       <textarea 
+                         className="w-full p-2 text-sm border border-slate-300 rounded-md h-24"
+                         value={(formData.experience[index]?.description || []).join("\n")}
+                         onChange={(e) => {
+                           const lines = e.target.value.split("\n");
+                           register(`experience.${index}.description`).onChange({ target: { name: `experience.${index}.description`, value: lines }});
+                         }}
+                       />
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               <button type="button" onClick={() => appendExp({ company: "", position: "", startDate: "", endDate: "", description: [] })} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                 <Plus size={18} /> Add Experience
+               </button>
+             </div>
+           )}
+
+           {activeTab === "projects" && (
+             <div className="space-y-6 animate-in fade-in">
+               {projFields.map((field, index) => (
+                 <div key={field.id} className="p-4 border border-slate-200 rounded-lg relative bg-slate-50">
+                   <button type="button" onClick={() => removeProj(index)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1">
+                     <Trash2 size={18} />
+                   </button>
+                   <div className="grid gap-4 mt-2">
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Project Name</label>
+                       <input {...register(`projects.${index}.name`)} className="w-full p-2 text-sm border border-slate-300 rounded-md" />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Technologies (comma separated)</label>
+                       <input 
+                         className="w-full p-2 text-sm border border-slate-300 rounded-md"
+                         value={(formData.projects[index]?.technologies || []).join(", ")}
+                         onChange={(e) => {
+                           const arr = e.target.value.split(",").map(s => s.trim());
+                           register(`projects.${index}.technologies`).onChange({ target: { name: `projects.${index}.technologies`, value: arr }});
+                         }}
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-xs font-medium text-slate-700 mb-1">Description (Bullets, separated by new lines)</label>
+                       <textarea 
+                         className="w-full p-2 text-sm border border-slate-300 rounded-md h-24"
+                         value={(formData.projects[index]?.description || []).join("\n")}
+                         onChange={(e) => {
+                           const lines = e.target.value.split("\n");
+                           register(`projects.${index}.description`).onChange({ target: { name: `projects.${index}.description`, value: lines }});
+                         }}
+                       />
+                     </div>
+                   </div>
+                 </div>
+               ))}
+               <button type="button" onClick={() => appendProj({ name: "", technologies: [], description: [] })} className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                 <Plus size={18} /> Add Project
+               </button>
+             </div>
+           )}
+
+           {activeTab === "skills" && (
+             <div className="space-y-6 animate-in fade-in">
+                {renderStringArrayInput("Languages (e.g. JavaScript, Python)", "skills.languages", "JavaScript, Python, C++")}
+                {renderStringArrayInput("Frameworks & Libraries (e.g. React, Next.js)", "skills.frameworks", "React, Node.js, Next.js")}
+                {renderStringArrayInput("Tools & Platforms (e.g. Git, AWS)", "skills.tools", "Git, Docker, AWS, Firebase")}
              </div>
            )}
         </div>
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="w-full md:w-1/2 h-full bg-slate-100 p-8 overflow-y-auto flex items-start justify-center">
+      <div className="w-full md:w-1/2 h-full bg-slate-100 p-4 md:p-8 overflow-y-auto flex items-start justify-center">
         {/* A4 Paper style preview */}
-        <div className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-[10mm] print:w-auto print:shadow-none print:m-0">
+        <div ref={previewRef} className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-[10mm] print:w-auto print:shadow-none print:m-0 shrink-0 transform origin-top md:scale-100 scale-75">
            <header className="text-center border-b-2 border-slate-900 pb-4 mb-4">
-              <h1 className="text-3xl font-bold uppercase tracking-wider text-slate-900">{formData.personalInfo.fullName || "YOUR NAME"}</h1>
-              <div className="text-sm text-slate-600 mt-2 space-x-2">
-                 <span>{formData.personalInfo.email || "email@example.com"}</span>
-                 <span>|</span>
-                 <span>{formData.personalInfo.phone || "(123) 456-7890"}</span>
-                 {formData.personalInfo.linkedin && (
-                   <>
-                     <span>|</span>
-                     <span>{formData.personalInfo.linkedin}</span>
-                   </>
-                 )}
-                 {formData.personalInfo.github && (
-                   <>
-                     <span>|</span>
-                     <span>{formData.personalInfo.github}</span>
-                   </>
-                 )}
+              <h1 className="text-3xl font-bold uppercase tracking-wider text-slate-900">{formData.personalInfo?.fullName || "YOUR NAME"}</h1>
+              <div className="text-sm text-slate-600 mt-2 flex flex-wrap justify-center gap-2">
+                 {formData.personalInfo?.email && <span>{formData.personalInfo.email}</span>}
+                 {formData.personalInfo?.email && formData.personalInfo?.phone && <span>|</span>}
+                 {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
+                 {(formData.personalInfo?.email || formData.personalInfo?.phone) && formData.personalInfo?.linkedin && <span>|</span>}
+                 {formData.personalInfo?.linkedin && <span>{formData.personalInfo.linkedin}</span>}
+                 {(formData.personalInfo?.email || formData.personalInfo?.phone || formData.personalInfo?.linkedin) && formData.personalInfo?.github && <span>|</span>}
+                 {formData.personalInfo?.github && <span>{formData.personalInfo.github}</span>}
               </div>
            </header>
 
-           {formData.experience.length > 0 && (
+           {formData.education?.length > 0 && (
+             <section className="mb-4">
+               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Education</h2>
+               {formData.education.map((edu, i) => (
+                 <div key={i} className="mb-2">
+                   <div className="flex justify-between font-bold text-slate-800">
+                     <span>{edu.institution}</span>
+                     <span>{edu.startDate} {edu.startDate && edu.endDate && "-"} {edu.endDate}</span>
+                   </div>
+                   <div className="flex justify-between text-sm text-slate-700">
+                     <span>{edu.degree}</span>
+                     {edu.score && <span>CGPA/Score: {edu.score}</span>}
+                   </div>
+                 </div>
+               ))}
+             </section>
+           )}
+
+           {formData.experience?.length > 0 && (
              <section className="mb-4">
                <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Experience</h2>
                {formData.experience.map((exp, i) => (
                  <div key={i} className="mb-3">
-                   <div className="flex justify-between font-bold">
+                   <div className="flex justify-between font-bold text-slate-800">
                      <span>{exp.position} at {exp.company}</span>
-                     <span>{exp.startDate} - {exp.endDate}</span>
+                     <span>{exp.startDate} {exp.startDate && exp.endDate && "-"} {exp.endDate}</span>
                    </div>
                    <ul className="list-disc list-outside ml-4 mt-1 text-sm text-slate-700">
-                     {exp.description.map((desc, j) => (
+                     {exp.description?.filter(Boolean).map((desc, j) => (
                        <li key={j}>{desc}</li>
                      ))}
                    </ul>
@@ -174,19 +356,36 @@ export function ResumeBuilder({
              </section>
            )}
 
-           {formData.projects.length > 0 && (
+           {formData.projects?.length > 0 && (
              <section className="mb-4">
                <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Projects</h2>
                {formData.projects.map((proj, i) => (
                  <div key={i} className="mb-3">
-                   <div className="font-bold">{proj.name} | <span className="font-normal italic text-slate-600">{proj.technologies.join(", ")}</span></div>
+                   <div className="font-bold text-slate-800">{proj.name} {proj.technologies?.length > 0 && <span className="font-normal italic text-slate-600">| {proj.technologies.join(", ")}</span>}</div>
                    <ul className="list-disc list-outside ml-4 mt-1 text-sm text-slate-700">
-                     {proj.description.map((desc, j) => (
+                     {proj.description?.filter(Boolean).map((desc, j) => (
                        <li key={j}>{desc}</li>
                      ))}
                    </ul>
                  </div>
                ))}
+             </section>
+           )}
+
+           {(formData.skills?.languages?.length > 0 || formData.skills?.frameworks?.length > 0 || formData.skills?.tools?.length > 0) && (
+             <section className="mb-4">
+               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Skills</h2>
+               <div className="text-sm text-slate-700 space-y-1">
+                 {formData.skills.languages?.filter(Boolean).length > 0 && (
+                   <div><span className="font-bold">Languages:</span> {formData.skills.languages.filter(Boolean).join(", ")}</div>
+                 )}
+                 {formData.skills.frameworks?.filter(Boolean).length > 0 && (
+                   <div><span className="font-bold">Frameworks:</span> {formData.skills.frameworks.filter(Boolean).join(", ")}</div>
+                 )}
+                 {formData.skills.tools?.filter(Boolean).length > 0 && (
+                   <div><span className="font-bold">Tools:</span> {formData.skills.tools.filter(Boolean).join(", ")}</div>
+                 )}
+               </div>
              </section>
            )}
         </div>

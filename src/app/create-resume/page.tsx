@@ -49,7 +49,9 @@ export default function CreateResumePage() {
   if (flowState === "builder") {
     return (
       <div className="flex flex-col min-h-screen">
-        <SiteHeader />
+        <div className="print:hidden">
+          <SiteHeader />
+        </div>
         <ResumeBuilder initialData={resumeData} onBack={() => setFlowState("onboarding")} />
       </div>
     );

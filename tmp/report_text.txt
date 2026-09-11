@@ -1,0 +1,139 @@
+LEARNING REPORT
+Google Gurugram — Khushiyon Ka Tyohaar
+Annual Festive Meet
+Date: 6 August 2026
+Venue: Google Office, Gurugram
+Nature of Document: Post-event learning summary
+(Derived from on-site session slides and materials)
+────────────────────────────────────────────────
+1. Purpose of This Report
+This report documents what was learned during Google's Khushiyon Ka Tyohaar (Annual Festive Meet) at the Gurugram office. It focuses only on insights, frameworks, and data shared in the sessions — not on personal photos or campus sightseeing. The goal is to convert the day's content into clear, reusable learning for marketing, product, and growth work.
+2. Event Context
+Event: Khushiyon Ka Tyohaar — Annual Festive Meet
+Host: Google (Gurugram office)
+Date: 6 August 2026
+Theme: How India shops during the festive season, and how brands can win using Search, YouTube, AI, CTV, local, and retail media
+Format: Expert presentations + product booths (Creator Partnerships, Commerce Media Network) + structured feedback
+Speakers noted from sessions
+Abhinav Kishore — India Head, SMB, Google Cloud
+Ramneek Bhardwaj — Business Lead, North & East India, New Business Sales
+Dhwani Rathod — Business Development Consultant, New Business Sales
+Jahnvi Sangal — Business Development Consultant, New Business Sales
+3. Core Learning Themes — Kya Seekhne Ko Mila
+Neeche diye gaye points isi visit ki asli seekh hain. Har theme ke andar session data + practical implication dono diye gaye hain.
+3.1 Festive Market Reality: Size, Timing & Growth Drivers
+Festive commerce in India is not a Diwali-week spike. Interest and spend build early, and growth is coming from structural shifts — not only discounts.
+Market scale: Festive Gross Merchandise Value context of about Rs 1.2 Lakh Crore (2025).
+Velocity: The first 11 days of the 2025 sales event alone crossed Rs 60,000+ Crore GMV.
+Timing: Search interest for 'Diwali Sale' starts as early as August — planning must begin then, not in October.
+Growth (~27% festive shopping growth) came from three forces: Tier 2+ city demand, higher spend per buyer, and quick commerce.
+Tier 2+ / Bharat: 60–65% of shoppers; roughly half of incremental e-retail orders.
+Spend: About 70% of buyers spent more than in 2024 (GST cuts + early platform access).
+Quick commerce: Net order value more than doubled YoY; festive share rose from 8% (2024) to 12%.
+Who shops: Gen Z is 40–45% of the e-retail shopper base — a core cohort, not a niche.
+Learning: Festive strategy must prioritise Bharat + Gen Z, start in August, and treat quick commerce as a mainstream festive channel.
+3.2 Shopper Journey: Research-Heavy, Not Impulse-Only
+The strongest behavioural lesson: festive buying is a multi-touch journey. Discovery may start on social, but validation and immersion happen on Google and YouTube.
+9 in 10 shoppers research before purchasing; 33% do 'a lot of research'.
+Average journey intensity: ~8.3 search-engine searches and ~7.7 online video views.
+Immersive stage: After inspiration, shoppers go deep — checking whether a product fits their identity and physical space. It is not a 'quick click'.
+Social → Search handoff: 7 in 10 festive shoppers who saw brands on Facebook/Instagram went to Google Search to research further.
+Omnichannel reality: Shoppers make ~6.6 physical store visits on average; 84% check digital sources before visiting a store.
+Speed closes the sale: 81% choose where to buy based on delivery speed; 90% want reliable shipping in two days or less.
+Nearly 30% used quick commerce for festive shopping — it has become a staple final step of the journey.
+Learning: Winning festive demand means owning research moments (Search/YouTube), connecting digital to store, and promising (and delivering) speed.
+3.3 AI Is Now Shopping Infrastructure
+The biggest mindset shift from the sessions: shoppers will no longer only 'try' AI — they will rely on it, especially for complex categories.
+AI Overview: ~2.5 billion monthly users.
+AI Mode: 1 billion+ monthly users (Gemini 1.5 era capabilities highlighted).
+95% of consumers using AI Mode for shopping find it helpful.
+AI acts as a personal shopper: comparing specs, clarifying needs, simplifying jargon, shortening decision time, and answering nuanced questions (~38–40% across roles).
+Highest AI chatbot dependency: Mobile devices (89%), large home appliances (87%), furniture (84%), consumer electronics (83%). Apparel is lower but still material (69%).
+India leads globally in AI marketing expectations: 53% of Indian CMOs expect 5–9% incremental growth from AI in marketing; 27% rank AI adoption in their top-3 priorities.
+Retail AI impact (Google Cloud framing): >$3T estimated agentic commerce revenue by 2030; 81% of consumers expect faster service due to AI; ~24% reduction in frontline burnout when AI is used.
+Data foundation for AI retail: Cleanliness (accurate data), Connectivity (open to agents), Context (actionable enrichment).
+Learning: For any product or brand, AI-ready content (clear specs, comparisons, FAQs, structured feeds) is now as important as creative ads.
+3.4 Media Systems That Matter This Festive Season
+YouTube Shorts & Creator Partnerships
+Short-form video is a primary catalyst for impulse purchases: 61% of shoppers who bought quickly (with little research) used YouTube Shorts in their journey.
+Creator Partnerships positioning: 'Capture Hearts (and Carts)' — emotional trust plus commerce.
+Repeatable flow: Connect with creators → create brand videos → boost as Partnership Ads → measure in Creator Partnership Hub.
+YouTube Prime Time Masthead (IPL example) was presented as a high-impact 'first eyeball' format.
+Connected TV (CTV)
+Google positioned as the CTV destination for the festive season.
+YouTube: #1 streaming platform in India.
+Google TV: #1 TV base operating system in India.
+DV360: access to ~86% reach of CTV households in India.
+Local / location advantage
+In an AI-first world, location is a competitive advantage.
+Three-step local framework: Be Visible (Business Profile + AI Search) → Build Connections (local conversion goals / Local Campaigns) → Drive Performance (connect and activate data signals).
+Ride-hailing inventory
+Premium high-intent placements on apps like Uber and Rapido (On Trip / Journey Ads; native & display; location-based shopping-hub formats).
+Framed opportunity: be seen during high-intent commute moments.
+Commerce Media Suite & Performance Max
+Commerce Media Suite now spans multiple campaign types: Performance Max, Video, Demand Gen, Search, and Shopping.
+Steer AI — do not set and forget: channel steering, demographic exclusions, first-party exclusions (e.g. returners), and product-value bid adjustments.
+Measurement & privacy
+iOS performance stability can be recovered with on-device conversion measurement — a privacy-preserving way to restore signal for models.
+Media planning (DV360 / Canvas)
+Media planning can be visualised geographically (Brand GRPs, Social GRPs, investment by city/state).
+Festive next steps taught: (1) consolidate media buys on DV360 across the journey, (2) activate programmatic DOOH where people gather, (3) align briefs with Google/DV360 POCs.
+Learning: Festive media is a system — Search + YouTube + CTV + Local + Creators + measurement — not isolated channel spends.
+3.5 Strategic Playbooks Shared on Stage
+Boosting Playbook: Gaining the Edge — practical levers for festive media uplift.
+Inspire consumers — Tip set A:
+Be Present — Future of Search
+Connect the Dots — Omnichannel solutions
+Multiply influence
+Inspire consumers — Tip set B:
+Own the moment
+Own the Living Room (CTV / YouTube / Google TV)
+Command Attention — Masthead and impact formats
+Booth-level concepts reinforced the same system thinking: Creator Partnerships for hearts-and-carts, and Commerce Media Network for Awareness → Consideration → Conversion using retail signals.
+4. Personal Takeaways — Mujhe Specifically Kya Mila
+Ye section event ke after-reflection se aata hai: jo cheezein ab practical soch / kaam mein seedha apply ho sakti hain.
+1. Festive planning starts in August
+Diwali interest builds early. Waiting for sale week means missing the research window when shoppers are already immersing on Google and YouTube.
+2. Bharat + Gen Z are the dual growth engine
+Tier 2+ cities and Gen Z together define volume and culture. Ignoring either means leaving the larger festive opportunity untouched.
+3. Social discovers; Google decides
+Even after Instagram/Facebook discovery, most festive shoppers validate on Google Search. SEO, Shopping feed quality, AI Overview readiness, and YouTube education content matter more than vanity social reach.
+4. AI is shopping infrastructure, not a novelty
+For complex categories, AI already behaves like a personal shopper. Product data, clear specs, and comparison content are the new storefront UX.
+5. Speed is a marketing message
+With quick commerce rising and two-day shipping expectations dominant, delivery reliability is part of brand promise — not only an operations KPI.
+6. Creators need a measurement loop
+Creator work should move from one-off posts to a system: create → boost as Partnership Ads → measure impact. Hearts without carts is incomplete.
+7. Steer AI; do not only automate
+PMax and Commerce Media Suite work best when humans guide them with channel controls, exclusions, and product-value signals.
+8. Measurement recovery is a competitive skill
+Privacy changes (especially iOS) reduce signal. On-device conversion measurement and clean first-party data are growth capabilities, not backend chores.
+9. Omnichannel must be designed, not assumed
+Digital research, store visits, CTV living-room presence, and festive DOOH all connect. Channel-silo campaigns underperform a journey-based plan.
+10. Culture and commerce are linked at Google
+The event itself showed how Google connects cultural moments (festivals) with product systems (ads, cloud, retail media) — a useful model for product storytelling.
+5. Key Statistics Reference
+Selected figures presented during the sessions (as shown on slides / cited studies):
+
+6. Closing Summary
+Khushiyon Ka Tyohaar was a compressed masterclass on how India shops in 2025–26: research-heavy, AI-assisted, omnichannel, speed-obsessed, and creator-influenced. The clearest overall lesson is that festive winners prepare early, respect Bharat and Gen Z, feed AI good data, and show up as a connected system across Search, YouTube, CTV, local, and retail media — not as scattered campaigns.
+End-of-day feedback reflected high value from the sessions (maximum satisfaction rating).
+Document type: Professional learning report  |  Based on analysis of event slides and materials  |  Figures as presented during Google Khushiyon Ka Tyohaar, Gurugram (6 August 2026).
+Metric | Insight
+Rs 1.2 Lakh Cr | Festive GMV context (2025)
+Rs 60K+ Cr | GMV in first 11 days of 2025 sales event
+27% | Festive shopping growth explained in session
+60–65% | Shoppers from Tier 2+ cities
+40–45% | Gen Z share of e-retail shoppers
+12% (from 8%) | Quick commerce share of festive shopping
+9 in 10 | Shoppers who research before purchase
+7 in 10 | Social discoverers who then search on Google
+84% | Research online before a store visit
+6.6 | Average physical store visits in journey
+81% / 90% | Buy based on speed / want ≤2-day shipping
+61% | Fast impulse buyers who used YouTube Shorts
+89% | AI chatbot use for mobile-device shopping
+95% | Find AI Mode helpful for shopping
+53% | Indian CMOs expect 5–9% growth from AI marketing
+>$3T by 2030 | Estimated agentic commerce revenue
+86% | CTV household reach via DV360 in India

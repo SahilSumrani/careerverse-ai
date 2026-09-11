@@ -14,7 +14,7 @@ export function HomeResumeCta() {
               <li>Intelligent feedback engine</li>
               <li>Optimized for freshers</li>
             </ul>
-            <Link href="/resume" className="cv-resume-cta-btn">
+            <Link href="/create-resume" className="cv-resume-cta-btn">
               Build my resume <span aria-hidden>&gt;</span>
             </Link>
           </div>

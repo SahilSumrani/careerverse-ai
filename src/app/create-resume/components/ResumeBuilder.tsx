@@ -2,7 +2,7 @@
 
 import { useForm, useFieldArray } from "react-hook-form";
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Plus, Trash2, Download } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Mic, MicOff, Volume2, Sparkles } from "lucide-react";
 
 export interface ResumeData {
   personalInfo: {
@@ -47,6 +47,9 @@ export function ResumeBuilder({
 }) {
   const [activeTab, setActiveTab] = useState<"personal" | "education" | "experience" | "projects" | "skills">("personal");
   const [isExporting, setIsExporting] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
   const previewRef = useRef<HTMLDivElement>(null);
 
   const defaultValues: ResumeData = initialData || {
@@ -75,6 +78,76 @@ export function ResumeBuilder({
     // ATS systems need selectable text, not canvas images.
     // The browser's native print-to-PDF is the best way to get a clean, text-based PDF.
     window.print();
+  };
+
+  const startListening = () => {
+    // @ts-ignore
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support the Web Speech API. Please try Google Chrome.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setAiMessage("Listening...");
+    };
+
+    recognition.onresult = async (event: any) => {
+      setIsListening(false);
+      const transcript = event.results[0][0].transcript;
+      setAiMessage(`Heard: "${transcript}"`);
+      setIsProcessingVoice(true);
+
+      try {
+        const res = await fetch("/api/resume/assistant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript, resumeState: formData }),
+        });
+
+        if (!res.ok) throw new Error("Failed to process voice");
+        
+        const data = await res.json();
+        if (data.success && data.data) {
+          const { updatedResume, aiResponse } = data.data;
+          
+          // Overwrite form state with AI updated state
+          Object.keys(updatedResume).forEach(key => {
+             // @ts-ignore
+             register(key).onChange({ target: { name: key, value: updatedResume[key] }});
+          });
+          
+          setAiMessage(aiResponse);
+          
+          // Speak back
+          const synth = window.speechSynthesis;
+          const utterance = new SpeechSynthesisUtterance(aiResponse);
+          synth.speak(utterance);
+        }
+      } catch (err) {
+        console.error(err);
+        setAiMessage("Sorry, I encountered an error updating your resume.");
+      } finally {
+        setIsProcessingVoice(false);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      setAiMessage("Sorry, I didn't catch that.");
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
   };
 
   // Helper function to handle string array inputs (comma separated)
@@ -305,30 +378,63 @@ export function ResumeBuilder({
       {/* RIGHT: Live Preview */}
       <div className="w-full md:w-1/2 h-full bg-slate-100 p-4 md:p-8 overflow-y-auto flex items-start justify-center">
         {/* A4 Paper style preview */}
-        <div ref={previewRef} className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-[10mm] print:w-auto print:shadow-none print:m-0 shrink-0 transform origin-top md:scale-100 scale-75">
-           <header className="text-center border-b-2 border-slate-900 pb-4 mb-4">
-              <h1 className="text-3xl font-bold uppercase tracking-wider text-slate-900">{formData.personalInfo?.fullName || "YOUR NAME"}</h1>
-              <div className="text-sm text-slate-600 mt-2 flex flex-wrap justify-center gap-2">
-                 {formData.personalInfo?.email && <span>{formData.personalInfo.email}</span>}
-                 {formData.personalInfo?.email && formData.personalInfo?.phone && <span>|</span>}
-                 {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
-                 {(formData.personalInfo?.email || formData.personalInfo?.phone) && formData.personalInfo?.linkedin && <span>|</span>}
-                 {formData.personalInfo?.linkedin && <span>{formData.personalInfo.linkedin}</span>}
-                 {(formData.personalInfo?.email || formData.personalInfo?.phone || formData.personalInfo?.linkedin) && formData.personalInfo?.github && <span>|</span>}
-                 {formData.personalInfo?.github && <span>{formData.personalInfo.github}</span>}
+        <div ref={previewRef} className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-[15mm] print:w-auto print:shadow-none print:p-0 print:m-0 shrink-0 transform origin-top md:scale-100 scale-75 font-sans">
+           <header className="text-center mb-6">
+              <h1 className="text-4xl font-bold tracking-wide text-slate-900 mb-2">{formData.personalInfo?.fullName || "YOUR NAME"}</h1>
+              <div className="text-[13px] text-slate-700 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+                 {formData.personalInfo?.email && (
+                   <span className="flex items-center gap-1">
+                     <span className="text-[#1E90FF]">&#9993;</span> {formData.personalInfo.email}
+                   </span>
+                 )}
+                 {formData.personalInfo?.phone && (
+                   <span className="flex items-center gap-1">
+                     <span className="text-[#1E90FF]">&#9742;</span> {formData.personalInfo.phone}
+                   </span>
+                 )}
+                 {formData.personalInfo?.linkedin && (
+                   <span className="flex items-center gap-1">
+                     <span className="text-[#1E90FF]">&#128279;</span> {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
+                   </span>
+                 )}
+                 {formData.personalInfo?.github && (
+                   <span className="flex items-center gap-1">
+                     <span className="text-[#1E90FF]">&#128279;</span> {formData.personalInfo.github.replace(/^https?:\/\/(www\.)?/, '')}
+                   </span>
+                 )}
               </div>
            </header>
 
+           {formData.experience?.length > 0 && (
+             <section className="mb-5">
+               <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Work Experience</h2>
+               {formData.experience.map((exp, i) => (
+                 <div key={i} className="mb-4">
+                   <div className="flex justify-between font-bold text-slate-900">
+                     <span>{exp.company}</span>
+                     <span>{exp.startDate} {exp.startDate && exp.endDate && "-"} {exp.endDate}</span>
+                   </div>
+                   <div className="text-sm font-medium text-slate-700 italic mb-1">{exp.position}</div>
+                   <ul className="list-disc list-outside ml-5 mt-1 text-[13px] text-slate-800 space-y-1">
+                     {exp.description?.filter(Boolean).map((desc, j) => (
+                       <li key={j} dangerouslySetInnerHTML={{ __html: desc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                     ))}
+                   </ul>
+                 </div>
+               ))}
+             </section>
+           )}
+
            {formData.education?.length > 0 && (
-             <section className="mb-4">
-               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Education</h2>
+             <section className="mb-5">
+               <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Education</h2>
                {formData.education.map((edu, i) => (
-                 <div key={i} className="mb-2">
-                   <div className="flex justify-between font-bold text-slate-800">
+                 <div key={i} className="mb-3">
+                   <div className="flex justify-between font-bold text-slate-900">
                      <span>{edu.institution}</span>
                      <span>{edu.startDate} {edu.startDate && edu.endDate && "-"} {edu.endDate}</span>
                    </div>
-                   <div className="flex justify-between text-sm text-slate-700">
+                   <div className="flex justify-between text-[13px] text-slate-700 mt-1">
                      <span>{edu.degree}</span>
                      {edu.score && <span>CGPA/Score: {edu.score}</span>}
                    </div>
@@ -337,34 +443,22 @@ export function ResumeBuilder({
              </section>
            )}
 
-           {formData.experience?.length > 0 && (
-             <section className="mb-4">
-               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Experience</h2>
-               {formData.experience.map((exp, i) => (
-                 <div key={i} className="mb-3">
-                   <div className="flex justify-between font-bold text-slate-800">
-                     <span>{exp.position} at {exp.company}</span>
-                     <span>{exp.startDate} {exp.startDate && exp.endDate && "-"} {exp.endDate}</span>
-                   </div>
-                   <ul className="list-disc list-outside ml-4 mt-1 text-sm text-slate-700">
-                     {exp.description?.filter(Boolean).map((desc, j) => (
-                       <li key={j}>{desc}</li>
-                     ))}
-                   </ul>
-                 </div>
-               ))}
-             </section>
-           )}
-
            {formData.projects?.length > 0 && (
-             <section className="mb-4">
-               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Projects</h2>
+             <section className="mb-5">
+               <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Projects</h2>
                {formData.projects.map((proj, i) => (
-                 <div key={i} className="mb-3">
-                   <div className="font-bold text-slate-800">{proj.name} {proj.technologies?.length > 0 && <span className="font-normal italic text-slate-600">| {proj.technologies.join(", ")}</span>}</div>
-                   <ul className="list-disc list-outside ml-4 mt-1 text-sm text-slate-700">
+                 <div key={i} className="mb-4">
+                   <div className="font-bold text-slate-900 flex justify-between">
+                     <span>{proj.name}</span>
+                   </div>
+                   {proj.technologies?.length > 0 && (
+                     <div className="text-[13px] text-slate-700 italic mb-1">
+                       Tech Stack: {proj.technologies.join(", ")}
+                     </div>
+                   )}
+                   <ul className="list-disc list-outside ml-5 mt-1 text-[13px] text-slate-800 space-y-1">
                      {proj.description?.filter(Boolean).map((desc, j) => (
-                       <li key={j}>{desc}</li>
+                       <li key={j} dangerouslySetInnerHTML={{ __html: desc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
                      ))}
                    </ul>
                  </div>
@@ -373,22 +467,52 @@ export function ResumeBuilder({
            )}
 
            {(formData.skills?.languages?.length > 0 || formData.skills?.frameworks?.length > 0 || formData.skills?.tools?.length > 0) && (
-             <section className="mb-4">
-               <h2 className="text-lg font-bold text-slate-800 uppercase tracking-wide border-b border-slate-300 mb-2">Skills</h2>
-               <div className="text-sm text-slate-700 space-y-1">
+             <section className="mb-5">
+               <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Skills</h2>
+               <div className="text-[13px] text-slate-800 space-y-1.5">
                  {formData.skills.languages?.filter(Boolean).length > 0 && (
-                   <div><span className="font-bold">Languages:</span> {formData.skills.languages.filter(Boolean).join(", ")}</div>
+                   <div><span className="font-bold text-slate-900">Languages:</span> {formData.skills.languages.filter(Boolean).join(", ")}</div>
                  )}
                  {formData.skills.frameworks?.filter(Boolean).length > 0 && (
-                   <div><span className="font-bold">Frameworks:</span> {formData.skills.frameworks.filter(Boolean).join(", ")}</div>
+                   <div><span className="font-bold text-slate-900">Frameworks:</span> {formData.skills.frameworks.filter(Boolean).join(", ")}</div>
                  )}
                  {formData.skills.tools?.filter(Boolean).length > 0 && (
-                   <div><span className="font-bold">Tools:</span> {formData.skills.tools.filter(Boolean).join(", ")}</div>
+                   <div><span className="font-bold text-slate-900">Cloud/Databases/Tools:</span> {formData.skills.tools.filter(Boolean).join(", ")}</div>
                  )}
                </div>
              </section>
            )}
         </div>
+      </div>
+
+      {/* Floating Voice Assistant Button */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
+        {aiMessage && (
+          <div className="mb-4 bg-white border border-blue-200 shadow-lg rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles size={16} className="text-blue-500" />
+              <span className="font-bold text-sm text-slate-800">AI Assistant</span>
+            </div>
+            <p className="text-sm text-slate-600">{aiMessage}</p>
+          </div>
+        )}
+        <button
+          onClick={startListening}
+          disabled={isListening || isProcessingVoice}
+          className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all ${
+            isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" :
+            isProcessingVoice ? "bg-slate-500 cursor-not-allowed" :
+            "bg-blue-600 hover:bg-blue-700 hover:scale-105"
+          }`}
+        >
+          {isProcessingVoice ? (
+            <Loader2 size={28} className="text-white animate-spin" />
+          ) : isListening ? (
+            <Volume2 size={28} className="text-white" />
+          ) : (
+            <Mic size={28} className="text-white" />
+          )}
+        </button>
       </div>
     </div>
   );

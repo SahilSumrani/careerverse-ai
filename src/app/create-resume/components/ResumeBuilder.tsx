@@ -81,6 +81,11 @@ export function ResumeBuilder({
   };
 
   const startListening = () => {
+    // INTERRUPT FEATURE: If the AI is currently speaking, cancel it immediately when the user clicks the mic again.
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+    }
+
     // @ts-ignore
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {

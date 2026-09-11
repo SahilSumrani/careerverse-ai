@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { withReticle } from "@reticlehq/next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["pdf-parse"],
   async redirects() {
     return [{ source: "/community", destination: "/network", permanent: true }];
   },

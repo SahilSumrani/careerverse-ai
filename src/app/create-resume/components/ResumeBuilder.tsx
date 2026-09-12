@@ -80,79 +80,82 @@ export function ResumeBuilder({
     window.print();
   };
 
-  const startListening = () => {
-    // INTERRUPT FEATURE: If the AI is currently speaking, cancel it immediately when the user clicks the mic again.
-    if (window.speechSynthesis && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
+  // We need a ref to hold the conversation instance so we can end it
+  const conversationRef = useRef<any>(null);
 
-    // @ts-ignore
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Your browser does not support the Web Speech API. Please try Google Chrome.");
+  const toggleListening = async () => {
+    if (isListening) {
+      // Stop conversation
+      if (conversationRef.current) {
+        await conversationRef.current.endSession();
+        conversationRef.current = null;
+      }
+      setIsListening(false);
+      setAiMessage("Voice Assistant stopped.");
       return;
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setAiMessage("Listening...");
-    };
-
-    recognition.onresult = async (event: any) => {
-      setIsListening(false);
-      const transcript = event.results[0][0].transcript;
-      setAiMessage(`Heard: "${transcript}"`);
+    try {
       setIsProcessingVoice(true);
+      
+      // We dynamically import to avoid SSR issues with browser APIs
+      const { Conversation } = await import('@elevenlabs/client');
 
-      try {
-        const res = await fetch("/api/resume/assistant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript, resumeState: formData }),
-        });
+      // The Agent ID provided by the user
+      const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || "zmh5xhBvMzqR4ZlXgcgL";
 
-        if (!res.ok) throw new Error("Failed to process voice");
-        
-        const data = await res.json();
-        if (data.success && data.data) {
-          const { updatedResume, aiResponse } = data.data;
-          
-          // Overwrite form state with AI updated state
-          Object.keys(updatedResume).forEach(key => {
-             // @ts-ignore
-             register(key).onChange({ target: { name: key, value: updatedResume[key] }});
-          });
-          
-          setAiMessage(aiResponse);
-          
-          // Speak back
-          const synth = window.speechSynthesis;
-          const utterance = new SpeechSynthesisUtterance(aiResponse);
-          synth.speak(utterance);
+      const conversation = await Conversation.startSession({
+        agentId: agentId,
+        onConnect: () => {
+          setIsListening(true);
+          setIsProcessingVoice(false);
+          setAiMessage("I am listening! Speak now.");
+        },
+        onDisconnect: () => {
+          setIsListening(false);
+          setAiMessage("Disconnected.");
+        },
+        onError: (error: any) => {
+          console.error("ElevenLabs Error:", error);
+          setAiMessage("Error connecting to voice agent.");
+          setIsListening(false);
+          setIsProcessingVoice(false);
+        },
+        onModeChange: (mode: any) => {
+          if (mode.mode === 'speaking') {
+             setAiMessage("AI is speaking...");
+          } else {
+             setAiMessage("Listening...");
+          }
+        },
+        // Setup Client Tool so the AI can update the resume form
+        clientTools: {
+          updateResume: async (updatedData: any) => {
+            // When the AI calls this tool, it passes the updated JSON
+            try {
+              if (typeof updatedData === 'string') {
+                updatedData = JSON.parse(updatedData);
+              }
+              // Overwrite form state with AI updated state
+              Object.keys(updatedData).forEach(key => {
+                 // @ts-ignore
+                 register(key).onChange({ target: { name: key, value: updatedData[key] }});
+              });
+              return "Successfully updated the resume!";
+            } catch (e) {
+              return "Failed to update resume form.";
+            }
+          }
         }
-      } catch (err) {
-        console.error(err);
-        setAiMessage("Sorry, I encountered an error updating your resume.");
-      } finally {
-        setIsProcessingVoice(false);
-      }
-    };
+      });
 
-    recognition.onerror = (event: any) => {
-      setIsListening(false);
-      setAiMessage("Sorry, I didn't catch that.");
-    };
+      conversationRef.current = conversation;
 
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
+    } catch (err) {
+      console.error("Failed to start ElevenLabs session:", err);
+      setAiMessage("Microphone permission denied or error occurred.");
+      setIsProcessingVoice(false);
+    }
   };
 
   // Helper function to handle string array inputs (comma separated)
@@ -502,8 +505,8 @@ export function ResumeBuilder({
           </div>
         )}
         <button
-          onClick={startListening}
-          disabled={isListening || isProcessingVoice}
+          onClick={toggleListening}
+          disabled={isProcessingVoice}
           className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all ${
             isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" :
             isProcessingVoice ? "bg-slate-500 cursor-not-allowed" :
@@ -513,7 +516,7 @@ export function ResumeBuilder({
           {isProcessingVoice ? (
             <Loader2 size={28} className="text-white animate-spin" />
           ) : isListening ? (
-            <Volume2 size={28} className="text-white" />
+            <MicOff size={28} className="text-white" />
           ) : (
             <Mic size={28} className="text-white" />
           )}

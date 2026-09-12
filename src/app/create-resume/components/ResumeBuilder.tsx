@@ -139,34 +139,38 @@ export function ResumeBuilder({
 
     try {
       setIsProcessingVoice(true);
-      
-      // 1. Check if the device has a microphone at all
+
+      // Step 1: Explicitly request mic permission FIRST to show a clear browser prompt
+      // and give a specific error message if denied — before ElevenLabs even loads.
       try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const hasMic = devices.some(device => device.kind === 'audioinput');
-        if (!hasMic) {
-          setAiMessage("Hardware Error: No microphone found on your system. Please plug in a microphone.");
-          setIsProcessingVoice(false);
-          return;
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        // Permission granted — stop the tracks so ElevenLabs can claim the mic freshly
+        stream.getTracks().forEach(track => track.stop());
+      } catch (micErr: any) {
+        console.error("Mic permission error:", micErr);
+        if (micErr?.name === 'NotAllowedError' || micErr?.name === 'PermissionDeniedError') {
+          setAiMessage("🎤 Microphone blocked! Click the 🔒 lock icon in the browser address bar → Site settings → Allow Microphone. Then try again.");
+        } else if (micErr?.name === 'NotFoundError' || micErr?.name === 'DevicesNotFoundError') {
+          setAiMessage("🎤 No microphone detected. Please plug in a microphone and try again.");
+        } else {
+          setAiMessage(`Microphone error: ${micErr?.name || micErr?.message}. Please check your system audio settings.`);
         }
-      } catch (e) {
-        console.warn("Could not enumerate devices", e);
+        setIsProcessingVoice(false);
+        return;
       }
 
-      // Removed the explicit getUserMedia stop-then-restart pattern (Bug 7)
-      // ElevenLabs will handle the mic request directly.
-      // We dynamically import to avoid SSR issues with browser APIs
+      // Step 2: Load ElevenLabs SDK (dynamic import avoids SSR issues)
       const { Conversation } = await import('@elevenlabs/client');
 
-      // The Agent ID provided by the user (must be set in Vercel ENV vars)
+      // Step 3: Check Agent ID from env vars
       const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
-      
       if (!agentId) {
-         setAiMessage("Configuration Error: Agent ID is missing in environment variables.");
-         setIsProcessingVoice(false);
-         return;
+        setAiMessage("Configuration Error: Agent ID is missing. Contact support.");
+        setIsProcessingVoice(false);
+        return;
       }
 
+      // Step 4: Start the ElevenLabs session
       const conversation = await Conversation.startSession({
         agentId: agentId,
         onConnect: () => {
@@ -188,23 +192,20 @@ export function ResumeBuilder({
         },
         onModeChange: (mode: any) => {
           if (mode.mode === 'speaking') {
-             setAiMessage("AI is speaking...");
+            setAiMessage("AI is speaking...");
           } else {
-             setAiMessage("Listening...");
+            setAiMessage("Listening...");
           }
         },
-        // Setup Client Tool so the AI can update the resume form
         clientTools: {
           updateResume: async (updatedData: any) => {
-            // When the AI calls this tool, it passes the updated JSON
             try {
               if (typeof updatedData === 'string') {
                 updatedData = JSON.parse(updatedData);
               }
-              // 1: Fix updateResume tool - use deep merge for nested objects to prevent shallow data loss
               const currentValues = getValues();
-              reset({ 
-                ...currentValues, 
+              reset({
+                ...currentValues,
                 ...updatedData,
                 personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
                 skills: { ...currentValues.skills, ...(updatedData.skills || {}) }
@@ -219,9 +220,15 @@ export function ResumeBuilder({
 
       conversationRef.current = conversation;
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to start ElevenLabs session:", err);
-      setAiMessage("An unexpected error occurred while starting the voice agent.");
+      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
+        setAiMessage("🎤 Microphone access was denied. Please allow microphone in browser settings and try again.");
+      } else if (err?.name === 'NotFoundError') {
+        setAiMessage("🎤 No microphone found. Please connect a microphone and try again.");
+      } else {
+        setAiMessage(`Error: ${err?.message || 'Unknown error'}. Check browser console for details.`);
+      }
       setIsProcessingVoice(false);
     }
   };

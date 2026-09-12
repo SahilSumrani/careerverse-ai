@@ -405,7 +405,7 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
   };
 
   return (
-    <div className="w-full flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-50">
+    <div className="w-full flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-50 print:h-auto print:overflow-visible print:block">
       {/* LEFT: Editor */}
       <div className="w-full md:w-1/2 h-full flex flex-col border-r border-slate-200 bg-white print:hidden">
         <div className="flex items-center justify-between p-4 border-b border-slate-200">
@@ -606,7 +606,7 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
         {/* A4 Paper style preview */}
         <div ref={previewRef} className="w-[210mm] min-h-[297mm] bg-white shadow-xl rounded-sm p-[12mm] md:p-[15mm] text-slate-800 transition-all transform origin-top md:scale-100 scale-75 print:scale-100 print:transform-none print:w-full print:min-h-0 print:shadow-none print:p-[15mm] print:m-0 shrink-0 font-sans">
            <header className="text-center mb-6">

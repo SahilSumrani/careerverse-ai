@@ -194,7 +194,7 @@ export function ResumeBuilder({
       const { token } = await tokenRes.json();
 
       const conversation = await Conversation.startSession({
-        signedUrl: token,
+        conversationToken: token,
         onConnect: () => {
           setIsListening(true);
           setIsProcessingVoice(false);

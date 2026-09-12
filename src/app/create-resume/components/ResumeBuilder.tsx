@@ -271,9 +271,16 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
           setAiMessage(mode.mode === "speaking" ? "AI is speaking..." : "Listening...");
         },
         clientTools: {
-          updateResume: async (updatedData: any) => {
+          updateResume: async (params: any) => {
             try {
-              if (typeof updatedData === "string") updatedData = JSON.parse(updatedData);
+              console.log("🔧 Tool called with:", params); // Debug log
+
+              // Extract the nested resumeData if present
+              let updatedData = params?.resumeData ?? params;
+              if (typeof updatedData === "string") {
+                updatedData = JSON.parse(updatedData);
+              }
+
               const currentValues = getValues();
               const merged = {
                 ...currentValues,
@@ -285,6 +292,7 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
               reset(merged);
               return "Resume updated successfully!";
             } catch (e) {
+              console.error("Failed to parse/update:", e);
               return "Failed to update resume.";
             }
           },

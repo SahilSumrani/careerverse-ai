@@ -68,15 +68,19 @@ export function ResumeBuilder({
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control, name: "experience" });
   const { fields: projFields, append: appendProj, remove: removeProj } = useFieldArray({ control, name: "projects" });
 
+  const isInitialized = useRef(false);
+
   // 3 & 5: Load from initialData or localStorage draft
   useEffect(() => {
-    if (initialData) {
+    if (initialData && !isInitialized.current) {
       reset(initialData);
-    } else {
+      isInitialized.current = true;
+    } else if (!isInitialized.current) {
       const draft = localStorage.getItem("cv_resume_draft");
       if (draft) {
         try {
           reset(JSON.parse(draft));
+          isInitialized.current = true;
         } catch (e) {
           console.error("Failed to parse resume draft", e);
         }
@@ -96,10 +100,17 @@ export function ResumeBuilder({
 
   const exportPDF = () => {
     setIsExporting(true);
+    // Use afterprint event for accurate timing instead of arbitrary setTimeout
+    const handleAfterPrint = () => {
+      setIsExporting(false);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    
+    // Give state time to update UI before print dialog blocks thread
     setTimeout(() => {
       window.print();
-      setIsExporting(false);
-    }, 500);
+    }, 100);
   };
 
   // We need a ref to hold the conversation instance so we can end it
@@ -166,12 +177,14 @@ export function ResumeBuilder({
         onDisconnect: () => {
           setIsListening(false);
           setAiMessage("Disconnected.");
+          conversationRef.current = null;
         },
         onError: (error: any) => {
           console.error("ElevenLabs Error:", error);
           setAiMessage(typeof error === 'string' ? error : "Error connecting to voice agent.");
           setIsListening(false);
           setIsProcessingVoice(false);
+          conversationRef.current = null;
         },
         onModeChange: (mode: any) => {
           if (mode.mode === 'speaking') {
@@ -188,8 +201,14 @@ export function ResumeBuilder({
               if (typeof updatedData === 'string') {
                 updatedData = JSON.parse(updatedData);
               }
-              // 1: Fix updateResume tool - use reset to merge the full updated object properly
-              reset({ ...getValues(), ...updatedData });
+              // 1: Fix updateResume tool - use deep merge for nested objects to prevent shallow data loss
+              const currentValues = getValues();
+              reset({ 
+                ...currentValues, 
+                ...updatedData,
+                personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
+                skills: { ...currentValues.skills, ...(updatedData.skills || {}) }
+              });
               return "Successfully updated the resume!";
             } catch (e) {
               return "Failed to update resume form.";
@@ -210,7 +229,7 @@ export function ResumeBuilder({
   const sanitizeAndFormat = (text: string) => {
     if (!text) return "";
     // 4: Sanitize raw HTML to prevent XSS, then allow bold markdown
-    const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     return escaped.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
   };
 
@@ -435,14 +454,10 @@ export function ResumeBuilder({
                 {renderStringArrayInput("Frameworks & Libraries (e.g. React, Next.js)", "skills.frameworks", "React, Node.js, Next.js")}
                 {renderStringArrayInput("Tools & Platforms (e.g. Git, AWS)", "skills.tools", "Git, Docker, AWS, Firebase")}
              </div>
-           )}
-        </div>
-      </div>
-
       {/* RIGHT: Live Preview */}
-      <div className="w-full md:w-1/2 h-full bg-slate-100 p-4 md:p-8 overflow-y-auto flex items-start justify-center">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar">
         {/* A4 Paper style preview */}
-        <div ref={previewRef} className="bg-white shadow-lg w-[210mm] min-h-[297mm] p-[15mm] print:w-auto print:shadow-none print:p-0 print:m-0 shrink-0 transform origin-top md:scale-100 scale-75 font-sans">
+        <div ref={previewRef} className="w-[210mm] min-h-[297mm] bg-white shadow-xl rounded-sm p-[12mm] md:p-[15mm] text-slate-800 transition-all transform origin-top md:scale-100 scale-75 print:scale-100 print:transform-none print:w-auto print:shadow-none print:p-0 print:m-0 shrink-0 font-sans">
            <header className="text-center mb-6">
               <h1 className="text-4xl font-bold tracking-wide text-slate-900 mb-2">{formData.personalInfo?.fullName || "YOUR NAME"}</h1>
               <div className="text-[13px] text-slate-700 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
@@ -563,6 +578,7 @@ export function ResumeBuilder({
         <button
           onClick={toggleListening}
           disabled={isProcessingVoice}
+          aria-label={isListening ? "Stop Voice Assistant" : "Start Voice Assistant"}
           className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-2xl transition-all ${
             isListening ? "bg-red-500 hover:bg-red-600 animate-pulse" :
             isProcessingVoice ? "bg-slate-500 cursor-not-allowed" :

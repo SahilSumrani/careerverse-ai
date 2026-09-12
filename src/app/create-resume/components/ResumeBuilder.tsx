@@ -36,6 +36,12 @@ export interface ResumeData {
     frameworks: string[];
     tools: string[];
   };
+  professionalSummary?: string;
+  certifications?: Array<{
+    name: string;
+    issuer: string;
+    date: string;
+  }>;
 }
 
 export function ResumeBuilder({
@@ -50,6 +56,7 @@ export function ResumeBuilder({
   const [isListening, setIsListening] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
+  const [voiceLang, setVoiceLang] = useState<"en" | "hi">("en");
   const previewRef = useRef<HTMLDivElement>(null);
 
   const defaultValues: ResumeData = initialData || {
@@ -115,6 +122,7 @@ export function ResumeBuilder({
 
   // We need a ref to hold the conversation instance so we can end it
   const conversationRef = useRef<any>(null);
+  const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 6: Cleanup on unmount
   useEffect(() => {
@@ -122,6 +130,7 @@ export function ResumeBuilder({
       if (conversationRef.current) {
         conversationRef.current.endSession();
       }
+      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
     };
   }, []);
 
@@ -131,6 +140,7 @@ export function ResumeBuilder({
         await conversationRef.current.endSession();
         conversationRef.current = null;
       }
+      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
       setIsListening(false);
       setAiMessage("Voice Assistant stopped.");
       return;
@@ -193,17 +203,61 @@ export function ResumeBuilder({
       }
       const { token } = await tokenRes.json();
 
+      const promptText = voiceLang === "hi"
+        ? `ROLE: Aap CareerVerse AI ke ek friendly resume assistant hain.
+GOAL: User ki jankari LOGICAL CHUNKS mein ikattha karein aur updateResume call karein.
+FLOW:
+1. Sabse pehle poochein: 'Aapka poora naam, email aur phone number kya hai?'
+2. Phir poochein: 'Apni pichli job ke baare mein batayein — company, role, kab se kab tak, aur 2-3 main kaam.'
+3. Phir poochein: 'Kya aur koi jobs hain?'
+4. Phir poochein: 'Aapki education — college, degree, aur graduation year.'
+5. Phir poochein: 'Kya aap koi projects add karna chahte hain?'
+6. Phir poochein: 'Apni key skills batayein.'
+WRITING RULES:
+- Bullets ko action verbs se shuru karein (Built, Led, Reduced)
+- Numbers/metrics include karein
+- Har bullet 20 words se kam rakhein
+- Personal pronouns (I, we) use na karein
+TONE: Encouraging aur brief rahein. Har response maximum 8 words ka ho. Koi lambi explanations nahi. Har chunk ke baad updateResume call karein.`
+        : `ROLE: You are a friendly resume-building assistant for CareerVerse AI.
+GOAL: Collect resume information in LOGICAL CHUNKS and call updateResume.
+FLOW:
+1. First ask: 'Tell me your name, email, and phone number.'
+2. Then: 'Tell me about your most recent job — company, role, dates, and 2-3 things you did.'
+3. Then: 'Any other jobs?'
+4. Then: 'Your education — college, degree, and graduation year.'
+5. Then: 'Any projects you want to add?'
+6. Then: 'List your key skills.'
+WRITING RULES:
+- Start bullets with action verbs (Built, Led, Reduced, Designed)
+- Include numbers/metrics wherever possible
+- Keep bullets under 20 words
+- No personal pronouns (I, we)
+TONE: Be encouraging and brief. Max 8 words per response. No long explanations. Call updateResume after EVERY chunk.`;
+
+      const firstMessage = voiceLang === "hi"
+        ? "Namaste! Aapka naam kya hai?"
+        : "Hi! What's your full name?";
+
       const conversation = await Conversation.startSession({
         conversationToken: token,
         onConnect: () => {
           setIsListening(true);
           setIsProcessingVoice(false);
           setAiMessage("I am listening! Speak now.");
+          
+          sessionTimerRef.current = setTimeout(async () => {
+            if (conversationRef.current) {
+              await conversationRef.current.endSession();
+              setAiMessage("Session time limit reached. Please restart if you need more time.");
+            }
+          }, 5 * 60 * 1000); // 5 minute cap
         },
         onDisconnect: () => {
           setIsListening(false);
           setAiMessage("Disconnected.");
           conversationRef.current = null;
+          if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
         },
         onError: (error: any) => {
           console.error("ElevenLabs Error:", error);
@@ -211,6 +265,7 @@ export function ResumeBuilder({
           setIsListening(false);
           setIsProcessingVoice(false);
           conversationRef.current = null;
+          if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
         },
         onModeChange: (mode: any) => {
           setAiMessage(mode.mode === "speaking" ? "AI is speaking..." : "Listening...");
@@ -226,15 +281,8 @@ export function ResumeBuilder({
                 personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
                 skills: { ...currentValues.skills, ...(updatedData.skills || {}) },
               };
-              // reset() updates form state; useFieldArray needs setValue for arrays
+              // reset() automatically syncs useFieldArray fields. Manual setValue causes race conditions.
               reset(merged);
-              // Explicitly sync array fields so form inputs update immediately
-              if (merged.education) setValue("education", merged.education);
-              if (merged.experience) setValue("experience", merged.experience);
-              if (merged.projects) setValue("projects", merged.projects);
-              if (merged.skills?.languages) setValue("skills.languages", merged.skills.languages);
-              if (merged.skills?.frameworks) setValue("skills.frameworks", merged.skills.frameworks);
-              if (merged.skills?.tools) setValue("skills.tools", merged.skills.tools);
               return "Resume updated successfully!";
             } catch (e) {
               return "Failed to update resume.";
@@ -244,19 +292,11 @@ export function ResumeBuilder({
         // Override agent to be concise + auto-fill to save tokens
         overrides: {
           agent: {
+            language: voiceLang,
             prompt: {
-              prompt: `You are a resume builder assistant. Your ONLY job is to collect resume information and call the updateResume tool with the data.
-
-Rules:
-- Ask for ONE piece of information at a time (name first, then email, then phone, etc.)
-- As soon as user provides any data, IMMEDIATELY call updateResume tool with it
-- Keep all responses under 10 words
-- Do NOT explain what you did — just confirm in 3 words max like "Got it!" or "Added!"
-- Do NOT ask follow-up questions unless essential
-- Fill resume sections in order: Personal Info → Experience → Education → Projects → Skills
-- When user says done or stop, say goodbye in 3 words`
+              prompt: promptText
             },
-            first_message: "Hi! What's your full name?"
+            first_message: firstMessage
           }
         },
       });
@@ -540,7 +580,16 @@ Rules:
               </div>
            </header>
 
-           {formData.experience?.length > 0 && (
+              <div className="space-y-4">
+            
+            {formData.professionalSummary && (
+              <section className="mb-5">
+                <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-2">Professional Summary</h2>
+                <p className="text-[13px] text-slate-800 leading-relaxed">{formData.professionalSummary}</p>
+              </section>
+            )}
+
+            {formData.experience?.length > 0 && (
              <section className="mb-5">
                <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Work Experience</h2>
                {formData.experience.map((exp, i) => (
@@ -615,18 +664,50 @@ Rules:
                    <div><span className="font-bold text-slate-900">Cloud/Databases/Tools:</span> {formData.skills.tools.filter(Boolean).join(", ")}</div>
                  )}
                </div>
-             </section>
-           )}
-        </div>
+              </section>
+            )}
+
+            {formData.certifications && formData.certifications.length > 0 && (
+              <section className="mb-5">
+                <h2 className="text-sm font-bold text-[#1E90FF] uppercase tracking-wide border-b border-[#1E90FF] pb-1 mb-3">Certifications & Awards</h2>
+                {formData.certifications.map((cert, i) => (
+                  <div key={i} className="mb-2">
+                    <div className="flex justify-between font-bold text-slate-900 text-[13px]">
+                      <span>{cert.name}</span>
+                      <span>{cert.date}</span>
+                    </div>
+                    {cert.issuer && <div className="text-[12px] text-slate-700">{cert.issuer}</div>}
+                  </div>
+                ))}
+              </section>
+            )}
+         </div>
+       </div>
       </div>
 
-      {/* Floating Voice Assistant Button */}
+      {/* Floating Voice Assistant Button & Language Toggle */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
         {aiMessage && (
           <div className="mb-4 bg-white border border-blue-200 shadow-lg rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Sparkles size={16} className="text-blue-500" />
-              <span className="font-bold text-sm text-slate-800">AI Assistant</span>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-blue-500" />
+                <span className="font-bold text-sm text-slate-800">AI Assistant</span>
+              </div>
+              <div className="flex gap-2 bg-slate-100 p-1 rounded-md text-xs">
+                <button 
+                  onClick={() => setVoiceLang("en")} 
+                  className={`px-2 py-0.5 rounded transition-colors ${voiceLang === "en" ? "bg-white shadow-sm font-bold text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  EN
+                </button>
+                <button 
+                  onClick={() => setVoiceLang("hi")} 
+                  className={`px-2 py-0.5 rounded transition-colors ${voiceLang === "hi" ? "bg-white shadow-sm font-bold text-blue-600" : "text-slate-500 hover:text-slate-700"}`}
+                >
+                  हिं
+                </button>
+              </div>
             </div>
             <p className="text-sm text-slate-600">{aiMessage}</p>
           </div>

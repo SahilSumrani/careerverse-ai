@@ -454,6 +454,10 @@ export function ResumeBuilder({
                 {renderStringArrayInput("Frameworks & Libraries (e.g. React, Next.js)", "skills.frameworks", "React, Node.js, Next.js")}
                 {renderStringArrayInput("Tools & Platforms (e.g. Git, AWS)", "skills.tools", "Git, Docker, AWS, Firebase")}
              </div>
+           )}
+        </div>
+      </div>
+
       {/* RIGHT: Live Preview */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar">
         {/* A4 Paper style preview */}

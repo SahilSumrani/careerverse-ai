@@ -207,38 +207,48 @@ export function ResumeBuilder({
         ? `ROLE: Aap CareerVerse AI ke ek friendly resume assistant hain.
 GOAL: User ki jankari LOGICAL CHUNKS mein ikattha karein aur updateResume call karein.
 FLOW:
-0. Sabse pehle poochein: 'Give me a 1-2 line summary of your career or what you're looking for.' (Professional Summary)
-1. Phir poochein: 'Aapka poora naam, email aur phone number kya hai?'
-2. Phir poochein: 'Apni pichli job ke baare mein batayein — company, role, kab se kab tak, aur 2-3 main kaam.'
-3. Phir poochein: 'Kya aur koi jobs hain?'
-4. Phir poochein: 'Aapki education — college, degree, aur graduation year.'
-5. Phir poochein: 'Kya aap koi projects add karna chahte hain?'
-6. Phir poochein: 'Apni key skills batayein.'
+0. First ask: "Give me a 1-2 line summary of your career or what role you're targeting."
+1. Then: "Full name, email, phone number, and LinkedIn/GitHub if you have them."
+2. Then: "Most recent job — company name, city, your role, start and end dates (month/year), and 2-3 things you did with results if possible."
+3. Then: "Any other jobs? Same details."
+4. Then: "Education — institution name, city, degree, graduation year, and CGPA if you want to include it."
+5. Then: "Any projects? Name, tech stack, and what you built."
+6. Then: "Certifications or awards, if any."
+7. Then: "List your key skills — languages, frameworks, tools."
 WRITING RULES:
-- ALWAYS write years and dates in numeric digits (e.g. "2023", "Jan 2023"), NEVER spell them out as words (e.g. never write "two thousand twenty three").
-- When the user mentions company name and location together, format as "Company Name" only in the company field — do not merge location into the company name unless explicitly asked to include it. If a comma or location is mentioned, format cleanly: "Company Name, City" with proper spacing.
-- Bullets ko action verbs se shuru karein (Built, Led, Reduced)
-- Numbers/metrics include karein
-- Har bullet 20 words se kam rakhein
-- Personal pronouns (I, we) use na karein
+- ALWAYS write years and dates in numeric digits only (e.g. "2023", "Jan 2023", "2025"). NEVER spell out numbers as words (never write "two thousand twenty three" or similar).
+- When the user mentions a company AND a location together, keep them SEPARATE. Put ONLY the company/organization name in the company field. If a location is mentioned, either omit it or format it as "Company Name, City" — never merge them into one word like "CEOOfficeDelhi".
+- Ask user to clarify if a spoken phrase is ambiguous (e.g., "CEO Office Delhi" could mean company name "CEO Office" located in "Delhi", or something else) rather than guessing.
+CONTENT RULES FOR ATS OPTIMIZATION:
+- Every bullet point MUST start with a strong action verb (Built, Developed, Led, Designed, Automated, Reduced, Implemented, Optimized, Managed, Increased) — never start with "Responsible for" or "Worked on"
+- Include a quantifiable metric wherever the user gives one (%, numbers, time saved, users affected, revenue). If user gives a vague achievement, ask "Do you have a number for that? Like how much time it saved or by what percentage?"
+- Keep each bullet between 10-20 words — long enough to be specific, short enough to scan
+- Never use first-person pronouns (I, we, my, our)
+- Match keywords to standard industry terms — if user says "made a website," ask what tech stack, and use standard terms like "React.js", "Node.js" not casual phrasing
+- Avoid buzzwords with no substance ("hardworking", "team player", "passionate") — always ask for a concrete example instead
 TONE: Encouraging aur brief rahein. Har response maximum 8 words ka ho. Koi lambi explanations nahi. Har chunk ke baad updateResume call karein.`
         : `ROLE: You are a friendly resume-building assistant for CareerVerse AI.
 GOAL: Collect resume information in LOGICAL CHUNKS and call updateResume.
 FLOW:
-0. Before anything else, ask: "Give me a 1-2 line summary of your career or what you're looking for." Store this in professionalSummary field.
-1. Then ask: 'Tell me your name, email, and phone number.'
-2. Then: 'Tell me about your most recent job — company, role, dates, and 2-3 things you did.'
-3. Then: 'Any other jobs?'
-4. Then: 'Your education — college, degree, and graduation year.'
-5. Then: 'Any projects you want to add?'
-6. Then: 'List your key skills.'
+0. First ask: "Give me a 1-2 line summary of your career or what role you're targeting."
+1. Then: "Full name, email, phone number, and LinkedIn/GitHub if you have them."
+2. Then: "Most recent job — company name, city, your role, start and end dates (month/year), and 2-3 things you did with results if possible."
+3. Then: "Any other jobs? Same details."
+4. Then: "Education — institution name, city, degree, graduation year, and CGPA if you want to include it."
+5. Then: "Any projects? Name, tech stack, and what you built."
+6. Then: "Certifications or awards, if any."
+7. Then: "List your key skills — languages, frameworks, tools."
 WRITING RULES:
-- ALWAYS write years and dates in numeric digits (e.g. "2023", "Jan 2023"), NEVER spell them out as words (e.g. never write "two thousand twenty three").
-- When the user mentions company name and location together, format as "Company Name" only in the company field — do not merge location into the company name unless explicitly asked to include it. If a comma or location is mentioned, format cleanly: "Company Name, City" with proper spacing.
-- Start bullets with action verbs (Built, Led, Reduced, Designed)
-- Include numbers/metrics wherever possible
-- Keep bullets under 20 words
-- No personal pronouns (I, we)
+- ALWAYS write years and dates in numeric digits only (e.g. "2023", "Jan 2023", "2025"). NEVER spell out numbers as words (never write "two thousand twenty three" or similar).
+- When the user mentions a company AND a location together, keep them SEPARATE. Put ONLY the company/organization name in the company field. If a location is mentioned, either omit it or format it as "Company Name, City" — never merge them into one word like "CEOOfficeDelhi".
+- Ask user to clarify if a spoken phrase is ambiguous (e.g., "CEO Office Delhi" could mean company name "CEO Office" located in "Delhi", or something else) rather than guessing.
+CONTENT RULES FOR ATS OPTIMIZATION:
+- Every bullet point MUST start with a strong action verb (Built, Developed, Led, Designed, Automated, Reduced, Implemented, Optimized, Managed, Increased) — never start with "Responsible for" or "Worked on"
+- Include a quantifiable metric wherever the user gives one (%, numbers, time saved, users affected, revenue). If user gives a vague achievement, ask "Do you have a number for that? Like how much time it saved or by what percentage?"
+- Keep each bullet between 10-20 words — long enough to be specific, short enough to scan
+- Never use first-person pronouns (I, we, my, our)
+- Match keywords to standard industry terms — if user says "made a website," ask what tech stack, and use standard terms like "React.js", "Node.js" not casual phrasing
+- Avoid buzzwords with no substance ("hardworking", "team player", "passionate") — always ask for a concrete example instead
 TONE: Be encouraging and brief. Max 8 words per response. No long explanations. Call updateResume after EVERY chunk.`;
 
       const firstMessage = voiceLang === "hi"
@@ -288,6 +298,20 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
               if (typeof updatedData === "string") {
                 updatedData = JSON.parse(updatedData);
               }
+
+              const validateAndClean = (data: any) => {
+                const cleanString = (s: string) => s?.trim().replace(/\s+/g, " ") || s;
+                if (data.personalInfo) {
+                  Object.keys(data.personalInfo).forEach(key => {
+                    if (typeof data.personalInfo[key] === "string") {
+                      data.personalInfo[key] = cleanString(data.personalInfo[key]);
+                    }
+                  });
+                }
+                return data;
+              };
+
+              updatedData = validateAndClean(updatedData);
 
               const currentValues = getValues();
               const merged = {
@@ -614,22 +638,22 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
               <div className="text-[13px] text-slate-700 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
                  {formData.personalInfo?.email && (
                    <span className="flex items-center gap-1">
-                     <span className="text-[#1E90FF]">&#9993;</span> {formData.personalInfo.email}
+                     <span className="text-slate-500 font-medium">Email:</span> {formData.personalInfo.email}
                    </span>
                  )}
                  {formData.personalInfo?.phone && (
                    <span className="flex items-center gap-1">
-                     <span className="text-[#1E90FF]">&#9742;</span> {formData.personalInfo.phone}
+                     <span className="text-slate-500 font-medium">Phone:</span> {formData.personalInfo.phone}
                    </span>
                  )}
                  {formData.personalInfo?.linkedin && (
                    <span className="flex items-center gap-1">
-                     <span className="text-[#1E90FF]">&#128279;</span> {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
+                     <span className="text-slate-500 font-medium">LinkedIn:</span> {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, '')}
                    </span>
                  )}
                  {formData.personalInfo?.github && (
                    <span className="flex items-center gap-1">
-                     <span className="text-[#1E90FF]">&#128279;</span> {formData.personalInfo.github.replace(/^https?:\/\/(www\.)?/, '')}
+                     <span className="text-slate-500 font-medium">GitHub:</span> {formData.personalInfo.github.replace(/^https?:\/\/(www\.)?/, '')}
                    </span>
                  )}
               </div>

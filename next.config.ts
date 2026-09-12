@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // microphone=(self) allows the site itself to use the mic (required for ElevenLabs voice)
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
           {
             key: "Content-Security-Policy",
             value: [
@@ -23,7 +24,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://api.groq.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+              // Added ElevenLabs API + WebSocket domains for voice agent
+              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://api.groq.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.elevenlabs.io wss://*.elevenlabs.io https://*.elevenlabs.io",
               "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
               "object-src 'none'",
               "base-uri 'self'",

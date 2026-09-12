@@ -207,13 +207,16 @@ export function ResumeBuilder({
         ? `ROLE: Aap CareerVerse AI ke ek friendly resume assistant hain.
 GOAL: User ki jankari LOGICAL CHUNKS mein ikattha karein aur updateResume call karein.
 FLOW:
-1. Sabse pehle poochein: 'Aapka poora naam, email aur phone number kya hai?'
+0. Sabse pehle poochein: 'Give me a 1-2 line summary of your career or what you're looking for.' (Professional Summary)
+1. Phir poochein: 'Aapka poora naam, email aur phone number kya hai?'
 2. Phir poochein: 'Apni pichli job ke baare mein batayein — company, role, kab se kab tak, aur 2-3 main kaam.'
 3. Phir poochein: 'Kya aur koi jobs hain?'
 4. Phir poochein: 'Aapki education — college, degree, aur graduation year.'
 5. Phir poochein: 'Kya aap koi projects add karna chahte hain?'
 6. Phir poochein: 'Apni key skills batayein.'
 WRITING RULES:
+- ALWAYS write years and dates in numeric digits (e.g. "2023", "Jan 2023"), NEVER spell them out as words (e.g. never write "two thousand twenty three").
+- When the user mentions company name and location together, format as "Company Name" only in the company field — do not merge location into the company name unless explicitly asked to include it. If a comma or location is mentioned, format cleanly: "Company Name, City" with proper spacing.
 - Bullets ko action verbs se shuru karein (Built, Led, Reduced)
 - Numbers/metrics include karein
 - Har bullet 20 words se kam rakhein
@@ -222,13 +225,16 @@ TONE: Encouraging aur brief rahein. Har response maximum 8 words ka ho. Koi lamb
         : `ROLE: You are a friendly resume-building assistant for CareerVerse AI.
 GOAL: Collect resume information in LOGICAL CHUNKS and call updateResume.
 FLOW:
-1. First ask: 'Tell me your name, email, and phone number.'
+0. Before anything else, ask: "Give me a 1-2 line summary of your career or what you're looking for." Store this in professionalSummary field.
+1. Then ask: 'Tell me your name, email, and phone number.'
 2. Then: 'Tell me about your most recent job — company, role, dates, and 2-3 things you did.'
 3. Then: 'Any other jobs?'
 4. Then: 'Your education — college, degree, and graduation year.'
 5. Then: 'Any projects you want to add?'
 6. Then: 'List your key skills.'
 WRITING RULES:
+- ALWAYS write years and dates in numeric digits (e.g. "2023", "Jan 2023"), NEVER spell them out as words (e.g. never write "two thousand twenty three").
+- When the user mentions company name and location together, format as "Company Name" only in the company field — do not merge location into the company name unless explicitly asked to include it. If a comma or location is mentioned, format cleanly: "Company Name, City" with proper spacing.
 - Start bullets with action verbs (Built, Led, Reduced, Designed)
 - Include numbers/metrics wherever possible
 - Keep bullets under 20 words
@@ -258,6 +264,7 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
           setAiMessage("Disconnected.");
           conversationRef.current = null;
           if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+          setTimeout(() => setAiMessage(""), 3000); // Auto-hide widget
         },
         onError: (error: any) => {
           console.error("ElevenLabs Error:", error);
@@ -266,6 +273,7 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
           setIsProcessingVoice(false);
           conversationRef.current = null;
           if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+          setTimeout(() => setAiMessage(""), 5000); // Auto-hide widget
         },
         onModeChange: (mode: any) => {
           setAiMessage(mode.mode === "speaking" ? "AI is speaking..." : "Listening...");
@@ -288,6 +296,45 @@ TONE: Be encouraging and brief. Max 8 words per response. No long explanations. 
                 personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
                 skills: { ...currentValues.skills, ...(updatedData.skills || {}) },
               };
+
+              // Sanitize dates (defense-in-depth against "two thousand twenty five" outputs)
+              const sanitizeDate = (str: string) => {
+                if (!str) return str;
+                const wordToNum: Record<string, string> = {
+                  zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5",
+                  six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
+                  eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15",
+                  sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19",
+                  twenty: "20", thirty: "30",
+                };
+                const match = str.match(/two thousand\s+([a-z\s]+)/i);
+                if (match) {
+                  const words = match[1].trim().split(/\s+/);
+                  let num = 0;
+                  words.forEach((w) => {
+                    const val = wordToNum[w.toLowerCase()];
+                    if (val) num += parseInt(val, 10);
+                  });
+                  return String(2000 + num);
+                }
+                return str;
+              };
+
+              if (merged.experience) {
+                merged.experience = merged.experience.map((e: any) => ({
+                  ...e,
+                  startDate: sanitizeDate(e.startDate),
+                  endDate: sanitizeDate(e.endDate)
+                }));
+              }
+              if (merged.education) {
+                merged.education = merged.education.map((e: any) => ({
+                  ...e,
+                  startDate: sanitizeDate(e.startDate),
+                  endDate: sanitizeDate(e.endDate)
+                }));
+              }
+
               // reset() automatically syncs useFieldArray fields. Manual setValue causes race conditions.
               reset(merged);
               return "Resume updated successfully!";

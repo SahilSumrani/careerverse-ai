@@ -497,3 +497,19 @@ h1 em,
   background: #fef6ee;
   color: #b54708;
 }
+
+/* Resume Builder Print Styles */
+@media print {
+  body > * { display: none !important; }
+  .print-resume-wrapper { display: block !important; }
+  @page { margin: 10mm; size: A4; }
+}
+
+/* Hide scrollbar utility used in tabs */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -60,7 +60,7 @@ export function ResumeBuilder({
     skills: { languages: [], frameworks: [], tools: [] },
   };
 
-  const { register, control, watch, reset, getValues, formState: { errors } } = useForm<ResumeData>({
+  const { register, control, watch, reset, getValues, setValue, formState: { errors } } = useForm<ResumeData>({
     defaultValues: initialData || defaultValues,
   });
 
@@ -220,17 +220,44 @@ export function ResumeBuilder({
             try {
               if (typeof updatedData === "string") updatedData = JSON.parse(updatedData);
               const currentValues = getValues();
-              reset({
+              const merged = {
                 ...currentValues,
                 ...updatedData,
                 personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
                 skills: { ...currentValues.skills, ...(updatedData.skills || {}) },
-              });
-              return "Successfully updated the resume!";
+              };
+              // reset() updates form state; useFieldArray needs setValue for arrays
+              reset(merged);
+              // Explicitly sync array fields so form inputs update immediately
+              if (merged.education) setValue("education", merged.education);
+              if (merged.experience) setValue("experience", merged.experience);
+              if (merged.projects) setValue("projects", merged.projects);
+              if (merged.skills?.languages) setValue("skills.languages", merged.skills.languages);
+              if (merged.skills?.frameworks) setValue("skills.frameworks", merged.skills.frameworks);
+              if (merged.skills?.tools) setValue("skills.tools", merged.skills.tools);
+              return "Resume updated successfully!";
             } catch (e) {
-              return "Failed to update resume form.";
+              return "Failed to update resume.";
             }
           },
+        },
+        // Override agent to be concise + auto-fill to save tokens
+        overrides: {
+          agent: {
+            prompt: {
+              prompt: `You are a resume builder assistant. Your ONLY job is to collect resume information and call the updateResume tool with the data.
+
+Rules:
+- Ask for ONE piece of information at a time (name first, then email, then phone, etc.)
+- As soon as user provides any data, IMMEDIATELY call updateResume tool with it
+- Keep all responses under 10 words
+- Do NOT explain what you did — just confirm in 3 words max like "Got it!" or "Added!"
+- Do NOT ask follow-up questions unless essential
+- Fill resume sections in order: Personal Info → Experience → Education → Projects → Skills
+- When user says done or stop, say goodbye in 3 words`
+            },
+            first_message: "Hi! What's your full name?"
+          }
         },
       });
 
@@ -484,9 +511,9 @@ export function ResumeBuilder({
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100/50 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto">
         {/* A4 Paper style preview */}
-        <div ref={previewRef} className="w-[210mm] min-h-[297mm] bg-white shadow-xl rounded-sm p-[12mm] md:p-[15mm] text-slate-800 transition-all transform origin-top md:scale-100 scale-75 print:scale-100 print:transform-none print:w-auto print:shadow-none print:p-0 print:m-0 shrink-0 font-sans">
+        <div ref={previewRef} className="w-[210mm] min-h-[297mm] bg-white shadow-xl rounded-sm p-[12mm] md:p-[15mm] text-slate-800 transition-all transform origin-top md:scale-100 scale-75 print:scale-100 print:transform-none print:w-full print:min-h-0 print:shadow-none print:p-[15mm] print:m-0 shrink-0 font-sans">
            <header className="text-center mb-6">
               <h1 className="text-4xl font-bold tracking-wide text-slate-900 mb-2">{formData.personalInfo?.fullName || "YOUR NAME"}</h1>
               <div className="text-[13px] text-slate-700 mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">

@@ -25,8 +25,23 @@ export async function GET() {
     if (!res.ok) {
       const text = await res.text();
       console.error("ElevenLabs token error:", res.status, text);
+      
+      if (res.status === 401) {
+        return NextResponse.json(
+          { error: "API key is missing 'convai_write' permission. Go to elevenlabs.io → Settings → API Keys → Create new key with Conversational AI permission." },
+          { status: 401 }
+        );
+      }
+      
+      if (res.status === 404) {
+        return NextResponse.json(
+          { error: `Agent not found. Check NEXT_PUBLIC_ELEVENLABS_AGENT_ID in Vercel env vars.` },
+          { status: 404 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: `ElevenLabs error: ${res.status} ${text}` },
+        { error: `ElevenLabs error ${res.status}: ${text}` },
         { status: res.status }
       );
     }

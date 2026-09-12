@@ -183,15 +183,18 @@ export function ResumeBuilder({
       // 3. Let ElevenLabs SDK acquire the mic directly (no double getUserMedia)
       const { Conversation } = await import("@elevenlabs/client");
 
-      const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
-      if (!agentId) {
-        setAiMessage("Configuration Error: Agent ID missing. Contact support.");
+      // Fetch a signed conversation token server-side (keeps API key secret)
+      const tokenRes = await fetch("/api/elevenlabs/token");
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json().catch(() => ({}));
+        setAiMessage(`Configuration Error: ${err.error || "Could not get voice token. Check Vercel ENV vars."}`);
         setIsProcessingVoice(false);
         return;
       }
+      const { token } = await tokenRes.json();
 
       const conversation = await Conversation.startSession({
-        agentId,
+        signedUrl: token,
         onConnect: () => {
           setIsListening(true);
           setIsProcessingVoice(false);

@@ -98,14 +98,27 @@ export function ResumeBuilder({
     try {
       setIsProcessingVoice(true);
       
-      // 1. Explicitly request microphone permission first
+      // 1. Check if the device has a microphone at all
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasMic = devices.some(device => device.kind === 'audioinput');
+        if (!hasMic) {
+          setAiMessage("Hardware Error: No microphone found on your system. Please plug in a microphone.");
+          setIsProcessingVoice(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not enumerate devices", e);
+      }
+
+      // 2. Explicitly request microphone permission
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         // Stop the tracks immediately so ElevenLabs can use the mic
         stream.getTracks().forEach(track => track.stop());
       } catch (micError: any) {
         console.error("Mic error:", micError);
-        setAiMessage(`Microphone Error: ${micError.name || micError.message || "Unknown error"}. Check Windows Settings.`);
+        setAiMessage(`Microphone Error: Your browser or Windows blocked the permission instantly (${micError.name}). Please check Windows Microphone Privacy Settings.`);
         setIsProcessingVoice(false);
         return;
       }

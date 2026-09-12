@@ -60,28 +60,59 @@ export function ResumeBuilder({
     skills: { languages: [], frameworks: [], tools: [] },
   };
 
-  const { register, control, watch, formState: { errors } } = useForm<ResumeData>({
-    defaultValues,
+  const { register, control, watch, reset, getValues, formState: { errors } } = useForm<ResumeData>({
+    defaultValues: initialData || defaultValues,
   });
 
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "education" });
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control, name: "experience" });
   const { fields: projFields, append: appendProj, remove: removeProj } = useFieldArray({ control, name: "projects" });
 
+  // 3 & 5: Load from initialData or localStorage draft
+  useEffect(() => {
+    if (initialData) {
+      reset(initialData);
+    } else {
+      const draft = localStorage.getItem("cv_resume_draft");
+      if (draft) {
+        try {
+          reset(JSON.parse(draft));
+        } catch (e) {
+          console.error("Failed to parse resume draft", e);
+        }
+      }
+    }
+  }, [initialData, reset]);
+
   const formData = watch();
 
+  // Debounce localStorage write to prevent perf hit
   useEffect(() => {
-    localStorage.setItem("cv_resume_draft", JSON.stringify(formData));
+    const handler = setTimeout(() => {
+      localStorage.setItem("cv_resume_draft", JSON.stringify(formData));
+    }, 1000);
+    return () => clearTimeout(handler);
   }, [formData]);
 
   const exportPDF = () => {
-    // ATS systems need selectable text, not canvas images.
-    // The browser's native print-to-PDF is the best way to get a clean, text-based PDF.
-    window.print();
+    setIsExporting(true);
+    setTimeout(() => {
+      window.print();
+      setIsExporting(false);
+    }, 500);
   };
 
   // We need a ref to hold the conversation instance so we can end it
   const conversationRef = useRef<any>(null);
+
+  // 6: Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (conversationRef.current) {
+        conversationRef.current.endSession();
+      }
+    };
+  }, []);
 
   const toggleListening = async () => {
     if (isListening) {
@@ -111,18 +142,8 @@ export function ResumeBuilder({
         console.warn("Could not enumerate devices", e);
       }
 
-      // 2. Explicitly request microphone permission
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Stop the tracks immediately so ElevenLabs can use the mic
-        stream.getTracks().forEach(track => track.stop());
-      } catch (micError: any) {
-        console.error("Mic error:", micError);
-        setAiMessage(`Microphone Error: Your browser or Windows blocked the permission instantly (${micError.name}). Please check Windows Microphone Privacy Settings.`);
-        setIsProcessingVoice(false);
-        return;
-      }
-
+      // Removed the explicit getUserMedia stop-then-restart pattern (Bug 7)
+      // ElevenLabs will handle the mic request directly.
       // We dynamically import to avoid SSR issues with browser APIs
       const { Conversation } = await import('@elevenlabs/client');
 
@@ -167,11 +188,8 @@ export function ResumeBuilder({
               if (typeof updatedData === 'string') {
                 updatedData = JSON.parse(updatedData);
               }
-              // Overwrite form state with AI updated state
-              Object.keys(updatedData).forEach(key => {
-                 // @ts-ignore
-                 register(key).onChange({ target: { name: key, value: updatedData[key] }});
-              });
+              // 1: Fix updateResume tool - use reset to merge the full updated object properly
+              reset({ ...getValues(), ...updatedData });
               return "Successfully updated the resume!";
             } catch (e) {
               return "Failed to update resume form.";
@@ -187,6 +205,13 @@ export function ResumeBuilder({
       setAiMessage("An unexpected error occurred while starting the voice agent.");
       setIsProcessingVoice(false);
     }
+  };
+
+  const sanitizeAndFormat = (text: string) => {
+    if (!text) return "";
+    // 4: Sanitize raw HTML to prevent XSS, then allow bold markdown
+    const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return escaped.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
   };
 
   // Helper function to handle string array inputs (comma separated)
@@ -456,7 +481,7 @@ export function ResumeBuilder({
                    <div className="text-sm font-medium text-slate-700 italic mb-1">{exp.position}</div>
                    <ul className="list-disc list-outside ml-5 mt-1 text-[13px] text-slate-800 space-y-1">
                      {exp.description?.filter(Boolean).map((desc, j) => (
-                       <li key={j} dangerouslySetInnerHTML={{ __html: desc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                       <li key={j} dangerouslySetInnerHTML={{ __html: sanitizeAndFormat(desc) }} />
                      ))}
                    </ul>
                  </div>
@@ -497,7 +522,7 @@ export function ResumeBuilder({
                    )}
                    <ul className="list-disc list-outside ml-5 mt-1 text-[13px] text-slate-800 space-y-1">
                      {proj.description?.filter(Boolean).map((desc, j) => (
-                       <li key={j} dangerouslySetInnerHTML={{ __html: desc.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') }} />
+                       <li key={j} dangerouslySetInnerHTML={{ __html: sanitizeAndFormat(desc) }} />
                      ))}
                    </ul>
                  </div>

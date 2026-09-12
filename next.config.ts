@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // Added ElevenLabs API + WebSocket domains for voice agent
-              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://api.groq.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.elevenlabs.io wss://*.elevenlabs.io https://*.elevenlabs.io",
+              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://api.groq.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.elevenlabs.io wss://api.elevenlabs.io wss://*.elevenlabs.io https://*.elevenlabs.io",
               "frame-src 'self' https://accounts.google.com https://*.firebaseapp.com",
               "object-src 'none'",
               "base-uri 'self'",

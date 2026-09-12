@@ -47,8 +47,9 @@ export async function GET() {
     }
 
     const data = await res.json();
-    // data.token is the signed conversation token
-    return NextResponse.json({ token: data.token });
+    // SDK's signedUrl needs a full WebSocket URL, not just the token string
+    const signedUrl = `wss://api.elevenlabs.io/v1/convai/conversation?token=${data.token}`;
+    return NextResponse.json({ token: signedUrl });
   } catch (err: any) {
     console.error("Token fetch failed:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

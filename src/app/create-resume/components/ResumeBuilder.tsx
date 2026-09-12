@@ -100,9 +100,12 @@ export function ResumeBuilder({
       
       // 1. Explicitly request microphone permission first
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (micError) {
-        setAiMessage("Please allow microphone access in your browser settings to use the Voice Assistant.");
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the tracks immediately so ElevenLabs can use the mic
+        stream.getTracks().forEach(track => track.stop());
+      } catch (micError: any) {
+        console.error("Mic error:", micError);
+        setAiMessage(`Microphone Error: ${micError.name || micError.message || "Unknown error"}. Check Windows Settings.`);
         setIsProcessingVoice(false);
         return;
       }

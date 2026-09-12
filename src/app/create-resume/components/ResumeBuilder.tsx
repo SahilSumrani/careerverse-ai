@@ -127,7 +127,6 @@ export function ResumeBuilder({
 
   const toggleListening = async () => {
     if (isListening) {
-      // Stop conversation
       if (conversationRef.current) {
         await conversationRef.current.endSession();
         conversationRef.current = null;
@@ -140,39 +139,59 @@ export function ResumeBuilder({
     try {
       setIsProcessingVoice(true);
 
-      // Step 1: Explicitly request mic permission FIRST to show a clear browser prompt
-      // and give a specific error message if denied — before ElevenLabs even loads.
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        // Permission granted — stop the tracks so ElevenLabs can claim the mic freshly
-        stream.getTracks().forEach(track => track.stop());
-      } catch (micErr: any) {
-        console.error("Mic permission error:", micErr);
-        if (micErr?.name === 'NotAllowedError' || micErr?.name === 'PermissionDeniedError') {
-          setAiMessage("🎤 Microphone blocked! Click the 🔒 lock icon in the browser address bar → Site settings → Allow Microphone. Then try again.");
-        } else if (micErr?.name === 'NotFoundError' || micErr?.name === 'DevicesNotFoundError') {
-          setAiMessage("🎤 No microphone detected. Please plug in a microphone and try again.");
-        } else {
-          setAiMessage(`Microphone error: ${micErr?.name || micErr?.message}. Please check your system audio settings.`);
-        }
+      // 0. Secure context check — getUserMedia only works on HTTPS or localhost
+      if (typeof window !== "undefined" && !window.isSecureContext) {
+        setAiMessage("🔒 Voice feature sirf HTTPS pe kaam karta hai. Please site ko https:// se open karo.");
         setIsProcessingVoice(false);
         return;
       }
 
-      // Step 2: Load ElevenLabs SDK (dynamic import avoids SSR issues)
-      const { Conversation } = await import('@elevenlabs/client');
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setAiMessage("Is browser mein microphone access supported nahi hai. Chrome/Edge/Firefox ka latest version try karo.");
+        setIsProcessingVoice(false);
+        return;
+      }
 
-      // Step 3: Check Agent ID from env vars
+      // 1. Check permission status using Permissions API — does NOT acquire the mic
+      if (navigator.permissions?.query) {
+        try {
+          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
+          if (status.state === "denied") {
+            setAiMessage("🎤 Microphone permanently blocked hai. Address bar mein 🔒 lock icon click karo → Site settings → Microphone → 'Allow' select karo → page reload karo.");
+            setIsProcessingVoice(false);
+            return;
+          }
+        } catch (e) {
+          // Firefox/Safari may not support 'microphone' name — safe to ignore
+          console.warn("Permissions API check failed, proceeding anyway", e);
+        }
+      }
+
+      // 2. Device existence check (non-blocking, does not acquire mic)
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasMic = devices.some((d) => d.kind === "audioinput");
+        if (!hasMic) {
+          setAiMessage("🎤 Koi microphone detect nahi hua. Please microphone connect karo aur dobara try karo.");
+          setIsProcessingVoice(false);
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not enumerate devices", e);
+      }
+
+      // 3. Let ElevenLabs SDK acquire the mic directly (no double getUserMedia)
+      const { Conversation } = await import("@elevenlabs/client");
+
       const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
       if (!agentId) {
-        setAiMessage("Configuration Error: Agent ID is missing. Contact support.");
+        setAiMessage("Configuration Error: Agent ID missing. Contact support.");
         setIsProcessingVoice(false);
         return;
       }
 
-      // Step 4: Start the ElevenLabs session
       const conversation = await Conversation.startSession({
-        agentId: agentId,
+        agentId,
         onConnect: () => {
           setIsListening(true);
           setIsProcessingVoice(false);
@@ -185,49 +204,45 @@ export function ResumeBuilder({
         },
         onError: (error: any) => {
           console.error("ElevenLabs Error:", error);
-          setAiMessage(typeof error === 'string' ? error : "Error connecting to voice agent.");
+          setAiMessage(typeof error === "string" ? error : "Error connecting to voice agent.");
           setIsListening(false);
           setIsProcessingVoice(false);
           conversationRef.current = null;
         },
         onModeChange: (mode: any) => {
-          if (mode.mode === 'speaking') {
-            setAiMessage("AI is speaking...");
-          } else {
-            setAiMessage("Listening...");
-          }
+          setAiMessage(mode.mode === "speaking" ? "AI is speaking..." : "Listening...");
         },
         clientTools: {
           updateResume: async (updatedData: any) => {
             try {
-              if (typeof updatedData === 'string') {
-                updatedData = JSON.parse(updatedData);
-              }
+              if (typeof updatedData === "string") updatedData = JSON.parse(updatedData);
               const currentValues = getValues();
               reset({
                 ...currentValues,
                 ...updatedData,
                 personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
-                skills: { ...currentValues.skills, ...(updatedData.skills || {}) }
+                skills: { ...currentValues.skills, ...(updatedData.skills || {}) },
               });
               return "Successfully updated the resume!";
             } catch (e) {
               return "Failed to update resume form.";
             }
-          }
-        }
+          },
+        },
       });
 
       conversationRef.current = conversation;
 
     } catch (err: any) {
       console.error("Failed to start ElevenLabs session:", err);
-      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
-        setAiMessage("🎤 Microphone access was denied. Please allow microphone in browser settings and try again.");
-      } else if (err?.name === 'NotFoundError') {
-        setAiMessage("🎤 No microphone found. Please connect a microphone and try again.");
+      if (err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")) {
+        setAiMessage("🎤 Microphone access denied. Browser address bar mein 🔒 icon click karke microphone allow karo, phir dobara try karo.");
+      } else if (err?.name === "NotFoundError") {
+        setAiMessage("🎤 Koi microphone connect nahi mila.");
+      } else if (err?.name === "NotReadableError") {
+        setAiMessage("🎤 Microphone kisi aur app/tab mein use ho raha hai. Baaki apps/tabs band karke phir try karo.");
       } else {
-        setAiMessage(`Error: ${err?.message || 'Unknown error'}. Check browser console for details.`);
+        setAiMessage(`Error: ${err?.message || "Unknown error"}. Console check karo.`);
       }
       setIsProcessingVoice(false);
     }

@@ -98,11 +98,26 @@ export function ResumeBuilder({
     try {
       setIsProcessingVoice(true);
       
+      // 1. Explicitly request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (micError) {
+        setAiMessage("Please allow microphone access in your browser settings to use the Voice Assistant.");
+        setIsProcessingVoice(false);
+        return;
+      }
+
       // We dynamically import to avoid SSR issues with browser APIs
       const { Conversation } = await import('@elevenlabs/client');
 
-      // The Agent ID provided by the user
-      const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID || "zmh5xhBvMzqR4ZlXgcgL";
+      // The Agent ID provided by the user (must be set in Vercel ENV vars)
+      const agentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
+      
+      if (!agentId) {
+         setAiMessage("Configuration Error: Agent ID is missing in environment variables.");
+         setIsProcessingVoice(false);
+         return;
+      }
 
       const conversation = await Conversation.startSession({
         agentId: agentId,
@@ -117,7 +132,7 @@ export function ResumeBuilder({
         },
         onError: (error: any) => {
           console.error("ElevenLabs Error:", error);
-          setAiMessage("Error connecting to voice agent.");
+          setAiMessage(typeof error === 'string' ? error : "Error connecting to voice agent.");
           setIsListening(false);
           setIsProcessingVoice(false);
         },
@@ -153,7 +168,7 @@ export function ResumeBuilder({
 
     } catch (err) {
       console.error("Failed to start ElevenLabs session:", err);
-      setAiMessage("Microphone permission denied or error occurred.");
+      setAiMessage("An unexpected error occurred while starting the voice agent.");
       setIsProcessingVoice(false);
     }
   };

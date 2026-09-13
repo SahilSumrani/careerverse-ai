@@ -35,6 +35,30 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/jobs",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
+      },
+      {
+        source: "/internships",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
+      },
+      {
+        source: "/api/opportunities",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
+      },
+      {
+        source: "/api/events",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
+      },
     ];
   },
 };

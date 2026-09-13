@@ -10,6 +10,8 @@ export const metadata: Metadata = {
     "Browse student internships on CareerVerse AI—work from home, hybrid, and on-site roles with stipends.",
 };
 
+export const revalidate = 60;
+
 type Props = {
   searchParams: Promise<{ q?: string }>;
 };

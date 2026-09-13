@@ -4,7 +4,15 @@ import { consumeDailyQuota } from "@/lib/rate-limit";
 
 const EVENT_RSVP_DAILY_CAP = 20;
 
+let cachedEvents: { items: unknown[]; source: "firestore" | "unconfigured" | "error"; timestamp: number } | null = null;
+const EVENTS_CACHE_TTL_MS = 60_000; // 60 seconds
+
 async function listEvents() {
+  const now = Date.now();
+  if (cachedEvents && now - cachedEvents.timestamp < EVENTS_CACHE_TTL_MS) {
+    return { items: cachedEvents.items, source: cachedEvents.source };
+  }
+
   if (!hasFirebaseAdminCredentials()) {
     return { items: [], source: "unconfigured" as const };
   }
@@ -38,15 +46,25 @@ async function listEvents() {
       isDemo: boolean;
     }>;
     items.sort((a, b) => (a.startsAt > b.startsAt ? 1 : -1));
+    cachedEvents = { items, source: "firestore", timestamp: now };
     return { items, source: "firestore" as const };
   } catch {
     return { items: [], source: "error" as const };
   }
 }
 
+export const revalidate = 60;
+
 export async function GET() {
   const { items, source } = await listEvents();
-  return jsonOk({ items, source });
+  return jsonOk(
+    { items, source },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+      },
+    },
+  );
 }
 
 export async function POST(req: Request) {

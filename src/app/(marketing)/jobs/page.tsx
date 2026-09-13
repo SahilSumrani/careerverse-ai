@@ -10,6 +10,8 @@ export const metadata: Metadata = {
     "Browse fresher and early-career jobs on CareerVerse AI—filters, stipends, and apply paths for students.",
 };
 
+export const revalidate = 60;
+
 type Props = {
   searchParams: Promise<{ q?: string }>;
 };

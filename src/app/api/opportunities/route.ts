@@ -99,15 +99,27 @@ export async function GET(req: Request) {
       )
     : items;
 
-  return jsonOk({
-    items: withMatch,
-    total: withMatch.length,
-    page: 1,
-    pageSize: withMatch.length,
-    source: mine ? "firestore" : source,
-    matchedTopN: ctx && matchQuota.ok ? Math.min(MATCH_TOP_N, items.length) : 0,
-    matchRemaining: ctx ? matchQuota.remaining : null,
-  });
+  const isPublicCatalog = !mine && !session?.user?.id;
+  const cacheHeader = isPublicCatalog
+    ? "public, s-maxage=60, stale-while-revalidate=300"
+    : "private, no-cache, no-store";
+
+  return jsonOk(
+    {
+      items: withMatch,
+      total: withMatch.length,
+      page: 1,
+      pageSize: withMatch.length,
+      source: mine ? "firestore" : source,
+      matchedTopN: ctx && matchQuota.ok ? Math.min(MATCH_TOP_N, items.length) : 0,
+      matchRemaining: ctx ? matchQuota.remaining : null,
+    },
+    {
+      headers: {
+        "Cache-Control": cacheHeader,
+      },
+    },
+  );
 }
 
 /** Approved recruiters (HR + recruiterApproved) or PLATFORM_ADMIN may publish jobs. */

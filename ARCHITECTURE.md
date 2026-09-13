@@ -7,11 +7,11 @@ AI-powered career operating system: Discover → Understand → Prepare → Conn
 ## Stack
 
 - **Frontend/Backend:** Next.js 16 (App Router) + TypeScript + Tailwind CSS 4
-- **Database:** SQLite (local/dev) via Prisma; PostgreSQL-ready schema patterns
-- **Auth:** Auth.js (NextAuth v5) — credentials + optional Google OAuth
+- **Database:** Google Cloud Firestore (via Firebase Admin SDK server-side, locked-down security rules)
+- **Auth:** Auth.js (NextAuth v5) + Firebase Auth bridge (JWT sessions)
 - **Validation:** Zod
 - **Forms:** React Hook Form
-- **AI:** Provider-agnostic `AIService` abstraction (OpenAI-compatible by default)
+- **AI & Voice:** Provider-agnostic `AIService` (OpenAI/Groq compatible) + OpenRouter (ATS Parsing & Resume Assistant) + ElevenLabs Conversational AI (Voice WebRTC)
 
 ## Priority Modules
 

@@ -20,17 +20,28 @@ export async function GET(req: Request) {
 
   const ctx = session?.user?.id ? await getCareerContext(session.user.id) : null;
 
-  return jsonOk({
-    opportunities: filtered.map((j) => ({
-      id: j.id,
-      title: j.title,
-      organizationName: j.company,
-      type: j.type,
-    })),
-    people: [],
-    events: [],
-    careers: [],
-    posts: [],
-    profileHint: ctx?.careerGoals ?? null,
-  });
+  const cacheHeader = session?.user?.id
+    ? "private, no-cache, no-store"
+    : "public, s-maxage=60, stale-while-revalidate=300";
+
+  return jsonOk(
+    {
+      opportunities: filtered.map((j) => ({
+        id: j.id,
+        title: j.title,
+        organizationName: j.company,
+        type: j.type,
+      })),
+      people: [],
+      events: [],
+      careers: [],
+      posts: [],
+      profileHint: ctx?.careerGoals ?? null,
+    },
+    {
+      headers: {
+        "Cache-Control": cacheHeader,
+      },
+    },
+  );
 }

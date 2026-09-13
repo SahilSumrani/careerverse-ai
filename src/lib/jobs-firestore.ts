@@ -35,8 +35,16 @@ function mapJobDoc(id: string, data: Record<string, unknown>, fromOpportunities 
   };
 }
 
-/** Load published jobs from Firestore only — no demo fallback. */
+let cachedJobsResult: { jobs: JobListing[]; source: string; timestamp: number; limit: number } | null = null;
+const JOBS_CACHE_TTL_MS = 30_000; // 30 seconds
+
+/** Load published jobs from Firestore with in-memory TTL caching. */
 export async function loadJobsFromFirestore(limit = 40): Promise<{ jobs: JobListing[]; source: string }> {
+  const now = Date.now();
+  if (cachedJobsResult && cachedJobsResult.limit >= limit && now - cachedJobsResult.timestamp < JOBS_CACHE_TTL_MS) {
+    return { jobs: cachedJobsResult.jobs.slice(0, limit), source: cachedJobsResult.source };
+  }
+
   if (!hasFirebaseAdminCredentials()) {
     return { jobs: [], source: "unconfigured" };
   }
@@ -46,6 +54,7 @@ export async function loadJobsFromFirestore(limit = 40): Promise<{ jobs: JobList
       const jobs = jobsSnap.docs
         .map((d) => mapJobDoc(d.id, d.data() as Record<string, unknown>, false))
         .filter((j) => !j.isDemo);
+      cachedJobsResult = { jobs, source: "firestore", timestamp: now, limit };
       return { jobs, source: "firestore" };
     }
     const oppSnap = await getAdminDb().collection("opportunities").limit(limit).get();
@@ -53,8 +62,10 @@ export async function loadJobsFromFirestore(limit = 40): Promise<{ jobs: JobList
       const jobs = oppSnap.docs
         .map((d) => mapJobDoc(d.id, d.data() as Record<string, unknown>, true))
         .filter((j) => !j.isDemo);
+      cachedJobsResult = { jobs, source: "firestore", timestamp: now, limit };
       return { jobs, source: "firestore" };
     }
+    cachedJobsResult = { jobs: [], source: "firestore", timestamp: now, limit };
     return { jobs: [], source: "firestore" };
   } catch {
     return { jobs: [], source: "error" };

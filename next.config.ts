@@ -3,6 +3,14 @@ import { withReticle } from "@reticlehq/next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdf-parse"],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "firebasestorage.googleapis.com" },
+      { protocol: "https", hostname: "storage.googleapis.com" },
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+    ],
+  },
   async redirects() {
     return [{ source: "/community", destination: "/network", permanent: true }];
   },

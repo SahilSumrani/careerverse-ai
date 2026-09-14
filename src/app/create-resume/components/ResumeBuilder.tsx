@@ -195,23 +195,23 @@ export function getResumeSuggestions(data: ResumeData): string[] {
 const SAMPLE_DATA: ResumeData = {
   templateId: "classic",
   personalInfo: {
-    fullName: "Sahil Sumrani",
+    fullName: "Alex Morgan",
     headline: "Full Stack Developer | Modern Web Technologies",
-    email: "officialsahilarora05@gmail.com",
-    phone: "8700543448",
-    location: "Delhi, India",
-    linkedin: "linkedin.com/in/sahil-sumrani",
-    github: "github.com/sahilsumrani",
+    email: "alex.morgan@example.com",
+    phone: "+1 (555) 019-2834",
+    location: "San Francisco, CA",
+    linkedin: "linkedin.com/in/alex-morgan",
+    github: "github.com/alexmorgan",
   },
   professionalSummary:
     "Passionate web developer proficient in JavaScript, React, and Node.js, building responsive full-stack applications that boost user engagement by up to 30%; seeking an internship to deliver scalable solutions and deepen expertise in modern web technologies.",
   experience: [
     {
-      company: "Chief Electoral Office Delhi",
-      position: "Graphic Designing Intern",
+      company: "TechNova Solutions",
+      position: "Frontend Development Intern",
       startDate: "06/2023",
       endDate: "Present",
-      location: "Delhi, India",
+      location: "San Francisco, CA",
       description: [
         "Collaborated with cross-functional teams to outline UI requirements, resulting in a successful launch of digital campaign assets.",
         "Created accessible visual layouts and brand identity guidelines for high-visibility public portals.",
@@ -231,12 +231,12 @@ const SAMPLE_DATA: ResumeData = {
   ],
   education: [
     {
-      institution: "School of Open Learning, University of Delhi",
-      degree: "Bachelor of Computer Applications",
-      startDate: "2023",
+      institution: "State University of California",
+      degree: "Bachelor of Science in Computer Science",
+      startDate: "2022",
       endDate: "2026",
-      location: "Delhi, India",
-      score: "",
+      location: "San Francisco, CA",
+      score: "3.8 GPA",
     },
   ],
   skills: {
@@ -377,6 +377,9 @@ export function ResumeBuilder({
   );
   const [zoom, setZoom] = useState<number>(75);
   const [resumeFontSize, setResumeFontSize] = useState<"compact" | "standard" | "large">("standard");
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  const [assistantInput, setAssistantInput] = useState("");
+  const [autoSpeak, setAutoSpeak] = useState(true);
 
   const previewRef = useRef<HTMLDivElement>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -422,6 +425,14 @@ export function ResumeBuilder({
   });
 
   const isInitialized = useRef(false);
+
+  // Auto-fit zoom on phone screens
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      const calcZoom = Math.max(38, Math.floor(((window.innerWidth - 24) / 794) * 100));
+      setZoom(calcZoom);
+    }
+  }, []);
 
   // Sync across devices: fetch user's saved resume from cloud if signed in
   useEffect(() => {
@@ -481,44 +492,14 @@ export function ResumeBuilder({
     return () => clearTimeout(handler);
   }, [formData, storageKey]);
 
-  // Voice speech synthesis: English only with fallback
-  const speakResponse = async (text: string) => {
+  // Instant speech synthesis: English only, zero network latency
+  const speakResponse = (text: string) => {
     const cleanText = stripEmojis(text);
     if (!cleanText || typeof window === "undefined") return;
 
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: cleanText, lang: "en" }),
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        currentAudioRef.current = audio;
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          currentAudioRef.current = null;
-        };
-        await audio.play();
-        return;
-      }
-    } catch {
-      // Fall through to browser synthesis
-    }
-
     if ("speechSynthesis" in window) {
       try {
+        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.lang = "en-US";
         utterance.rate = 1.0;
@@ -527,8 +508,8 @@ export function ResumeBuilder({
         const preferredVoice = voices.find(
           (v) =>
             v.lang.startsWith("en") &&
-            (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha"))
-        );
+            (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Aria") || v.name.includes("Samantha"))
+        ) || voices.find((v) => v.lang.startsWith("en"));
         if (preferredVoice) utterance.voice = preferredVoice;
         window.speechSynthesis.speak(utterance);
       } catch (synthErr) {
@@ -537,9 +518,10 @@ export function ResumeBuilder({
     }
   };
 
-  // Run AI Assistant optimization command
+  // Run AI Assistant optimization command (supports voice or text)
   const runAssistantCommand = async (command: string) => {
     const cleanCmd = stripEmojis(command);
+    if (!cleanCmd) return;
     setIsProcessingVoice(true);
     setAiMessage(`Working on: "${cleanCmd}"...`);
     setShowAssistantBubble(true);
@@ -569,16 +551,19 @@ export function ResumeBuilder({
         });
       }
 
-      const reply = stripEmojis(aiResponse) || "Updated your resume with your request!";
+      const reply = stripEmojis(aiResponse) || "I have updated your resume with your requested changes.";
       setAiMessage(reply);
-      speakResponse(reply);
+      if (autoSpeak) {
+        speakResponse(reply);
+      }
     } catch (err: any) {
       console.error("AI assistant error:", err);
       const errMsg = "Could not complete request. Please try again.";
       setAiMessage(errMsg);
-      speakResponse(errMsg);
+      if (autoSpeak) speakResponse(errMsg);
     } finally {
       setIsProcessingVoice(false);
+      setAssistantInput("");
     }
   };
 
@@ -682,8 +667,55 @@ export function ResumeBuilder({
 
   return (
     <div className="w-full flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-100 print:h-auto print:overflow-visible print:block">
+      {/* Mobile Top View Switcher (Edit vs Preview) */}
+      <div className="flex md:hidden items-center justify-between p-2 bg-white border-b border-slate-200 shrink-0 sticky top-0 z-30 shadow-2xs">
+        <button
+          onClick={onBack}
+          className="text-slate-600 text-xs font-semibold px-2 py-1 flex items-center gap-1 cursor-pointer"
+        >
+          &larr; Back
+        </button>
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setMobileTab("edit")}
+            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+              mobileTab === "edit"
+                ? "bg-white text-blue-600 shadow-xs font-bold"
+                : "text-slate-600"
+            }`}
+          >
+            Edit Form
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileTab("preview");
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setZoom(Math.max(38, Math.floor(((window.innerWidth - 24) / 794) * 100)));
+              }
+            }}
+            className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+              mobileTab === "preview"
+                ? "bg-white text-blue-600 shadow-xs font-bold"
+                : "text-slate-600"
+            }`}
+          >
+            Preview PDF
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={exportPDF}
+          disabled={isExporting}
+          className="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-xs flex items-center gap-1 cursor-pointer"
+        >
+          <Download size={12} /> PDF
+        </button>
+      </div>
+
       {/* LEFT: Editor */}
-      <div className="w-full md:w-[45%] lg:w-[42%] h-full flex flex-col border-r border-slate-200 bg-white print:hidden shrink-0 shadow-sm">
+      <div className={`w-full md:w-[45%] lg:w-[42%] h-full flex flex-col border-r border-slate-200 bg-white print:hidden shrink-0 shadow-sm ${mobileTab === "edit" ? "flex" : "hidden md:flex"}`}>
         {/* Top bar with back, template switcher, and save/export buttons */}
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-slate-200 bg-slate-50/70">
           <button
@@ -799,7 +831,7 @@ export function ResumeBuilder({
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
                 <input
                   {...register("personalInfo.fullName")}
-                  placeholder="e.g. Sahil Sumrani"
+                  placeholder="e.g. Alex Morgan"
                   className="w-full p-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500"
                 />
               </div>
@@ -1233,12 +1265,12 @@ export function ResumeBuilder({
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="flex-1 overflow-auto p-3 md:p-6 bg-slate-200/90 print:bg-white flex flex-col items-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
+      <div className={`flex-1 overflow-auto p-2 sm:p-3 md:p-6 bg-slate-200/90 print:bg-white flex flex-col items-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block ${mobileTab === "preview" ? "flex" : "hidden md:flex"}`}>
         {/* Zoom Controls Bar */}
-        <div className="mb-3 flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-300 shadow-xs print:hidden shrink-0">
+        <div className="mb-3 flex flex-wrap items-center gap-2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-300 shadow-xs print:hidden shrink-0">
           <span className="text-xs font-semibold text-slate-600">Zoom:</span>
           <button
-            onClick={() => setZoom((z) => Math.max(50, z - 5))}
+            onClick={() => setZoom((z) => Math.max(35, z - 5))}
             className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-700 cursor-pointer"
           >
             -
@@ -1252,12 +1284,24 @@ export function ResumeBuilder({
           </button>
           <div className="h-3.5 w-px bg-slate-300 mx-1" />
           <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const fit = Math.min(100, Math.floor(((window.innerWidth - 32) / 794) * 100));
+                setZoom(Math.max(38, fit));
+              }
+            }}
+            className="text-xs px-2 py-0.5 rounded cursor-pointer transition-colors text-slate-600 hover:bg-slate-100"
+          >
+            Fit Screen
+          </button>
+          <button
             onClick={() => setZoom(75)}
             className={`text-xs px-2.5 py-0.5 rounded cursor-pointer transition-colors ${
               zoom === 75 ? "bg-blue-600 text-white font-bold" : "text-slate-600 hover:bg-slate-100"
             }`}
           >
-            Fit Page
+            75%
           </button>
           <button
             onClick={() => setZoom(100)}
@@ -1767,15 +1811,27 @@ export function ResumeBuilder({
             <div className="flex items-center justify-between mb-2 pr-6">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-blue-500" />
-                <span className="font-bold text-xs text-slate-800">AI Assistant (English)</span>
+                <span className="font-bold text-xs text-slate-800">AI Assistant</span>
               </div>
-              <button
-                onClick={() => speakResponse(aiMessage)}
-                title="Listen to Assistant"
-                className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                <Volume2 size={15} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setAutoSpeak(!autoSpeak)}
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors cursor-pointer ${
+                    autoSpeak ? "bg-blue-100 text-blue-700 font-semibold" : "text-slate-400 hover:bg-slate-100"
+                  }`}
+                  title={autoSpeak ? "Auto-speak is active" : "Auto-speak is muted"}
+                >
+                  {autoSpeak ? "Voice ON" : "Muted"}
+                </button>
+                <button
+                  onClick={() => speakResponse(aiMessage)}
+                  title="Replay Voice"
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <Volume2 size={15} />
+                </button>
+              </div>
             </div>
             {/* Close Bot Message Button */}
             <button
@@ -1786,6 +1842,33 @@ export function ResumeBuilder({
               <X size={15} />
             </button>
             <p className="text-xs text-slate-700 leading-relaxed mb-2.5">{aiMessage}</p>
+
+            {/* Interactive Command Input Box (Allows typing as well as voice) */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (assistantInput.trim()) {
+                  runAssistantCommand(assistantInput.trim());
+                }
+              }}
+              className="mb-2.5 flex items-center gap-1.5"
+            >
+              <input
+                type="text"
+                value={assistantInput}
+                onChange={(e) => setAssistantInput(e.target.value)}
+                placeholder="Ask AI to optimize, add project, or edit..."
+                disabled={isProcessingVoice}
+                className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50 focus:bg-white"
+              />
+              <button
+                type="submit"
+                disabled={isProcessingVoice || !assistantInput.trim()}
+                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
+              >
+                Send
+              </button>
+            </form>
 
             {/* Real-time Dynamic Suggestions (Filtered to only what is missing/weak) */}
             <div className="pt-2 border-t border-slate-100">

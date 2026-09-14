@@ -17,6 +17,8 @@ import {
   LogIn,
   FileType,
   Volume2,
+  X,
+  ExternalLink,
 } from "lucide-react";
 
 export interface ResumeData {
@@ -50,6 +52,7 @@ export interface ResumeData {
   projects: Array<{
     name: string;
     technologies: string[];
+    link?: string;
     description: string[];
   }>;
   skills: {
@@ -64,6 +67,7 @@ export interface ResumeData {
   trainingCourses?: Array<{
     name: string;
     provider?: string;
+    duration?: string;
     description: string;
   }>;
   languages?: Array<{
@@ -81,7 +85,6 @@ export interface ResumeData {
 function renderFormattedText(text: string | undefined): ReactNode {
   if (!text) return null;
 
-  // Split by bold tokens **...**
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -92,7 +95,6 @@ function renderFormattedText(text: string | undefined): ReactNode {
         </strong>
       );
     }
-    // Clean any stray lone asterisks
     const cleaned = part.replace(/\*/g, "");
     return <span key={index}>{cleaned}</span>;
   });
@@ -103,25 +105,36 @@ const SAMPLE_DATA: ResumeData = {
   templateId: "classic",
   personalInfo: {
     fullName: "Sahil Sumrani",
-    headline: "Chief Experience Officer | Customer-Centric Strategies | Digital Transformation",
+    headline: "Full Stack Developer | Modern Web Technologies",
     email: "officialsahilarora05@gmail.com",
     phone: "8700543448",
-    location: "Indianapolis, Indiana",
+    location: "Delhi, India",
     linkedin: "linkedin.com/in/sahil-sumrani",
     github: "github.com/sahilsumrani",
   },
   professionalSummary:
-    "Motivated and results-driven student with a strong foundation in web development seeking an internship to apply and expand technical skills in a dynamic environment.",
+    "Passionate web developer proficient in JavaScript, React, and Node.js, building responsive full-stack applications that boost user engagement by up to 30%; seeking an internship to deliver scalable solutions and deepen expertise in modern web technologies.",
   experience: [
     {
       company: "Chief Electoral Office Delhi",
       position: "Graphic Designing Intern",
       startDate: "06/2023",
       endDate: "Present",
-      location: "San Diego, California",
+      location: "Delhi, India",
       description: [
-        "Collaborated with product teams to outline requirements, resulting in a successful launch of features.",
-        "Executed rigorous testing protocols that enhanced software stability and improved user satisfaction.",
+        "Collaborated with cross-functional teams to outline UI requirements, resulting in a successful launch of digital campaign assets.",
+        "Created accessible visual layouts and brand identity guidelines for high-visibility public portals.",
+      ],
+    },
+  ],
+  projects: [
+    {
+      name: "CareerVerse AI Platform",
+      technologies: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
+      link: "https://careerverse.ai",
+      description: [
+        "Engineered an interactive resume builder with real-time A4 preview and dual executive templates.",
+        "Integrated AI voice assistant utilizing Groq LLM inference for sub-second ATS resume optimization.",
       ],
     },
   ],
@@ -135,11 +148,10 @@ const SAMPLE_DATA: ResumeData = {
       score: "",
     },
   ],
-  projects: [],
   skills: {
-    languages: ["JavaScript", "PHP", "HTML", "CSS", "TypeScript"],
-    frameworks: ["React.js", "Next.js", "WordPress"],
-    tools: ["Shopify", "MongoDB", "Git", "Figma"],
+    languages: ["JavaScript", "TypeScript", "HTML", "CSS", "PHP"],
+    frameworks: ["React.js", "Next.js", "Tailwind CSS", "Node.js"],
+    tools: ["MongoDB", "Git", "Figma", "WordPress", "Shopify"],
   },
   keyAchievements: [
     {
@@ -148,33 +160,34 @@ const SAMPLE_DATA: ResumeData = {
         "Introduced an innovative feedback system that enhanced response rates by 50%, leading to actionable insights that drove initiatives to improve satisfaction.",
     },
     {
-      title: "Increased Customer Retention",
+      title: "Increased User Retention",
       description:
-        "Successfully designed a customer loyalty program that increased retention by 20%, significantly improving overall profitability.",
+        "Successfully designed a user loyalty program that increased engagement by 20%, significantly improving overall retention.",
     },
     {
       title: "Elevated Service Quality",
       description:
-        "Implemented a new training curriculum that increased customer service quality ratings by 30% within six months.",
+        "Implemented training curriculum that increased customer service quality ratings by 30% within six months.",
     },
   ],
   trainingCourses: [
     {
-      name: "Customer Experience Management",
+      name: "Full Stack Web Development",
       provider: "Coursera",
+      duration: "6 Months",
       description:
-        "An in-depth program by Coursera focused on strategic customer experience improvements, delivered by leading industry experts.",
+        "Comprehensive program focused on modern frontend architecture, REST APIs, and database design.",
     },
     {
-      name: "Data-Driven Decisions",
+      name: "Data-Driven Decisions & Analytics",
       provider: "edX",
+      duration: "8 Weeks",
       description:
-        "This Excel-based course provided by edX teaches how to make informed strategic decisions based on customer data analysis.",
+        "Course focused on making informed strategic decisions based on application metrics and user analytics.",
     },
   ],
   languages: [
     { name: "English", proficiency: 5 },
-    { name: "Hindi", proficiency: 5 },
   ],
 };
 
@@ -257,7 +270,7 @@ export function ResumeBuilder({
 }) {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<
-    "personal" | "summary" | "experience" | "education" | "skills" | "achievements" | "courses"
+    "personal" | "summary" | "experience" | "projects" | "education" | "skills" | "achievements" | "courses"
   >("personal");
   const [isExporting, setIsExporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -266,7 +279,6 @@ export function ResumeBuilder({
   const [isListening, setIsListening] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
-  const [voiceLang, setVoiceLang] = useState<"en" | "hi">("en");
   const [zoom, setZoom] = useState<number>(75);
   const previewRef = useRef<HTMLDivElement>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -284,6 +296,7 @@ export function ResumeBuilder({
       frameworks: initialData?.skills?.frameworks?.length ? initialData.skills.frameworks : SAMPLE_DATA.skills.frameworks,
       tools: initialData?.skills?.tools?.length ? initialData.skills.tools : SAMPLE_DATA.skills.tools,
     },
+    projects: initialData?.projects?.length ? initialData.projects : SAMPLE_DATA.projects,
     templateId: initialData?.templateId || "classic",
   };
 
@@ -292,6 +305,7 @@ export function ResumeBuilder({
   });
 
   const { fields: expFields, append: appendExp, remove: removeExp } = useFieldArray({ control, name: "experience" });
+  const { fields: projFields, append: appendProj, remove: removeProj } = useFieldArray({ control, name: "projects" });
   const { fields: eduFields, append: appendEdu, remove: removeEdu } = useFieldArray({ control, name: "education" });
   const { fields: achFields, append: appendAch, remove: removeAch } = useFieldArray({
     control,
@@ -336,11 +350,10 @@ export function ResumeBuilder({
     return () => clearTimeout(handler);
   }, [formData]);
 
-  // Voice speech synthesis with infallible fallback
-  const speakResponse = async (text: string, lang: "en" | "hi") => {
+  // Voice speech synthesis: English only with fallback
+  const speakResponse = async (text: string) => {
     if (!text || typeof window === "undefined") return;
 
-    // Stop ongoing audio
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
@@ -353,7 +366,7 @@ export function ResumeBuilder({
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, lang }),
+        body: JSON.stringify({ text, lang: "en" }),
       });
 
       if (res.ok) {
@@ -369,21 +382,20 @@ export function ResumeBuilder({
         return;
       }
     } catch {
-      // Fall through to native synthesis
+      // Fall through
     }
 
-    // Native Web Speech fallback ensures assistant ALWAYS talks
     if ("speechSynthesis" in window) {
       try {
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
+        utterance.lang = "en-US";
         utterance.rate = 1.0;
-        utterance.pitch = 1.05;
+        utterance.pitch = 1.0;
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(
           (v) =>
-            v.lang.startsWith(lang === "hi" ? "hi" : "en") &&
-            (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Neural"))
+            v.lang.startsWith("en") &&
+            (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha"))
         );
         if (preferredVoice) utterance.voice = preferredVoice;
         window.speechSynthesis.speak(utterance);
@@ -393,7 +405,7 @@ export function ResumeBuilder({
     }
   };
 
-  // Clean toggle for voice recognition
+  // English-only Voice Recognition
   const toggleListening = async () => {
     if (isListening) {
       if (recognitionRef.current) recognitionRef.current.stop();
@@ -412,18 +424,14 @@ export function ResumeBuilder({
 
     try {
       const recognition = new SpeechRecognition();
-      recognition.lang = voiceLang === "hi" ? "hi-IN" : "en-US";
+      recognition.lang = "en-US";
       recognition.continuous = false;
       recognition.interimResults = false;
 
       recognition.onstart = () => {
         setIsListening(true);
         setIsProcessingVoice(false);
-        setAiMessage(
-          voiceLang === "hi"
-            ? "🎙️ Sun raha hoon... Boliye kya add karna hai (jaise: 'Mera professional summary improve karo')"
-            : "🎙️ Listening... Speak your request (e.g., 'Enhance my summary for web development')"
-        );
+        setAiMessage("🎙️ Listening in English... Tell me how to update or optimize your resume.");
       };
 
       recognition.onresult = async (event: any) => {
@@ -442,7 +450,6 @@ export function ResumeBuilder({
             body: JSON.stringify({
               transcript,
               resumeState: currentValues,
-              lang: voiceLang,
             }),
           });
 
@@ -459,22 +466,14 @@ export function ResumeBuilder({
             });
           }
 
-          const reply =
-            aiResponse ||
-            (voiceLang === "hi"
-              ? "Aapka resume update ho gaya hai!"
-              : "Updated your resume with your request!");
-
+          const reply = aiResponse || "Updated your resume with your request!";
           setAiMessage(reply);
-          speakResponse(reply, voiceLang);
+          speakResponse(reply);
         } catch (err: any) {
           console.error("Voice command error:", err);
-          const errMsg =
-            voiceLang === "hi"
-              ? "Command process nahi ho paayi. Kripya dobara koshish karein."
-              : "Could not process command. Please try again.";
+          const errMsg = "Could not process command. Please try again.";
           setAiMessage(errMsg);
-          speakResponse(errMsg, voiceLang);
+          speakResponse(errMsg);
         } finally {
           setIsProcessingVoice(false);
         }
@@ -620,6 +619,7 @@ export function ResumeBuilder({
             { id: "personal", label: "Personal" },
             { id: "summary", label: "Summary" },
             { id: "experience", label: "Experience" },
+            { id: "projects", label: "Projects" },
             { id: "education", label: "Education" },
             { id: "skills", label: "Skills" },
             { id: "achievements", label: "Achievements" },
@@ -707,7 +707,7 @@ export function ResumeBuilder({
                 <textarea
                   {...register("professionalSummary")}
                   rows={6}
-                  placeholder="Motivated and results-driven student with a strong foundation in..."
+                  placeholder="Passionate web developer proficient in..."
                   className="w-full p-3 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 leading-relaxed"
                 />
               </div>
@@ -802,6 +802,85 @@ export function ResumeBuilder({
                 className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-semibold cursor-pointer"
               >
                 <Plus size={14} /> Add Experience
+              </button>
+            </div>
+          )}
+
+          {activeTab === "projects" && (
+            <div className="space-y-4 animate-in fade-in">
+              {projFields.map((field, index) => (
+                <div key={field.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 relative">
+                  <button
+                    type="button"
+                    onClick={() => removeProj(index)}
+                    className="absolute top-3 right-3 text-slate-400 hover:text-red-600"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="space-y-2.5 pr-6">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-0.5">Project Name</label>
+                        <input
+                          {...register(`projects.${index}.name`)}
+                          placeholder="e.g. CareerVerse Platform"
+                          className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-0.5">Project Link (optional)</label>
+                        <input
+                          {...register(`projects.${index}.link`)}
+                          placeholder="e.g. https://github.com/..."
+                          className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Controller
+                        control={control}
+                        name={`projects.${index}.technologies`}
+                        render={({ field }) => (
+                          <TagInput
+                            label="Technologies Used"
+                            tags={field.value || []}
+                            onChange={field.onChange}
+                            placeholder="e.g. React, Next.js, Node.js"
+                          />
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-0.5">
+                        Bullet Points / Key Features
+                      </label>
+                      <textarea
+                        rows={3}
+                        defaultValue={(formData.projects?.[index]?.description || []).join("\n")}
+                        onChange={(e) => {
+                          const lines = e.target.value.split("\n").filter((l) => l.trim().length > 0);
+                          setValue(`projects.${index}.description`, lines);
+                        }}
+                        placeholder="• Built responsive UI&#10;• Reduced latency by 35%"
+                        className="w-full p-2 text-xs border border-slate-300 rounded bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  appendProj({
+                    name: "",
+                    technologies: [],
+                    link: "",
+                    description: [],
+                  })
+                }
+                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-semibold cursor-pointer"
+              >
+                <Plus size={14} /> Add Project
               </button>
             </div>
           )}
@@ -967,11 +1046,18 @@ export function ResumeBuilder({
                         <Trash2 size={14} />
                       </button>
                       <div className="space-y-1.5 pr-5">
-                        <input
-                          {...register(`trainingCourses.${index}.name` as any)}
-                          placeholder="Course name"
-                          className="w-full p-1 text-xs border border-slate-300 rounded bg-white font-semibold"
-                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            {...register(`trainingCourses.${index}.name` as any)}
+                            placeholder="Course name"
+                            className="w-full p-1 text-xs border border-slate-300 rounded bg-white font-semibold"
+                          />
+                          <input
+                            {...register(`trainingCourses.${index}.duration` as any)}
+                            placeholder="Duration / Year (e.g. 6 Months, 2024)"
+                            className="w-full p-1 text-xs border border-slate-300 rounded bg-white"
+                          />
+                        </div>
                         <input
                           {...register(`trainingCourses.${index}.description` as any)}
                           placeholder="Provider & skills learned"
@@ -982,7 +1068,7 @@ export function ResumeBuilder({
                   ))}
                   <button
                     type="button"
-                    onClick={() => appendCourse({ name: "", provider: "", description: "" })}
+                    onClick={() => appendCourse({ name: "", provider: "", duration: "", description: "" })}
                     className="w-full py-1.5 border border-dashed border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 text-xs font-medium cursor-pointer"
                   >
                     + Add Course
@@ -1073,7 +1159,7 @@ export function ResumeBuilder({
                 {/* 2-Column Grid */}
                 <div className="grid grid-cols-12 gap-5 flex-1">
                   {/* Left Column (60%) */}
-                  <div className="col-span-7 space-y-3.5">
+                  <div className="col-span-7 space-y-3">
                     {formData.professionalSummary && (
                       <section>
                         <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
@@ -1087,27 +1173,60 @@ export function ResumeBuilder({
 
                     {formData.experience?.length > 0 && (
                       <section>
-                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
                           Experience
                         </h2>
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           {formData.experience.map((exp, i) => (
                             <div key={i}>
-                              <div className="font-bold text-[12.5px] text-slate-900 leading-tight">
+                              <div className="font-bold text-[12px] text-slate-900 leading-tight">
                                 {exp.position}
                               </div>
-                              <div className="text-[12px] font-semibold text-sky-700">
+                              <div className="text-[11.5px] font-semibold text-sky-700">
                                 {exp.company}
                               </div>
-                              <div className="text-[10.5px] text-slate-500 font-medium mb-1 flex items-center gap-2">
+                              <div className="text-[10px] text-slate-500 font-medium mb-0.5 flex items-center gap-2">
                                 <span>
                                   {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
                                 </span>
                                 {exp.location && <span>• {exp.location}</span>}
                               </div>
-                              <ul className="list-disc list-outside ml-3.5 text-[11px] text-slate-800 space-y-1 leading-snug">
+                              <ul className="list-disc list-outside ml-3.5 text-[11px] text-slate-800 space-y-0.5 leading-snug">
                                 {exp.description?.map((bullet, j) => (
                                   <li key={j}>{renderFormattedText(bullet)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Projects in Executive Column */}
+                    {formData.projects?.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Key Projects
+                        </h2>
+                        <div className="space-y-2">
+                          {formData.projects.map((proj, i) => (
+                            <div key={i}>
+                              <div className="flex items-center gap-1 font-bold text-[12px] text-slate-900">
+                                <span>{proj.name}</span>
+                                {proj.link && (
+                                  <a href={proj.link} target="_blank" rel="noreferrer" className="text-sky-600 inline-block">
+                                    <ExternalLink size={10} />
+                                  </a>
+                                )}
+                              </div>
+                              {proj.technologies?.length > 0 && (
+                                <div className="text-[10.5px] text-slate-600 font-medium mb-0.5">
+                                  Tech: {proj.technologies.join(", ")}
+                                </div>
+                              )}
+                              <ul className="list-disc list-outside ml-3.5 text-[10.5px] text-slate-800 space-y-0.5 leading-snug">
+                                {proj.description?.map((b, j) => (
+                                  <li key={j}>{renderFormattedText(b)}</li>
                                 ))}
                               </ul>
                             </div>
@@ -1118,20 +1237,20 @@ export function ResumeBuilder({
                   </div>
 
                   {/* Right Column (40%) */}
-                  <div className="col-span-5 space-y-3.5 border-l border-slate-200 pl-4">
+                  <div className="col-span-5 space-y-3 border-l border-slate-200 pl-4">
                     {/* Key Achievements */}
                     {formData.keyAchievements && formData.keyAchievements.length > 0 && (
                       <section>
                         <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
                           Key Achievements
                         </h2>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {formData.keyAchievements.map((ach, i) => (
                             <div key={i}>
-                              <div className="text-[11.5px] font-bold text-slate-900 leading-tight">
+                              <div className="text-[11px] font-bold text-slate-900 leading-tight">
                                 {ach.title}
                               </div>
-                              <p className="text-[10.5px] text-slate-700 leading-snug mt-0.5">
+                              <p className="text-[10px] text-slate-700 leading-snug mt-0.5">
                                 {renderFormattedText(ach.description)}
                               </p>
                             </div>
@@ -1171,7 +1290,7 @@ export function ResumeBuilder({
                         <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
                           Education
                         </h2>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {formData.education.map((edu, i) => (
                             <div key={i}>
                               <div className="text-[11.5px] font-bold text-slate-900 leading-tight">
@@ -1190,7 +1309,7 @@ export function ResumeBuilder({
                       </section>
                     )}
 
-                    {/* Training / Courses */}
+                    {/* Training / Courses with Duration */}
                     {formData.trainingCourses && formData.trainingCourses.length > 0 && (
                       <section>
                         <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
@@ -1199,8 +1318,11 @@ export function ResumeBuilder({
                         <div className="space-y-1.5">
                           {formData.trainingCourses.map((c, i) => (
                             <div key={i}>
-                              <div className="text-[11px] font-bold text-slate-900 leading-tight">
-                                {c.name}
+                              <div className="flex items-baseline justify-between text-[11px] font-bold text-slate-900 leading-tight">
+                                <span>{c.name}</span>
+                                {c.duration && (
+                                  <span className="text-[9.5px] font-semibold text-sky-700">{c.duration}</span>
+                                )}
                               </div>
                               <p className="text-[10px] text-slate-700 leading-snug mt-0.5">
                                 {renderFormattedText(c.description)}
@@ -1217,9 +1339,9 @@ export function ResumeBuilder({
                         <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
                           Languages
                         </h2>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           {formData.languages.map((l, i) => (
-                            <div key={i} className="flex items-center justify-between text-[11px]">
+                            <div key={i} className="flex items-center justify-between text-[10.5px]">
                               <span className="font-bold text-slate-800">{l.name}</span>
                               <div className="flex gap-1">
                                 {[1, 2, 3, 4, 5].map((seg) => (
@@ -1266,11 +1388,11 @@ export function ResumeBuilder({
                   </div>
                 </header>
 
-                <div className="space-y-3.5 text-slate-800">
+                <div className="space-y-3 text-slate-800">
                   {/* Summary */}
                   {formData.professionalSummary && (
                     <section>
-                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1 text-center font-serif">
                         Summary
                       </h2>
                       <p className="text-[11.5px] text-slate-800 leading-relaxed text-justify">
@@ -1282,10 +1404,10 @@ export function ResumeBuilder({
                   {/* Experience */}
                   {formData.experience?.length > 0 && (
                     <section>
-                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-2 text-center font-serif">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
                         Experience
                       </h2>
-                      <div className="space-y-2.5">
+                      <div className="space-y-2">
                         {formData.experience.map((exp, i) => (
                           <div key={i}>
                             <div className="flex justify-between items-baseline">
@@ -1294,7 +1416,7 @@ export function ResumeBuilder({
                                 {exp.location || "San Diego, California"}
                               </span>
                             </div>
-                            <div className="flex justify-between items-baseline mb-1">
+                            <div className="flex justify-between items-baseline mb-0.5">
                               <span className="font-semibold text-slate-800 italic text-[11.5px]">
                                 {exp.position}
                               </span>
@@ -1313,12 +1435,45 @@ export function ResumeBuilder({
                     </section>
                   )}
 
+                  {/* Projects */}
+                  {formData.projects?.length > 0 && (
+                    <section>
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                        Projects
+                      </h2>
+                      <div className="space-y-2">
+                        {formData.projects.map((proj, i) => (
+                          <div key={i}>
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-bold text-slate-900 text-[11.5px]">{proj.name}</span>
+                              {proj.link && (
+                                <a href={proj.link} target="_blank" rel="noreferrer" className="text-[10px] text-sky-600 hover:underline">
+                                  Link
+                                </a>
+                              )}
+                            </div>
+                            {proj.technologies?.length > 0 && (
+                              <div className="text-[10px] text-slate-600 italic">
+                                Technologies: {proj.technologies.join(", ")}
+                              </div>
+                            )}
+                            <ul className="list-disc list-outside ml-4 text-[10.5px] text-slate-800 space-y-0.5 leading-snug">
+                              {proj.description?.map((bullet, j) => (
+                                <li key={j}>{renderFormattedText(bullet)}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   {/* Skills */}
                   {(formData.skills?.languages?.length > 0 ||
                     formData.skills?.frameworks?.length > 0 ||
                     formData.skills?.tools?.length > 0) && (
                     <section>
-                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1 text-center font-serif">
                         Skills
                       </h2>
                       <p className="text-[11px] text-slate-800 text-center font-medium leading-relaxed">
@@ -1331,7 +1486,7 @@ export function ResumeBuilder({
                     </section>
                   )}
 
-                  {/* Training / Courses */}
+                  {/* Training / Courses with Duration */}
                   {formData.trainingCourses && formData.trainingCourses.length > 0 && (
                     <section>
                       <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1 text-center font-serif">
@@ -1340,7 +1495,8 @@ export function ResumeBuilder({
                       <div className="space-y-1">
                         {formData.trainingCourses.map((c, i) => (
                           <div key={i} className="text-[10.5px] text-slate-800 leading-snug">
-                            <span className="font-bold text-slate-900">{c.name}</span> —{" "}
+                            <span className="font-bold text-slate-900">{c.name}</span>
+                            {c.duration && <span className="font-medium text-sky-700"> ({c.duration})</span>} —{" "}
                             {renderFormattedText(c.description)}
                           </div>
                         ))}
@@ -1351,10 +1507,10 @@ export function ResumeBuilder({
                   {/* Education */}
                   {formData.education?.length > 0 && (
                     <section>
-                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1 text-center font-serif">
                         Education
                       </h2>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         {formData.education.map((edu, i) => (
                           <div key={i}>
                             <div className="flex justify-between items-baseline">
@@ -1378,16 +1534,16 @@ export function ResumeBuilder({
                   {/* Key Achievements: 3-column bottom grid */}
                   {formData.keyAchievements && formData.keyAchievements.length > 0 && (
                     <section className="pt-1">
-                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-2 text-center font-serif">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
                         Key Achievements
                       </h2>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-3 gap-3.5">
                         {formData.keyAchievements.slice(0, 3).map((ach, i) => (
                           <div key={i} className="text-left">
-                            <h4 className="font-bold text-slate-900 text-[11px] mb-0.5 leading-tight">
+                            <h4 className="font-bold text-slate-900 text-[10.5px] mb-0.5 leading-tight">
                               {ach.title}
                             </h4>
-                            <p className="text-[10px] text-slate-600 leading-snug">
+                            <p className="text-[9.5px] text-slate-600 leading-snug">
                               {renderFormattedText(ach.description)}
                             </p>
                           </div>
@@ -1398,7 +1554,7 @@ export function ResumeBuilder({
                 </div>
 
                 {/* Watermark */}
-                <div className="mt-auto pt-4 text-right text-[9px] text-slate-400 print:hidden font-sans">
+                <div className="mt-auto pt-3 text-right text-[9px] text-slate-400 print:hidden font-sans">
                   Powered by <span className="font-bold text-slate-500">CareerVerse AI</span>
                 </div>
               </div>
@@ -1410,40 +1566,28 @@ export function ResumeBuilder({
       {/* Floating Voice Assistant */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
         {aiMessage && (
-          <div className="mb-3 bg-white border border-blue-200 shadow-xl rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4">
-            <div className="flex items-center justify-between mb-1.5">
+          <div className="mb-3 bg-white border border-blue-200 shadow-xl rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4 relative">
+            <div className="flex items-center justify-between mb-1.5 pr-6">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-blue-500" />
-                <span className="font-bold text-xs text-slate-800">AI Assistant</span>
+                <span className="font-bold text-xs text-slate-800">AI Assistant (English)</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => speakResponse(aiMessage, voiceLang)}
-                  title="Listen to response"
-                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <Volume2 size={15} />
-                </button>
-                <div className="flex gap-1 bg-slate-100 p-0.5 rounded text-[11px]">
-                  <button
-                    onClick={() => setVoiceLang("en")}
-                    className={`px-1.5 py-0.5 rounded cursor-pointer ${
-                      voiceLang === "en" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
-                    }`}
-                  >
-                    EN
-                  </button>
-                  <button
-                    onClick={() => setVoiceLang("hi")}
-                    className={`px-1.5 py-0.5 rounded cursor-pointer ${
-                      voiceLang === "hi" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
-                    }`}
-                  >
-                    हिं
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={() => speakResponse(aiMessage)}
+                title="Listen again"
+                className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <Volume2 size={15} />
+              </button>
             </div>
+            {/* Close Bot Message Button */}
+            <button
+              onClick={() => setAiMessage("")}
+              title="Close message"
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded-full hover:bg-slate-100 cursor-pointer"
+            >
+              <X size={15} />
+            </button>
             <p className="text-xs text-slate-700 leading-relaxed">{aiMessage}</p>
           </div>
         )}

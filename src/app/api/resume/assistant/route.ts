@@ -7,8 +7,51 @@ export const runtime = "nodejs";
 
 const ASSISTANT_SESSION_DAILY_CAP = 60;
 const ASSISTANT_GUEST_HOURLY_CAP = 25;
-const MAX_TRANSCRIPT_CHARS = 2000;
-const MAX_STATE_CHARS = 65536;
+const MAX_TRANSCRIPT_CHARS = 1500;
+
+// Compact state payload to save tokens
+function compactResumePayload(state: any) {
+  if (!state || typeof state !== "object") return {};
+  return {
+    personalInfo: {
+      fullName: state.personalInfo?.fullName || "",
+      headline: state.personalInfo?.headline || "",
+      email: state.personalInfo?.email || "",
+      phone: state.personalInfo?.phone || "",
+      location: state.personalInfo?.location || "",
+      linkedin: state.personalInfo?.linkedin || "",
+    },
+    professionalSummary: state.professionalSummary || "",
+    experience: (state.experience || []).map((e: any) => ({
+      company: e.company || "",
+      position: e.position || "",
+      startDate: e.startDate || "",
+      endDate: e.endDate || "",
+      location: e.location || "",
+      description: e.description || [],
+    })),
+    projects: (state.projects || []).map((p: any) => ({
+      name: p.name || "",
+      technologies: p.technologies || [],
+      description: p.description || [],
+    })),
+    education: (state.education || []).map((ed: any) => ({
+      institution: ed.institution || "",
+      degree: ed.degree || "",
+      startDate: ed.startDate || "",
+      endDate: ed.endDate || "",
+      score: ed.score || "",
+    })),
+    skills: {
+      languages: state.skills?.languages || [],
+      frameworks: state.skills?.frameworks || [],
+      tools: state.skills?.tools || [],
+    },
+    keyAchievements: state.keyAchievements || [],
+    trainingCourses: state.trainingCourses || [],
+    languages: state.languages || [],
+  };
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +89,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { transcript, resumeState, lang = "en" } = await req.json();
+    const { transcript, resumeState } = await req.json();
 
     if (!transcript || typeof transcript !== "string") {
       return NextResponse.json({ error: "No transcript provided" }, { status: 400 });
@@ -59,47 +102,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const stateSerialized = JSON.stringify(resumeState || {});
-    if (stateSerialized.length > MAX_STATE_CHARS) {
-      return NextResponse.json(
-        { error: "Resume payload exceeds maximum allowable size." },
-        { status: 400 }
-      );
-    }
-
-    const isHindi = lang === "hi" || /[\u0900-\u097F]/.test(transcript) || /mera|karo|banao|badlo|daalo|add|hatao/i.test(transcript);
+    const cleanState = compactResumePayload(resumeState);
+    const stateSerialized = JSON.stringify(cleanState);
 
     const systemPrompt = `
-You are CareerVerse AI Resume Co-Pilot, an elite career mentor specializing in helping students, interns, and early-career job seekers craft winning resumes.
+You are CareerVerse AI Resume Co-Pilot. STRICT LANGUAGE RULE: Speak and reply ONLY in clean, professional English. NEVER speak or reply in Hindi, even if the user speaks in Hindi.
 
-Your capabilities:
-1. Student Guidance: Help students turn weak phrases into powerful, metric-driven achievements using action verbs (e.g., "Assisted in website" -> "Developed responsive web pages using React and Next.js, enhancing page load speed by 25%").
-2. Summary Optimization: Craft targeted, impactful summaries for students seeking internships or entry-level roles.
-3. Skill Enhancement: When students mention their tech stack (e.g., "add fullstack web dev"), categorize and add clean, relevant skills across languages, frameworks, and tools.
-4. Clean Text: DO NOT include markdown asterisks (like **text**) in outputs; return clean, properly capitalized text.
-5. Conversational Voice Reply: Return a natural, encouraging voice response in ${isHindi ? "Hinglish/Hindi" : "English"} (1-2 sentences max) so the text-to-speech engine speaks it clearly to the student.
+Your Tasks:
+1. Command Execution: Modify the resume state based on user instructions.
+2. Full Optimization: If the user says "optimize", "improve", "make it better", or "review", perform full professional ATS optimization:
+   - Rewrite professionalSummary to be concise, impactful, and tailored to modern entry-level / intern / student hiring standards.
+   - Upgrade experience and project bullets: start with high-impact action verbs (Engineered, Developed, Spearheaded, Built, Optimized) and include realistic outcome metrics where applicable.
+   - Clean up skills into relevant categories.
+   - Remove any markdown asterisks (**) from all text fields.
+3. Conversational Speech Response: In 'aiResponse', provide a friendly, clear English response (1-2 sentences max) suitable for text-to-speech.
 
-Current Resume State:
+Current Resume JSON:
 ${stateSerialized}
 
 User Request:
 "${transcript.trim()}"
 
-Return JSON matching this exact structure only (no markdown code blocks):
+Return ONLY valid JSON (no markdown fences) matching this structure:
 {
-  "updatedResume": { ...the entire updated resume state object... },
-  "aiResponse": "Short conversational response to speak aloud to the student."
+  "updatedResume": { ...entire updated resume state object... },
+  "aiResponse": "Short 1-2 sentence response in English explaining what was improved."
 }
 `;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+    const timeout = setTimeout(() => controller.abort(), 18000);
 
     let apiUrl = "https://api.groq.com/openai/v1/chat/completions";
     let apiKey = GROQ_API_KEY;
     let modelName = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
-    // Fallback to OpenRouter if Groq key isn't provided
     if (!GROQ_API_KEY && OPENROUTER_API_KEY) {
       apiUrl = "https://openrouter.ai/api/v1/chat/completions";
       apiKey = OPENROUTER_API_KEY;
@@ -117,10 +154,10 @@ Return JSON matching this exact structure only (no markdown code blocks):
           model: modelName,
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `Please update my resume based on this command: "${transcript.trim()}"` }
+            { role: "user", content: transcript.trim() }
           ],
-          temperature: 0.3,
-          max_tokens: 2500,
+          temperature: 0.2,
+          max_tokens: 1400,
           response_format: { type: "json_object" },
         }),
         signal: controller.signal,
@@ -128,8 +165,7 @@ Return JSON matching this exact structure only (no markdown code blocks):
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error("Groq/LLM API error:", response.status, errText);
-        // Fallback to OpenRouter if Groq call failed
+        console.error("Groq API error:", response.status, errText);
         if (apiUrl.includes("groq.com") && OPENROUTER_API_KEY) {
           const fbRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -145,7 +181,7 @@ Return JSON matching this exact structure only (no markdown code blocks):
                 { role: "system", content: systemPrompt },
                 { role: "user", content: transcript.trim() }
               ],
-              max_tokens: 2500,
+              max_tokens: 1400,
             }),
           });
           if (fbRes.ok) {

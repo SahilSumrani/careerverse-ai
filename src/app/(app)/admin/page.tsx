@@ -3,11 +3,30 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { PageHeader, EmptyState, Skeleton } from "@/components/ui/states";
+import {
+  Users,
+  Briefcase,
+  FileText,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Search,
+  RefreshCw,
+  Clock,
+  ArrowUpRight,
+  TrendingUp,
+  UserCheck,
+  UserX,
+  X,
+  Activity,
+  Cpu,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/states";
 import { ROLE_NAMES, type RoleName } from "@/lib/roles";
-import "@/styles/admin-console.css";
 
 type Track = "student" | "mentor" | "recruiter";
 
@@ -100,9 +119,9 @@ type AdminPayload = {
   serverTime?: string;
 };
 
-const POLL_MS = 12_000;
+const POLL_MS = 15_000;
 
-function Donut({
+function DonutGauge({
   students,
   mentors,
   recruiters,
@@ -112,54 +131,57 @@ function Donut({
   recruiters: number;
 }) {
   const total = Math.max(students + mentors + recruiters, 1);
-  const r = 42;
+  const r = 38;
   const c = 2 * Math.PI * r;
   const s1 = (students / total) * c;
   const s2 = (mentors / total) * c;
   const s3 = (recruiters / total) * c;
+
   return (
-    <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden>
-      <circle cx="60" cy="60" r={r} fill="none" stroke="#e2e8f0" strokeWidth="14" />
-      <circle
-        cx="60"
-        cy="60"
-        r={r}
-        fill="none"
-        stroke="#2563eb"
-        strokeWidth="14"
-        strokeDasharray={`${s1} ${c - s1}`}
-        strokeDashoffset={c * 0.25}
-        transform="rotate(-90 60 60)"
-      />
-      <circle
-        cx="60"
-        cy="60"
-        r={r}
-        fill="none"
-        stroke="#db2777"
-        strokeWidth="14"
-        strokeDasharray={`${s2} ${c - s2}`}
-        strokeDashoffset={c * 0.25 - s1}
-        transform="rotate(-90 60 60)"
-      />
-      <circle
-        cx="60"
-        cy="60"
-        r={r}
-        fill="none"
-        stroke="#ea580c"
-        strokeWidth="14"
-        strokeDasharray={`${s3} ${c - s3}`}
-        strokeDashoffset={c * 0.25 - s1 - s2}
-        transform="rotate(-90 60 60)"
-      />
-      <text x="60" y="58" textAnchor="middle" fontSize="18" fontWeight="700" fill="#0f172a">
-        {students + mentors + recruiters}
-      </text>
-      <text x="60" y="74" textAnchor="middle" fontSize="9" fill="#64748b">
-        sample
-      </text>
-    </svg>
+    <div className="relative flex h-36 w-36 items-center justify-center">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={r} stroke="#f1f5f9" strokeWidth="10" fill="none" />
+        {/* Students (Indigo) */}
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke="#6366f1"
+          strokeWidth="10"
+          fill="none"
+          strokeDasharray={`${Math.max(s1, 1)} ${c - Math.max(s1, 1)}`}
+          strokeLinecap="round"
+        />
+        {/* Mentors (Pink) */}
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke="#ec4899"
+          strokeWidth="10"
+          fill="none"
+          strokeDasharray={`${Math.max(s2, 1)} ${c - Math.max(s2, 1)}`}
+          strokeDashoffset={-s1}
+          strokeLinecap="round"
+        />
+        {/* Recruiters (Amber) */}
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke="#f59e0b"
+          strokeWidth="10"
+          fill="none"
+          strokeDasharray={`${Math.max(s3, 1)} ${c - Math.max(s3, 1)}`}
+          strokeDashoffset={-(s1 + s2)}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-2xl font-black text-slate-900">{total}</span>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total Users</span>
+      </div>
+    </div>
   );
 }
 
@@ -172,6 +194,8 @@ function AdminConsoleInner() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("ALL");
 
   const load = useCallback(async (opts?: { soft?: boolean; userId?: string | null }) => {
     if (!opts?.soft) setLoading(true);
@@ -195,7 +219,6 @@ function AdminConsoleInner() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial admin fetch
     void load();
     const id = window.setInterval(() => void load({ soft: true, userId: selectedId }), POLL_MS);
     return () => window.clearInterval(id);
@@ -229,446 +252,525 @@ function AdminConsoleInner() {
   }
 
   const rb = data?.registrationBreakdown;
-  const maxLoc = useMemo(
-    () => Math.max(1, ...(data?.locationBreakdown.map((l) => l.count) ?? [1])),
-    [data?.locationBreakdown],
-  );
+
+  // Filtered users
+  const filteredUsers = useMemo(() => {
+    if (!data?.recentUsers) return [];
+    return data.recentUsers.filter((u) => {
+      const name = (u.name || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = !query || name.includes(query) || email.includes(query);
+      const matchesRole =
+        roleFilter === "ALL" ||
+        u.roles.includes(roleFilter as RoleName) ||
+        (roleFilter === "PENDING" && (u.registration?.track && !u.recruiterApproved && !u.mentorApproved));
+      return matchesSearch && matchesRole;
+    });
+  }, [data?.recentUsers, searchQuery, roleFilter]);
 
   return (
-    <div className="cv-admin">
-      <div className="cv-admin-hero">
+    <div className="space-y-8 pb-16">
+      {/* Header & Live Polling Indicator */}
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <PageHeader
-            title="Admin console"
-            description="Live registrations, user activity, and platform controls."
-          />
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">Platform Command Center</h1>
+            <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-bold text-rose-800">
+              Admin Access
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Real-time telemetry, role governance, approvals queue, and token consumption.
+          </p>
         </div>
-        <div className="cv-admin-live" aria-live="polite">
-          <span className="cv-admin-live-dot" />
-          Live · refresh {lastRefresh || "…"}
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-xs">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Synced: {lastRefresh || "Connecting…"}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void load()}
+            className="flex items-center gap-1.5 rounded-2xl border-slate-200 text-xs font-bold text-slate-700"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
         </div>
       </div>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {data?.note ? <p className="text-sm text-muted-foreground">{data.note}</p> : null}
-
-      {loading && !data ? (
-        <div className="cv-admin-metrics">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" />
-          ))}
+      {error ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">
+          {error}
         </div>
-      ) : !data ? (
-        <EmptyState title="Admin unavailable" description="PLATFORM_ADMIN session required." />
-      ) : (
-        <>
-          <div className="cv-admin-metrics">
-            {(
-              [
-                ["Users", data.overview.users, "blue"],
-                ["Students", rb?.students ?? 0, "pink"],
-                ["Mentors", rb?.mentors ?? 0, "violet"],
-                ["Recruiters", rb?.recruiters ?? 0, "orange"],
-                ["Applications", data.overview.applications, "green"],
-                ["Jobs", data.overview.opportunities, "slate"],
-              ] as const
-            ).map(([label, value, tone]) => (
-              <div key={label} className="cv-admin-metric" data-tone={tone}>
-                <p>{label}</p>
-                <strong>{value}</strong>
-              </div>
-            ))}
-          </div>
+      ) : null}
 
-          {(tab === "dashboard" || tab === "pending") && (
-            <section className="cv-admin-card">
-              <h2>Pending approvals</h2>
-              <p className="sub">Mentors and recruiters waiting for one-click approval.</p>
-              <ul className="mt-4 space-y-3">
-                {(data.pendingQueue || []).map((row) => (
-                  <li
+      {/* 4 Modern Pastel KPI Cards (Matches Reference Mockups) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Lavender (Total Registered Members) */}
+        <div className="rounded-3xl border border-violet-100/80 bg-violet-50/80 p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-500 text-white shadow-sm">
+              <Users className="h-5 w-5" />
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-bold text-violet-700 shadow-xs">
+              <TrendingUp className="h-3 w-3" /> Live
+            </span>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-violet-600/90">
+              Total Platform Users
+            </p>
+            <p className="mt-1 text-3xl font-black text-slate-900">{data?.overview.users ?? 0}</p>
+            <p className="mt-1 text-xs text-violet-700/80">Active accounts registered</p>
+          </div>
+        </div>
+
+        {/* Card 2: Amber / Peach (Applications In Pipeline) */}
+        <div className="rounded-3xl border border-amber-100/80 bg-amber-50/80 p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm">
+              <FileText className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-bold text-amber-700 shadow-xs">
+              Flow
+            </span>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-600/90">
+              Job Applications
+            </p>
+            <p className="mt-1 text-3xl font-black text-slate-900">
+              {data?.overview.applications ?? 0}
+            </p>
+            <p className="mt-1 text-xs text-amber-700/80">Submitted by students</p>
+          </div>
+        </div>
+
+        {/* Card 3: Rose / Pink (Active Job Postings) */}
+        <div className="rounded-3xl border border-rose-100/80 bg-rose-50/80 p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-500 text-white shadow-sm">
+              <Briefcase className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-bold text-rose-700 shadow-xs">
+              Board
+            </span>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-rose-600/90">
+              Published Jobs
+            </p>
+            <p className="mt-1 text-3xl font-black text-slate-900">
+              {data?.overview.opportunities ?? 0}
+            </p>
+            <p className="mt-1 text-xs text-rose-700/80">Verified company postings</p>
+          </div>
+        </div>
+
+        {/* Card 4: Sky / Cyan (AI Events & Tokens) */}
+        <div className="rounded-3xl border border-sky-100/80 bg-sky-50/80 p-5 shadow-sm transition hover:shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-sm">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-bold text-sky-700 shadow-xs">
+              Daily Ops
+            </span>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-sky-600/90">
+              AI Events Today
+            </p>
+            <p className="mt-1 text-3xl font-black text-slate-900">
+              {data?.overview.aiEventsToday ?? 0}
+            </p>
+            <p className="mt-1 text-xs text-sky-700/80">Resume scoring & copilot</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Approvals & Registration Breakdown Row */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+        {/* Left 8-cols: Pending Approvals Queue (High Priority) */}
+        <div className="space-y-6 lg:col-span-8">
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Pending Approvals Queue</h2>
+                <p className="text-xs text-slate-500">
+                  Mentors and Recruiters awaiting verification before platform access unlocks.
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                {data?.pendingQueue.length ?? 0} In Waiting
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {data?.pendingQueue.length ? (
+                data.pendingQueue.map((row) => (
+                  <div
                     key={`${row.kind}-${row.id}`}
-                    className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between transition hover:border-indigo-200 hover:bg-white hover:shadow-xs"
                   >
-                    <button type="button" className="min-w-0 text-left" onClick={() => void openUser(row.id)}>
-                      <p className="font-medium">
-                        {row.name || row.email}{" "}
-                        <Badge tone={row.kind === "mentor" ? "warning" : "success"}>{row.kind}</Badge>
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900">{row.name || row.email}</p>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            row.kind === "mentor"
+                              ? "bg-violet-100 text-violet-800"
+                              : "bg-emerald-100 text-emerald-800"
+                          }`}
+                        >
+                          {row.kind.toUpperCase()}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-slate-500 mt-0.5">
                         {row.email}
-                        {row.companyName ? ` · ${row.companyName}` : ""}
-                        {row.expertise ? ` · ${row.expertise}` : ""}
-                        {row.careerScore != null ? ` · score ${row.careerScore}` : ""}
+                        {row.companyName ? ` · Organization: ${row.companyName}` : ""}
+                        {row.expertise ? ` · Field: ${row.expertise}` : ""}
                       </p>
-                    </button>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/admin/users/${encodeURIComponent(row.id)}`}
-                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => void openUser(row.id)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition"
                       >
-                        Profile
-                      </Link>
-                      <Button
-                        size="sm"
+                        Inspect
+                      </button>
+                      <button
+                        type="button"
                         disabled={busyId === row.id}
                         onClick={() =>
                           void postAction(
                             { action: row.kind === "mentor" ? "approve_mentor" : "approve_recruiter", id: row.id },
-                            row.id,
+                            row.id
                           )
                         }
+                        className="rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition disabled:opacity-50"
                       >
                         {busyId === row.id ? "Approving…" : "Approve"}
-                      </Button>
+                      </button>
                     </div>
-                  </li>
-                ))}
-              </ul>
-              {!(data.pendingQueue || []).length ? (
-                <p className="mt-3 text-sm text-muted-foreground">No pending mentors or recruiters.</p>
-              ) : null}
-            </section>
-          )}
-
-          {(tab === "dashboard" || tab === "registrations") && (
-            <div className="cv-admin-grid cv-admin-grid-main">
-              <section className="cv-admin-card">
-                <h2>Registration mix</h2>
-                <p className="sub">Who is signing up (from recent user sample).</p>
-                <div className="cv-admin-donut-wrap">
-                  <Donut
-                    students={rb?.students ?? 0}
-                    mentors={rb?.mentors ?? 0}
-                    recruiters={rb?.recruiters ?? 0}
-                  />
-                  <ul className="cv-admin-legend">
-                    <li>
-                      <span className="cv-admin-swatch" style={{ background: "#2563eb" }} />
-                      Students · {rb?.students ?? 0}
-                    </li>
-                    <li>
-                      <span className="cv-admin-swatch" style={{ background: "#db2777" }} />
-                      Mentors · {rb?.mentors ?? 0}
-                      {rb?.pendingMentors ? ` (${rb.pendingMentors} pending)` : ""}
-                    </li>
-                    <li>
-                      <span className="cv-admin-swatch" style={{ background: "#ea580c" }} />
-                      Recruiters · {rb?.recruiters ?? 0}
-                      {rb?.pendingRecruiters ? ` (${rb.pendingRecruiters} pending)` : ""}
-                    </li>
-                  </ul>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 py-8 text-center text-xs text-slate-400">
+                  <CheckCircle className="mx-auto h-7 w-7 text-emerald-400 mb-1" />
+                  All recruiter and mentor requests are processed!
                 </div>
-              </section>
-
-              <section className="cv-admin-card">
-                <h2>Live registrations</h2>
-                <p className="sub">Newest student / mentor / recruiter signups · auto-refresh.</p>
-                <div className="cv-admin-feed">
-                  {data.recentRegistrations.map((r) => (
-                    <button key={r.id} type="button" onClick={() => void openUser(r.id)}>
-                      <div className="title">
-                        {r.name || r.email}{" "}
-                        <Badge tone={r.track === "student" ? "info" : r.track === "mentor" ? "warning" : "success"}>
-                          {r.track}
-                        </Badge>
-                        {r.pending ? <Badge tone="warning">pending</Badge> : null}
-                      </div>
-                      <div className="meta">
-                        {r.email}
-                        {r.createdAt ? ` · ${r.createdAt.slice(0, 16).replace("T", " ")}` : ""}
-                      </div>
-                    </button>
-                  ))}
-                  {!data.recentRegistrations.length ? (
-                    <p className="text-sm text-muted-foreground">No registrations yet.</p>
-                  ) : null}
-                </div>
-              </section>
+              )}
             </div>
-          )}
+          </div>
 
-          {(tab === "dashboard" || tab === "activity") && (
-            <div className="cv-admin-grid cv-admin-grid-main">
-              <section className="cv-admin-card">
-                <h2>Activity feed</h2>
-                <p className="sub">Signup, resume, onboarding, AI events · click user when linked.</p>
-                <div className="cv-admin-feed">
-                  {data.recentActivity.map((ev) => (
-                    <button
-                      key={ev.id}
-                      type="button"
-                      className="row"
-                      disabled={!ev.userId}
-                      onClick={() => (ev.userId ? void openUser(ev.userId) : undefined)}
-                    >
-                      <div className="title">{ev.name}</div>
-                      <div className="meta">
-                        {ev.userId ? `user ${ev.userId.slice(0, 8)}…` : "system"}
-                        {ev.createdAt ? ` · ${ev.createdAt.slice(0, 19).replace("T", " ")}` : ""}
-                        {ev.props && "track" in ev.props ? ` · ${String(ev.props.track)}` : ""}
-                      </div>
-                    </button>
-                  ))}
-                  {!data.recentActivity.length ? (
-                    <p className="text-sm text-muted-foreground">No analytics events yet.</p>
-                  ) : null}
-                </div>
-              </section>
-
-              <section className="cv-admin-card">
-                <h2>Watchlist</h2>
-                <p className="sub">Pending approvals, suspensions, noisy AI failures.</p>
-                <div className="cv-admin-feed">
-                  {data.flags.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      className="cv-admin-flag"
-                      data-severity={f.severity}
-                      disabled={!f.userId}
-                      onClick={() => (f.userId ? void openUser(f.userId) : undefined)}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                  {!data.flags.length ? (
-                    <p className="text-sm text-muted-foreground">Nothing flagged right now.</p>
-                  ) : null}
-                </div>
-              </section>
-            </div>
-          )}
-
-          {(tab === "dashboard" || tab === "ops") && (
-            <div className="cv-admin-grid cv-admin-grid-main">
-              <section className="cv-admin-card">
-                <h2>Preferred locations</h2>
-                <p className="sub">Where students say they want to work.</p>
-                <div className="cv-admin-bars">
-                  {data.locationBreakdown.slice(0, 8).map((row) => (
-                    <div key={row.location} className="cv-admin-bar-row">
-                      <header>
-                        <span>{row.location}</span>
-                        <span>{row.count}</span>
-                      </header>
-                      <div className="cv-admin-bar-track">
-                        <div
-                          className="cv-admin-bar-fill"
-                          style={{ width: `${Math.round((row.count / maxLoc) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {!data.locationBreakdown.length ? (
-                    <p className="text-sm text-muted-foreground">No location preferences yet.</p>
-                  ) : null}
-                </div>
-              </section>
-
-              <section className="cv-admin-card space-y-3">
-                <div>
-                  <h2>Ops</h2>
-                  <p className="sub">
-                    Copilot: {data.chatLimits.dailyCap}/day · {data.chatLimits.maxInputChars} chars · AI
-                    events today {data.overview.aiEventsToday}
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  disabled={busyId === "seed-jobs"}
-                  onClick={() => void postAction({ action: "seed_starter_jobs" }, "seed-jobs")}
-                >
-                  {busyId === "seed-jobs" ? "Seeding…" : "Seed starter jobs"}
-                </Button>
-                <div className="cv-admin-feed">
-                  {data.aiUsage.slice(0, 8).map((ev) => (
-                    <div key={ev.id} className="row">
-                      <div className="title">
-                        {ev.operation}
-                        {!ev.success ? " · failed" : ""}
-                      </div>
-                      <div className="meta">
-                        {ev.model || "n/a"} · in {ev.tokensIn}/out {ev.tokensOut}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-
-          {(tab === "dashboard" || tab === "users") && (
-            <section className="cv-admin-card">
-              <h2>Users</h2>
-              <p className="sub">Click a row for activity. Approve mentors/recruiters or suspend abuse.</p>
-              <ul className="mt-4 space-y-3">
-                {data.recentUsers.map((u) => (
-                  <li
-                    key={u.id}
-                    className="flex flex-col gap-3 rounded-2xl border border-border bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <button type="button" className="min-w-0 text-left" onClick={() => void openUser(u.id)}>
-                      <p className="font-medium">
-                        {u.name || u.email}
-                        {u.suspendedAt ? (
-                          <>
-                            {" "}
-                            <Badge tone="warning">Suspended</Badge>
-                          </>
-                        ) : null}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {u.email} · {u.roles.join(", ") || "STUDENT"}
-                        {u.registration?.track ? ` · ${u.registration.track}` : ""}
-                        {u.registration?.companyName ? ` · ${u.registration.companyName}` : ""}
-                        {u.careerScore != null ? ` · score ${u.careerScore}` : ""}
-                      </p>
-                    </button>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        id={`roles-${u.id}`}
-                        aria-label={`Roles for ${u.email}`}
-                        key={`${u.id}-${u.roles.join(",")}`}
-                        className="h-9 max-w-[160px] rounded-xl border border-border bg-white px-2 text-xs"
-                        defaultValue={
-                          u.roles.includes("PLATFORM_ADMIN") ? "PLATFORM_ADMIN" : u.roles[0] || "STUDENT"
-                        }
-                        disabled={busyId === u.id}
-                        onChange={(e) => {
-                          const role = e.target.value as RoleName;
-                          void postAction({ action: "set_roles", id: u.id, roles: [role] }, u.id);
-                        }}
-                      >
-                        {ROLE_NAMES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                      {!u.suspendedAt ? (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          disabled={busyId === u.id}
-                          onClick={() => void postAction({ action: "suspend_user", id: u.id }, u.id)}
-                        >
-                          Suspend
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyId === u.id}
-                          onClick={() => void postAction({ action: "unsuspend_user", id: u.id }, u.id)}
-                        >
-                          Unsuspend
-                        </Button>
-                      )}
-                      {u.roles.includes("HR") || u.registration?.track === "hr" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyId === u.id}
-                          onClick={() =>
-                            void postAction(
-                              { action: u.recruiterApproved ? "revoke_recruiter" : "approve_recruiter", id: u.id },
-                              u.id,
-                            )
-                          }
-                        >
-                          {u.recruiterApproved ? "Revoke recruiter" : "Approve recruiter"}
-                        </Button>
-                      ) : null}
-                      {u.roles.includes("MENTOR") || u.registration?.track === "mentor" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busyId === u.id}
-                          onClick={() =>
-                            void postAction(
-                              { action: u.mentorApproved ? "revoke_mentor" : "approve_mentor", id: u.id },
-                              u.id,
-                            )
-                          }
-                        >
-                          {u.mentorApproved ? "Revoke mentor" : "Approve mentor"}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
-      )}
-
-      {selectedId && data?.focusedUser ? (
-        <>
-          <button
-            type="button"
-            className="cv-admin-drawer-backdrop"
-            aria-label="Close user activity"
-            onClick={() => setSelectedId(null)}
-          />
-          <aside className="cv-admin-drawer" aria-label="User activity">
-            <div className="flex items-start justify-between gap-2">
+          {/* User Management Directory */}
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
               <div>
-                <h3>{data.focusedUser.name || data.focusedUser.email}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {data.focusedUser.email} · {data.focusedUser.roles.join(", ")}
+                <h2 className="text-lg font-bold text-slate-900">User Account Directory</h2>
+                <p className="text-xs text-slate-500">
+                  Inspect registered users, manage role assignments, and govern access.
                 </p>
               </div>
+
+              {/* Role Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-100/80 p-1">
+                {["ALL", "STUDENT", "MENTOR", "HR", "PLATFORM_ADMIN"].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition ${
+                      roleFilter === r
+                        ? "bg-white text-slate-900 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {r === "ALL" ? "All" : r === "HR" ? "Recruiter" : r === "PLATFORM_ADMIN" ? "Admin" : r.charAt(0) + r.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Box */}
+            <div className="mt-4 relative">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or track..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50/50 py-2 pl-10 pr-4 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+              />
+            </div>
+
+            {/* Table */}
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400">
+                    <th className="pb-3 font-semibold uppercase tracking-wider">Account</th>
+                    <th className="pb-3 font-semibold uppercase tracking-wider">Track</th>
+                    <th className="pb-3 font-semibold uppercase tracking-wider">Role Assignment</th>
+                    <th className="pb-3 font-semibold uppercase tracking-wider">Status</th>
+                    <th className="pb-3 text-right font-semibold uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredUsers.slice(0, 15).map((u) => {
+                    const initials = (u.name || u.email || "U")
+                      .substring(0, 2)
+                      .toUpperCase();
+
+                    return (
+                      <tr key={u.id} className="group hover:bg-slate-50/60 transition">
+                        <td className="py-3.5">
+                          <button
+                            type="button"
+                            onClick={() => void openUser(u.id)}
+                            className="flex items-center gap-3 text-left"
+                          >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 font-bold text-slate-700">
+                              {initials}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900 hover:text-indigo-600 transition">
+                                {u.name || "Unnamed"}
+                              </p>
+                              <p className="text-[11px] text-slate-400">{u.email}</p>
+                            </div>
+                          </button>
+                        </td>
+
+                        <td className="py-3.5 font-semibold text-slate-600">
+                          {u.registration?.track || "Direct Student"}
+                        </td>
+
+                        <td className="py-3.5">
+                          <select
+                            value={u.roles.includes("PLATFORM_ADMIN") ? "PLATFORM_ADMIN" : u.roles[0] || "STUDENT"}
+                            disabled={busyId === u.id}
+                            onChange={(e) => {
+                              const role = e.target.value as RoleName;
+                              void postAction({ action: "set_roles", id: u.id, roles: [role] }, u.id);
+                            }}
+                            className="rounded-xl border border-slate-200 bg-white px-2 py-1 text-xs font-bold text-slate-700 focus:border-indigo-500 focus:outline-none"
+                          >
+                            {ROLE_NAMES.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+
+                        <td className="py-3.5">
+                          {u.suspendedAt ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                              Suspended
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {!u.suspendedAt ? (
+                              <button
+                                type="button"
+                                disabled={busyId === u.id}
+                                onClick={() => void postAction({ action: "suspend_user", id: u.id }, u.id)}
+                                className="rounded-xl border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition"
+                              >
+                                Suspend
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={busyId === u.id}
+                                onClick={() => void postAction({ action: "unsuspend_user", id: u.id }, u.id)}
+                                className="rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-100 transition"
+                              >
+                                Unsuspend
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Right 4-cols: Donut Registration Mix & System Activity Feed */}
+        <div className="space-y-6 lg:col-span-4">
+          {/* Donut User Mix Card */}
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h3 className="text-base font-bold text-slate-900">User Demographics</h3>
+            <p className="text-xs text-slate-500">Distribution across platform tracks</p>
+
+            <div className="mt-5 flex flex-col items-center">
+              <DonutGauge
+                students={rb?.students ?? 0}
+                mentors={rb?.mentors ?? 0}
+                recruiters={rb?.recruiters ?? 0}
+              />
+
+              <div className="mt-5 w-full space-y-2 text-xs">
+                <div className="flex items-center justify-between rounded-xl bg-indigo-50/60 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                    <span className="font-semibold text-slate-700">Students</span>
+                  </div>
+                  <span className="font-bold text-slate-900">{rb?.students ?? 0}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-pink-50/60 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-pink-500" />
+                    <span className="font-semibold text-slate-700">Mentors</span>
+                  </div>
+                  <span className="font-bold text-slate-900">
+                    {rb?.mentors ?? 0}{" "}
+                    {rb?.pendingMentors ? (
+                      <span className="text-[10px] text-pink-600 font-bold">({rb.pendingMentors} pending)</span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-amber-50/60 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    <span className="font-semibold text-slate-700">Recruiters</span>
+                  </div>
+                  <span className="font-bold text-slate-900">
+                    {rb?.recruiters ?? 0}{" "}
+                    {rb?.pendingRecruiters ? (
+                      <span className="text-[10px] text-amber-600 font-bold">({rb.pendingRecruiters} pending)</span>
+                    ) : null}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Intelligence & Tokens telemetry */}
+          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-4 w-4 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">AI Operation Logs</h3>
+              </div>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600">
+                Live
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-2.5 max-h-80 overflow-y-auto">
+              {data?.aiUsage.slice(0, 6).map((ev) => (
+                <div
+                  key={ev.id}
+                  className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">{ev.operation}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+                        ev.success ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                      }`}
+                    >
+                      {ev.success ? "OK" : "ERR"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Model: {ev.model || "Gemini"} · In: {ev.tokensIn} / Out: {ev.tokensOut}
+                  </p>
+                </div>
+              ))}
+              {!data?.aiUsage.length && (
+                <p className="py-4 text-center text-xs text-slate-400">No recent AI telemetry.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* User Inspection Modal Drawer */}
+      {selectedId && data?.focusedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-xs p-4">
+          <div className="h-full w-full max-w-md rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200">
+            <div>
+              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {data.focusedUser.name || data.focusedUser.email}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {data.focusedUser.email} · {data.focusedUser.roles.join(", ")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 transition"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Recent Telemetry Events
+                </h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {data.focusedUser.activity.map((ev) => (
+                    <div key={ev.id} className="rounded-xl border border-slate-100 bg-slate-50 p-2.5 text-xs">
+                      <p className="font-bold text-slate-800">{ev.name}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {ev.createdAt ? ev.createdAt.slice(0, 19).replace("T", " ") : "Timestamped"}
+                      </p>
+                    </div>
+                  ))}
+                  {!data.focusedUser.activity.length && (
+                    <p className="text-xs text-slate-400">No logged activity recorded for this profile.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4 flex items-center justify-between">
+              <Link
+                href={`/admin/users/${encodeURIComponent(data.focusedUser.id)}`}
+                className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 transition"
+              >
+                Full User Profile
+              </Link>
               <Button size="sm" variant="outline" onClick={() => setSelectedId(null)}>
-                Close
+                Close Drawer
               </Button>
             </div>
-            <h4 className="mt-5 text-sm font-semibold">Activity</h4>
-            <div className="cv-admin-feed">
-              {data.focusedUser.activity.map((ev) => (
-                <div key={ev.id} className="row">
-                  <div className="title">{ev.name}</div>
-                  <div className="meta">
-                    {ev.createdAt ? ev.createdAt.slice(0, 19).replace("T", " ") : "—"}
-                  </div>
-                </div>
-              ))}
-              {!data.focusedUser.activity.length ? (
-                <p className="text-sm text-muted-foreground">No tracked events for this user yet.</p>
-              ) : null}
-            </div>
-            <h4 className="mt-5 text-sm font-semibold">AI usage</h4>
-            <div className="cv-admin-feed">
-              {data.focusedUser.aiUsage.map((ev) => (
-                <div key={ev.id} className="row">
-                  <div className="title">
-                    {ev.operation}
-                    {!ev.success ? " · failed" : ""}
-                  </div>
-                  <div className="meta">{ev.createdAt ? ev.createdAt.slice(0, 19).replace("T", " ") : "—"}</div>
-                </div>
-              ))}
-              {!data.focusedUser.aiUsage.length ? (
-                <p className="text-sm text-muted-foreground">No AI usage for this user.</p>
-              ) : null}
-            </div>
-            <Link
-              href={`/admin/users/${encodeURIComponent(data.focusedUser.id)}`}
-              className={buttonVariants({ variant: "outline", size: "sm", className: "mt-5" })}
-            >
-              View full profile
-            </Link>
-          </aside>
-        </>
-      ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function AdminPage() {
   return (
-    <Suspense fallback={<Skeleton className="h-40 w-full rounded-2xl" />}>
+    <Suspense fallback={<Skeleton className="h-40 w-full rounded-3xl" />}>
       <AdminConsoleInner />
     </Suspense>
   );

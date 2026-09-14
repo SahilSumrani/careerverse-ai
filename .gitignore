@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+*.bat
+output/*.json
 
 # debug
 npm-debug.log*

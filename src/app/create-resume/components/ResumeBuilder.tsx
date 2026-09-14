@@ -378,7 +378,6 @@ export function ResumeBuilder({
   const [zoom, setZoom] = useState<number>(75);
   const [resumeFontSize, setResumeFontSize] = useState<"compact" | "standard" | "large">("standard");
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
-  const [assistantInput, setAssistantInput] = useState("");
   const [autoSpeak, setAutoSpeak] = useState(true);
 
   const previewRef = useRef<HTMLDivElement>(null);
@@ -563,7 +562,6 @@ export function ResumeBuilder({
       if (autoSpeak) speakResponse(errMsg);
     } finally {
       setIsProcessingVoice(false);
-      setAssistantInput("");
     }
   };
 
@@ -589,19 +587,29 @@ export function ResumeBuilder({
       recognition.lang = "en-US";
       recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
         setIsListening(true);
         setIsProcessingVoice(false);
         setShowAssistantBubble(true);
-        setAiMessage("Listening in English... Tell me how to update or optimize your resume.");
+        setAiMessage("Listening... Speak your resume request or tap a suggestion below.");
       };
 
       recognition.onresult = async (event: any) => {
-        const transcript = event.results?.[0]?.[0]?.transcript;
-        if (!transcript) return;
+        const result = event.results?.[0]?.[0];
+        const rawTranscript = result?.transcript?.trim();
+        const confidence = typeof result?.confidence === "number" ? result.confidence : 1;
+
+        // Filter out ambient noise, coughs, single-syllable background sounds
+        if (!rawTranscript || rawTranscript.length < 3 || confidence < 0.25) {
+          setIsListening(false);
+          setAiMessage("Could not hear clearly. Please tap the mic to speak again or click a suggestion below.");
+          return;
+        }
+
         setIsListening(false);
-        await runAssistantCommand(transcript);
+        await runAssistantCommand(rawTranscript);
       };
 
       recognition.onerror = () => {
@@ -1843,57 +1851,53 @@ export function ResumeBuilder({
             </button>
             <p className="text-xs text-slate-700 leading-relaxed mb-2.5">{aiMessage}</p>
 
-            {/* Interactive Command Input Box (Allows typing as well as voice) */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (assistantInput.trim()) {
-                  runAssistantCommand(assistantInput.trim());
-                }
-              }}
-              className="mb-2.5 flex items-center gap-1.5"
-            >
-              <input
-                type="text"
-                value={assistantInput}
-                onChange={(e) => setAssistantInput(e.target.value)}
-                placeholder="Ask AI to optimize, add project, or edit..."
-                disabled={isProcessingVoice}
-                className="flex-1 text-xs px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50 focus:bg-white"
-              />
-              <button
-                type="submit"
-                disabled={isProcessingVoice || !assistantInput.trim()}
-                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer shadow-xs"
-              >
-                Send
-              </button>
-            </form>
-
-            {/* Real-time Dynamic Suggestions (Filtered to only what is missing/weak) */}
+            {/* Real-time Dynamic Suggestions (Click any suggestion to immediately apply) */}
             <div className="pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  {liveSuggestions.length > 0 ? "Live Suggestions" : "Resume Status"}
+                  {liveSuggestions.length > 0 ? "Click To Apply Suggestions" : "Resume Status"}
                 </span>
                 {liveSuggestions.length > 0 && (
                   <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded">
-                    {liveSuggestions.length} tips
+                    {liveSuggestions.length} available
                   </span>
                 )}
               </div>
 
               {liveSuggestions.length > 0 ? (
-                <div className="space-y-1.5 mb-2.5">
-                  {liveSuggestions.slice(0, 2).map((sugg, i) => (
-                    <div key={i} className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg flex items-start gap-1.5">
-                      <span className="text-blue-500 font-bold mt-0.5">•</span>
-                      <span className="leading-snug">{sugg}</span>
+                <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-0.5">
+                  {liveSuggestions.slice(0, 3).map((sugg, i) => (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        if (!isProcessingVoice) {
+                          runAssistantCommand(`Please apply this suggestion to my resume: ${sugg}`);
+                        }
+                      }}
+                      className="group p-2 rounded-lg border border-blue-100/90 bg-linear-to-r from-blue-50/50 to-indigo-50/30 hover:border-blue-400 hover:bg-blue-50/80 transition-all cursor-pointer flex items-center justify-between gap-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                        <Sparkles size={13} className="text-blue-600 shrink-0 mt-0.5" />
+                        <span className="text-[11px] text-slate-800 leading-snug font-medium line-clamp-2">
+                          {sugg}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          runAssistantCommand(`Please apply this suggestion to my resume: ${sugg}`);
+                        }}
+                        disabled={isProcessingVoice}
+                        className="shrink-0 text-[10px] font-bold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded-md shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        Apply
+                      </button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg font-medium mb-2.5 leading-snug">
+                <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/60 p-2 rounded-lg font-medium mb-2.5 leading-snug">
                   All key sections are filled! Ready for final ATS optimization.
                 </p>
               )}

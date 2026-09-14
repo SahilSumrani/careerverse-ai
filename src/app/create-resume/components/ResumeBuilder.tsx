@@ -134,6 +134,7 @@ export function ResumeBuilder({
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
       }
+      // Never allow browser's built-in robotic engine to speak
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
@@ -158,13 +159,8 @@ export function ResumeBuilder({
 
       await audio.play();
     } catch (e) {
-      console.warn("Neural TTS error, fallback to browser speech:", e);
-      try {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
-        utterance.pitch = 1.2;
-        window.speechSynthesis.speak(utterance);
-      } catch {}
+      console.error("Neural TTS playback error:", e);
+      // Strict: Do NOT fallback to window.speechSynthesis because Windows defaults to robotic male SAPI
     }
   };
 

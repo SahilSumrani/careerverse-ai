@@ -81,11 +81,33 @@ export interface ResumeData {
   }>;
 }
 
-// Clean markdown bold (**) and asterisks (*) into React elements
+// Strict emoji cleaner
+export function stripEmojis(text: string | undefined | null): string {
+  if (!text) return "";
+  return text
+    .replace(/[\p{Extended_Pictographic}\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function stripEmojisFromObject(obj: any): any {
+  if (typeof obj === "string") return stripEmojis(obj);
+  if (Array.isArray(obj)) return obj.map(stripEmojisFromObject);
+  if (obj && typeof obj === "object") {
+    const res: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      res[k] = stripEmojisFromObject(v);
+    }
+    return res;
+  }
+  return obj;
+}
+
+// Clean markdown bold (**) and asterisks (*) into React elements without emojis
 function renderFormattedText(text: string | undefined): ReactNode {
   if (!text) return null;
-
-  const parts = text.split(/(\*\*.*?\*\*)/g);
+  const clean = stripEmojis(text);
+  const parts = clean.split(/(\*\*.*?\*\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       const inner = part.slice(2, -2).replace(/\*/g, "").trim();
@@ -98,6 +120,75 @@ function renderFormattedText(text: string | undefined): ReactNode {
     const cleaned = part.replace(/\*/g, "");
     return <span key={index}>{cleaned}</span>;
   });
+}
+
+// Starter blank template tailored to session user
+export function getStarterResume(user?: { name?: string | null; email?: string | null } | null): ResumeData {
+  return {
+    templateId: "classic",
+    personalInfo: {
+      fullName: user?.name || "",
+      headline: "",
+      email: user?.email || "",
+      phone: "",
+      location: "",
+      linkedin: "",
+      github: "",
+    },
+    professionalSummary: "",
+    experience: [],
+    projects: [],
+    education: [],
+    skills: {
+      languages: [],
+      frameworks: [],
+      tools: [],
+    },
+    keyAchievements: [],
+    trainingCourses: [],
+    languages: [],
+  };
+}
+
+// Proactive real-time suggestions: only recommends what is missing/weak
+export function getResumeSuggestions(data: ResumeData): string[] {
+  const suggestions: string[] = [];
+
+  if (!data.personalInfo?.headline?.trim()) {
+    suggestions.push("Add a targeted job title headline (e.g., 'Full Stack Developer | React & Node.js').");
+  }
+
+  const summary = data.professionalSummary?.trim() || "";
+  if (!summary || summary.length < 50) {
+    suggestions.push("Add a 2-3 sentence professional summary focusing on your technical strengths.");
+  }
+
+  const hasExp = (data.experience || []).length > 0;
+  const hasProj = (data.projects || []).length > 0;
+  if (!hasExp && !hasProj) {
+    suggestions.push("Add at least 1 internship, work experience, or key project.");
+  } else if (hasExp) {
+    const lacksMetrics = data.experience.some((e) =>
+      (e.description || []).some((b) => !/\d+|%|\$|scaled|optimized|built|increased|reduced/i.test(b))
+    );
+    if (lacksMetrics) {
+      suggestions.push("Quantify experience bullets with measurable metrics (% increase, numbers, scale).");
+    }
+  }
+
+  const totalSkills =
+    (data.skills?.languages?.length || 0) +
+    (data.skills?.frameworks?.length || 0) +
+    (data.skills?.tools?.length || 0);
+  if (totalSkills < 4) {
+    suggestions.push("Add key technical skills across languages, frameworks, and tools.");
+  }
+
+  if (!data.education || data.education.length === 0) {
+    suggestions.push("Add your degree and university under the Education section.");
+  }
+
+  return suggestions;
 }
 
 // Sample fallback content
@@ -269,6 +360,8 @@ export function ResumeBuilder({
   onBack: () => void;
 }) {
   const { data: session } = useSession();
+  const storageKey = session?.user?.id ? `cv_resume_draft_${session.user.id}` : "cv_resume_draft_guest";
+
   const [activeTab, setActiveTab] = useState<
     "personal" | "summary" | "experience" | "projects" | "education" | "skills" | "achievements" | "courses"
   >("personal");
@@ -278,25 +371,33 @@ export function ResumeBuilder({
   const [showSignInPrompt, setShowSignInPrompt] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-  const [aiMessage, setAiMessage] = useState("");
+  const [showAssistantBubble, setShowAssistantBubble] = useState(true);
+  const [aiMessage, setAiMessage] = useState<string>(
+    "Hello! I am your AI Resume Assistant. I monitor your sections in real time to suggest high-impact improvements."
+  );
   const [zoom, setZoom] = useState<number>(75);
+  const [resumeFontSize, setResumeFontSize] = useState<"compact" | "standard" | "large">("standard");
+
   const previewRef = useRef<HTMLDivElement>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
+  const starter = getStarterResume(session?.user);
   const initialValues: ResumeData = {
-    ...SAMPLE_DATA,
+    ...starter,
     ...(initialData || {}),
     personalInfo: {
-      ...SAMPLE_DATA.personalInfo,
+      ...starter.personalInfo,
       ...(initialData?.personalInfo || {}),
     },
     skills: {
-      languages: initialData?.skills?.languages?.length ? initialData.skills.languages : SAMPLE_DATA.skills.languages,
-      frameworks: initialData?.skills?.frameworks?.length ? initialData.skills.frameworks : SAMPLE_DATA.skills.frameworks,
-      tools: initialData?.skills?.tools?.length ? initialData.skills.tools : SAMPLE_DATA.skills.tools,
+      languages: initialData?.skills?.languages || [],
+      frameworks: initialData?.skills?.frameworks || [],
+      tools: initialData?.skills?.tools || [],
     },
-    projects: initialData?.projects?.length ? initialData.projects : SAMPLE_DATA.projects,
+    projects: initialData?.projects || [],
+    education: initialData?.education || [],
+    experience: initialData?.experience || [],
     templateId: initialData?.templateId || "classic",
   };
 
@@ -322,37 +423,68 @@ export function ResumeBuilder({
 
   const isInitialized = useRef(false);
 
+  // Sync across devices: fetch user's saved resume from cloud if signed in
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    let active = true;
+    fetch("/api/resume/save")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!active) return;
+        if (data?.resume && !initialData) {
+          reset(stripEmojisFromObject(data.resume));
+          if (data.templateId) setValue("templateId", data.templateId);
+          isInitialized.current = true;
+        } else if (!initialData && data?.userProfile) {
+          const curr = getValues();
+          if (!curr.personalInfo.fullName && data.userProfile.name) {
+            setValue("personalInfo.fullName", stripEmojis(data.userProfile.name));
+          }
+          if (!curr.personalInfo.email && data.userProfile.email) {
+            setValue("personalInfo.email", stripEmojis(data.userProfile.email));
+          }
+        }
+      })
+      .catch((err) => console.warn("Failed to load server resume", err));
+    return () => {
+      active = false;
+    };
+  }, [session?.user?.id, initialData, reset, setValue, getValues]);
+
+  // Load from session-specific local draft
   useEffect(() => {
     if (initialData && !isInitialized.current) {
-      reset(initialValues);
+      reset(stripEmojisFromObject(initialData));
       isInitialized.current = true;
     } else if (!isInitialized.current) {
-      const draft = localStorage.getItem("cv_resume_draft");
+      const draft = localStorage.getItem(storageKey);
       if (draft) {
         try {
-          reset(JSON.parse(draft));
+          reset(stripEmojisFromObject(JSON.parse(draft)));
           isInitialized.current = true;
         } catch (e) {
           console.error("Failed to parse resume draft", e);
         }
       }
     }
-  }, [initialData, reset]);
+  }, [initialData, storageKey, reset]);
 
   const formData = watch();
   const currentTemplate = formData.templateId || "classic";
+  const liveSuggestions = getResumeSuggestions(formData);
 
-  // Auto-save draft to localStorage
+  // Auto-save draft to session-scoped localStorage
   useEffect(() => {
     const handler = setTimeout(() => {
-      localStorage.setItem("cv_resume_draft", JSON.stringify(formData));
+      localStorage.setItem(storageKey, JSON.stringify(formData));
     }, 800);
     return () => clearTimeout(handler);
-  }, [formData]);
+  }, [formData, storageKey]);
 
   // Voice speech synthesis: English only with fallback
   const speakResponse = async (text: string) => {
-    if (!text || typeof window === "undefined") return;
+    const cleanText = stripEmojis(text);
+    if (!cleanText || typeof window === "undefined") return;
 
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
@@ -366,7 +498,7 @@ export function ResumeBuilder({
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, lang: "en" }),
+        body: JSON.stringify({ text: cleanText, lang: "en" }),
       });
 
       if (res.ok) {
@@ -382,12 +514,12 @@ export function ResumeBuilder({
         return;
       }
     } catch {
-      // Fall through
+      // Fall through to browser synthesis
     }
 
     if ("speechSynthesis" in window) {
       try {
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(cleanText);
         utterance.lang = "en-US";
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
@@ -402,6 +534,51 @@ export function ResumeBuilder({
       } catch (synthErr) {
         console.warn("Speech synthesis error:", synthErr);
       }
+    }
+  };
+
+  // Run AI Assistant optimization command
+  const runAssistantCommand = async (command: string) => {
+    const cleanCmd = stripEmojis(command);
+    setIsProcessingVoice(true);
+    setAiMessage(`Working on: "${cleanCmd}"...`);
+    setShowAssistantBubble(true);
+
+    try {
+      const currentValues = getValues();
+      const res = await fetch("/api/resume/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: cleanCmd,
+          resumeState: currentValues,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Assistant request failed");
+      const responseData = await res.json();
+      const { updatedResume, aiResponse } = responseData?.data || {};
+
+      if (updatedResume) {
+        const sanitized = stripEmojisFromObject(updatedResume);
+        reset({
+          ...currentValues,
+          ...sanitized,
+          personalInfo: { ...currentValues.personalInfo, ...(sanitized.personalInfo || {}) },
+          skills: { ...currentValues.skills, ...(sanitized.skills || {}) },
+        });
+      }
+
+      const reply = stripEmojis(aiResponse) || "Updated your resume with your request!";
+      setAiMessage(reply);
+      speakResponse(reply);
+    } catch (err: any) {
+      console.error("AI assistant error:", err);
+      const errMsg = "Could not complete request. Please try again.";
+      setAiMessage(errMsg);
+      speakResponse(errMsg);
+    } finally {
+      setIsProcessingVoice(false);
     }
   };
 
@@ -431,52 +608,15 @@ export function ResumeBuilder({
       recognition.onstart = () => {
         setIsListening(true);
         setIsProcessingVoice(false);
-        setAiMessage("🎙️ Listening in English... Tell me how to update or optimize your resume.");
+        setShowAssistantBubble(true);
+        setAiMessage("Listening in English... Tell me how to update or optimize your resume.");
       };
 
       recognition.onresult = async (event: any) => {
         const transcript = event.results?.[0]?.[0]?.transcript;
         if (!transcript) return;
-
         setIsListening(false);
-        setIsProcessingVoice(true);
-        setAiMessage(`"${transcript}"...`);
-
-        try {
-          const currentValues = getValues();
-          const res = await fetch("/api/resume/assistant", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              transcript,
-              resumeState: currentValues,
-            }),
-          });
-
-          if (!res.ok) throw new Error("Assistant request failed");
-          const responseData = await res.json();
-          const { updatedResume, aiResponse } = responseData?.data || {};
-
-          if (updatedResume) {
-            reset({
-              ...currentValues,
-              ...updatedResume,
-              personalInfo: { ...currentValues.personalInfo, ...(updatedResume.personalInfo || {}) },
-              skills: { ...currentValues.skills, ...(updatedResume.skills || {}) },
-            });
-          }
-
-          const reply = aiResponse || "Updated your resume with your request!";
-          setAiMessage(reply);
-          speakResponse(reply);
-        } catch (err: any) {
-          console.error("Voice command error:", err);
-          const errMsg = "Could not process command. Please try again.";
-          setAiMessage(errMsg);
-          speakResponse(errMsg);
-        } finally {
-          setIsProcessingVoice(false);
-        }
+        await runAssistantCommand(transcript);
       };
 
       recognition.onerror = () => {
@@ -579,8 +719,20 @@ export function ResumeBuilder({
             </button>
           </div>
 
-          {/* Actions: Save & PDF Export */}
-          <div className="flex items-center gap-2">
+          {/* Actions: Demo, Save & PDF Export */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Load sample demo data? This will fill the fields with an example.")) {
+                  reset(stripEmojisFromObject(SAMPLE_DATA));
+                }
+              }}
+              title="Load example data for demo"
+              className="px-2 py-1 text-[11px] text-slate-500 hover:text-blue-600 font-medium rounded hover:bg-slate-200/60 transition-colors cursor-pointer"
+            >
+              Demo Example
+            </button>
             <button
               onClick={handleSaveToAccount}
               disabled={isSaving}
@@ -1115,6 +1267,41 @@ export function ResumeBuilder({
           >
             100%
           </button>
+          <div className="h-3.5 w-px bg-slate-300 mx-1" />
+          <span className="text-xs font-semibold text-slate-600">Font:</span>
+          <button
+            type="button"
+            onClick={() => setResumeFontSize("compact")}
+            className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
+              resumeFontSize === "compact"
+                ? "bg-blue-600 text-white font-bold"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Compact
+          </button>
+          <button
+            type="button"
+            onClick={() => setResumeFontSize("standard")}
+            className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
+              resumeFontSize === "standard"
+                ? "bg-blue-600 text-white font-bold"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            onClick={() => setResumeFontSize("large")}
+            className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
+              resumeFontSize === "large"
+                ? "bg-blue-600 text-white font-bold"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Large
+          </button>
         </div>
 
         {/* Scaled A4 Wrapper */}
@@ -1129,7 +1316,9 @@ export function ResumeBuilder({
               transform: `scale(${zoom / 100})`,
               transformOrigin: "top left",
             }}
-            className="w-[210mm] min-h-[297mm] max-h-[297mm] bg-white shadow-2xl rounded-sm p-[10mm] text-slate-900 font-sans shrink-0 print:shadow-none print:w-full print:p-[10mm] print:transform-none print:max-h-none overflow-hidden"
+            className={`w-[210mm] min-h-[297mm] max-h-[297mm] bg-white shadow-2xl rounded-sm text-slate-900 font-sans shrink-0 print:shadow-none print:w-full print:transform-none print:max-h-none overflow-hidden ${
+              resumeFontSize === "compact" ? "p-[8mm]" : resumeFontSize === "large" ? "p-[11mm]" : "p-[10mm]"
+            }`}
           >
             {/* ========================================================= */}
             {/* TEMPLATE 1: Executive 2-Column (Brad Jensen style) */}
@@ -1146,13 +1335,15 @@ export function ResumeBuilder({
                       {formData.personalInfo.headline}
                     </p>
                   )}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[11px] text-slate-700 font-medium">
-                    {formData.personalInfo?.phone && <span>📞 {formData.personalInfo.phone}</span>}
-                    {formData.personalInfo?.email && <span>✉️ {formData.personalInfo.email}</span>}
-                    {formData.personalInfo?.linkedin && (
-                      <span>🔗 {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-700 font-medium">
+                    {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
+                    {formData.personalInfo?.email && (
+                      <span>{formData.personalInfo?.phone ? " • " : ""}{formData.personalInfo.email}</span>
                     )}
-                    {formData.personalInfo?.location && <span>📍 {formData.personalInfo.location}</span>}
+                    {formData.personalInfo?.linkedin && (
+                      <span> • {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                    )}
+                    {formData.personalInfo?.location && <span> • {formData.personalInfo.location}</span>}
                   </div>
                 </header>
 
@@ -1369,9 +1560,9 @@ export function ResumeBuilder({
             {currentTemplate === "classic" && (
               <div className="flex flex-col h-full text-slate-900 leading-normal font-sans">
                 {/* Centered Classic Header */}
-                <header className="text-center pb-3.5 mb-3.5 border-b border-slate-300">
+                <header className="text-center pb-3 mb-3 border-b border-slate-300">
                   <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mb-1 font-serif">
-                    {formData.personalInfo?.fullName || "Sahil Sumrani"}
+                    {formData.personalInfo?.fullName || "YOUR NAME"}
                   </h1>
                   {formData.personalInfo?.headline && (
                     <p className="text-xs md:text-[12.5px] font-semibold text-slate-700 tracking-wide mb-1.5">
@@ -1380,11 +1571,13 @@ export function ResumeBuilder({
                   )}
                   <div className="text-[11px] text-slate-600 flex flex-wrap justify-center gap-x-3 gap-y-0.5 font-medium">
                     {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
-                    {formData.personalInfo?.email && <span>• {formData.personalInfo.email}</span>}
-                    {formData.personalInfo?.linkedin && (
-                      <span>• {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                    {formData.personalInfo?.email && (
+                      <span>{formData.personalInfo?.phone ? " • " : ""}{formData.personalInfo.email}</span>
                     )}
-                    {formData.personalInfo?.location && <span>• {formData.personalInfo.location}</span>}
+                    {formData.personalInfo?.linkedin && (
+                      <span> • {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                    )}
+                    {formData.personalInfo?.location && <span> • {formData.personalInfo.location}</span>}
                   </div>
                 </header>
 
@@ -1412,9 +1605,11 @@ export function ResumeBuilder({
                           <div key={i}>
                             <div className="flex justify-between items-baseline">
                               <span className="font-bold text-slate-900 text-[12px]">{exp.company}</span>
-                              <span className="text-[10.5px] text-slate-600 font-medium">
-                                {exp.location || "San Diego, California"}
-                              </span>
+                              {exp.location && (
+                                <span className="text-[10.5px] text-slate-600 font-medium">
+                                  {exp.location}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between items-baseline mb-0.5">
                               <span className="font-semibold text-slate-800 italic text-[11.5px]">
@@ -1515,9 +1710,11 @@ export function ResumeBuilder({
                           <div key={i}>
                             <div className="flex justify-between items-baseline">
                               <span className="font-bold text-slate-900 text-[11.5px]">{edu.institution}</span>
-                              <span className="text-[10px] text-slate-600">
-                                {edu.location || "Stanford, California"}
-                              </span>
+                              {edu.location && (
+                                <span className="text-[10px] text-slate-600">
+                                  {edu.location}
+                                </span>
+                              )}
                             </div>
                             <div className="flex justify-between items-baseline">
                               <span className="text-slate-700 italic text-[11px]">{edu.degree}</span>
@@ -1565,16 +1762,16 @@ export function ResumeBuilder({
 
       {/* Floating Voice Assistant */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
-        {aiMessage && (
-          <div className="mb-3 bg-white border border-blue-200 shadow-xl rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4 relative">
-            <div className="flex items-center justify-between mb-1.5 pr-6">
+        {showAssistantBubble && aiMessage && (
+          <div className="mb-3 bg-white border border-blue-200 shadow-2xl rounded-2xl p-4 max-w-sm w-[330px] sm:w-[350px] animate-in fade-in slide-in-from-bottom-4 relative">
+            <div className="flex items-center justify-between mb-2 pr-6">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-blue-500" />
                 <span className="font-bold text-xs text-slate-800">AI Assistant (English)</span>
               </div>
               <button
                 onClick={() => speakResponse(aiMessage)}
-                title="Listen again"
+                title="Listen to Assistant"
                 className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <Volume2 size={15} />
@@ -1582,17 +1779,79 @@ export function ResumeBuilder({
             </div>
             {/* Close Bot Message Button */}
             <button
-              onClick={() => setAiMessage("")}
-              title="Close message"
+              onClick={() => setShowAssistantBubble(false)}
+              title="Close Assistant"
               className="absolute top-3 right-3 text-slate-400 hover:text-slate-700 transition-colors p-0.5 rounded-full hover:bg-slate-100 cursor-pointer"
             >
               <X size={15} />
             </button>
-            <p className="text-xs text-slate-700 leading-relaxed">{aiMessage}</p>
+            <p className="text-xs text-slate-700 leading-relaxed mb-2.5">{aiMessage}</p>
+
+            {/* Real-time Dynamic Suggestions (Filtered to only what is missing/weak) */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  {liveSuggestions.length > 0 ? "Live Suggestions" : "Resume Status"}
+                </span>
+                {liveSuggestions.length > 0 && (
+                  <span className="text-[10px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.5 rounded">
+                    {liveSuggestions.length} tips
+                  </span>
+                )}
+              </div>
+
+              {liveSuggestions.length > 0 ? (
+                <div className="space-y-1.5 mb-2.5">
+                  {liveSuggestions.slice(0, 2).map((sugg, i) => (
+                    <div key={i} className="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-lg flex items-start gap-1.5">
+                      <span className="text-blue-500 font-bold mt-0.5">•</span>
+                      <span className="leading-snug">{sugg}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg font-medium mb-2.5 leading-snug">
+                  All key sections are filled! Ready for final ATS optimization.
+                </p>
+              )}
+
+              {/* 1-Click Fast Actions */}
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => runAssistantCommand("Please optimize my entire resume for ATS screening with strong action verbs and metric enhancements.")}
+                  disabled={isProcessingVoice}
+                  className="text-[10px] bg-blue-600 text-white hover:bg-blue-700 font-semibold px-2.5 py-1 rounded-md transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  Optimize Resume
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runAssistantCommand("Please polish my professional summary to be concise, metric-driven, and high-impact.")}
+                  disabled={isProcessingVoice}
+                  className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 font-medium px-2 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Polish Summary
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runAssistantCommand("Quantify my experience and project bullets with realistic metrics and strong verbs.")}
+                  disabled={isProcessingVoice}
+                  className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 font-medium px-2 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Add Metrics
+                </button>
+              </div>
+            </div>
           </div>
         )}
         <button
-          onClick={toggleListening}
+          onClick={() => {
+            if (!showAssistantBubble) {
+              setShowAssistantBubble(true);
+            }
+            toggleListening();
+          }}
           disabled={isProcessingVoice}
           aria-label={isListening ? "Stop Voice Assistant" : "Start Voice Assistant"}
           className={`flex items-center justify-center w-14 h-14 rounded-full shadow-2xl transition-all cursor-pointer ${

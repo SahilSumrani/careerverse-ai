@@ -75,3 +75,44 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ resume: null });
+    }
+
+    if (hasFirebaseAdminCredentials()) {
+      const db = getAdminDb();
+      const snap = await db
+        .collection(USERS_COLLECTION)
+        .doc(session.user.id)
+        .collection("builderResumes")
+        .orderBy("updatedAt", "desc")
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const docData = snap.docs[0].data();
+        return NextResponse.json({
+          resume: docData.data,
+          templateId: docData.templateId || "classic",
+          title: docData.name,
+          updatedAt: docData.updatedAt,
+        });
+      }
+    }
+
+    return NextResponse.json({
+      resume: null,
+      userProfile: {
+        name: session.user.name || "",
+        email: session.user.email || "",
+      },
+    });
+  } catch (error: any) {
+    console.error("Fetch saved resume error:", error);
+    return NextResponse.json({ resume: null });
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { FileUp, FileText, Loader2, AlertCircle } from "lucide-react";
@@ -9,12 +10,33 @@ import { ResumeBuilder, ResumeData } from "./components/ResumeBuilder";
 type FlowState = "onboarding" | "upload" | "builder";
 
 export default function CreateResumePage() {
+  const { data: session } = useSession();
   const [flowState, setFlowState] = useState<FlowState>("onboarding");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [hasServerResume, setHasServerResume] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const storageKey = session?.user?.id ? `cv_resume_draft_${session.user.id}` : "cv_resume_draft_guest";
+
+  // Check if logged-in user has an existing saved resume in their account
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    let active = true;
+    fetch("/api/resume/save")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.resume) {
+          setHasServerResume(true);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [session?.user?.id]);
 
   const processFile = async (file: File) => {
     const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
@@ -134,8 +156,25 @@ export default function CreateResumePage() {
               </button>
 
               <button
-                onClick={() => {
-                  const draft = localStorage.getItem("cv_resume_draft");
+                onClick={async () => {
+                  // Try to load saved server resume first if available
+                  if (session?.user?.id) {
+                    try {
+                      const res = await fetch("/api/resume/save");
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data?.resume) {
+                          setResumeData(data.resume);
+                          setFlowState("builder");
+                          return;
+                        }
+                      }
+                    } catch (e) {
+                      console.warn("Could not fetch cloud resume", e);
+                    }
+                  }
+
+                  const draft = localStorage.getItem(storageKey);
                   if (draft) {
                     try {
                       setResumeData(JSON.parse(draft));
@@ -147,14 +186,23 @@ export default function CreateResumePage() {
                   }
                   setFlowState("builder");
                 }}
-                className="group flex flex-col items-center justify-center p-8 bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl shadow-sm hover:shadow-md transition-all text-left cursor-pointer"
+                className="group flex flex-col items-center justify-center p-8 bg-white border-2 border-slate-200 hover:border-blue-500 rounded-2xl shadow-sm hover:shadow-md transition-all text-left cursor-pointer relative"
               >
+                {hasServerResume && (
+                  <span className="absolute top-4 right-4 bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                    Saved Resume Found
+                  </span>
+                )}
                 <div className="h-16 w-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <FileText size={32} />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Start from scratch</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                  {hasServerResume ? "Continue My Resume" : "Start from scratch"}
+                </h3>
                 <p className="text-slate-600 text-center">
-                  Use our step-by-step ATS-friendly builder to create a brand new resume in minutes with dual templates.
+                  {hasServerResume
+                    ? "Load your saved resume or start creating your ATS-friendly resume."
+                    : "Use our step-by-step ATS-friendly builder to create a brand new resume in minutes with dual templates."}
                 </p>
               </button>
             </div>

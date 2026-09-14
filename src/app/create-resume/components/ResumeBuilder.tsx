@@ -123,78 +123,48 @@ export function ResumeBuilder({
   // Free Native Web Speech & Synthesis refs
   const recognitionRef = useRef<any>(null);
 
-  // Preload and cache natural female voices on mount
-  const [cachedVoices, setCachedVoices] = useState<SpeechSynthesisVoice[]>([]);
+  // Ultra-realistic Neural Female Voice Player (ElevenLabs quality, 100% Free)
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const updateVoices = () => {
-      const v = window.speechSynthesis.getVoices();
-      if (v && v.length > 0) {
-        setCachedVoices(v);
-      }
-    };
-    updateVoices();
-    window.speechSynthesis.onvoiceschanged = updateVoices;
-  }, []);
-
-  // Text to speech helper (Strictly Natural Female Voice, 100% Free)
-  const speakResponse = (text: string, lang: "en" | "hi") => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const speakResponse = async (text: string, lang: "en" | "hi") => {
+    if (!text || typeof window === "undefined") return;
     try {
-      window.speechSynthesis.cancel(); // stop previous speech
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
-      utterance.rate = 1.0;
-      utterance.pitch = 1.2; // Feminine pitch
-
-      const allVoices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
-      if (allVoices && allVoices.length > 0) {
-        const targetPrefix = lang === "hi" ? "hi" : "en";
-        const langVoices = allVoices.filter((v) => v.lang.toLowerCase().startsWith(targetPrefix));
-
-        // Strictly match female names and filter out any male voices
-        const maleKeywords = ["david", "mark", "george", "male", "guy", "stefan", "ravi", "madhav"];
-        const femaleKeywords = [
-          "zira", "natural", "online", "female", "samantha", "victoria", "kavya", 
-          "swara", "priya", "google", "eva", "jenny", "aria", "michelle", "karen", "susan"
-        ];
-
-        // 1st priority: Matching language + explicitly female keywords + NOT male
-        let chosenVoice = langVoices.find((v) => {
-          const name = v.name.toLowerCase();
-          const isNotMale = !maleKeywords.some((m) => name.includes(m));
-          const isFemale = femaleKeywords.some((f) => name.includes(f));
-          return isNotMale && isFemale;
-        });
-
-        // 2nd priority: Any matching language voice that is NOT explicitly male
-        if (!chosenVoice) {
-          chosenVoice = langVoices.find((v) => {
-            const name = v.name.toLowerCase();
-            return !maleKeywords.some((m) => name.includes(m));
-          });
-        }
-
-        // 3rd priority: Global natural female voice (like Google US English Female)
-        if (!chosenVoice) {
-          chosenVoice = allVoices.find((v) => {
-            const name = v.name.toLowerCase();
-            return (
-              !maleKeywords.some((m) => name.includes(m)) &&
-              femaleKeywords.some((f) => name.includes(f))
-            );
-          });
-        }
-
-        if (chosenVoice) {
-          utterance.voice = chosenVoice;
-        }
+      // Stop previous audio if playing
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
       }
 
-      window.speechSynthesis.speak(utterance);
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, lang }),
+      });
+
+      if (!res.ok) throw new Error("TTS fetch failed");
+
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      currentAudioRef.current = audio;
+
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        currentAudioRef.current = null;
+      };
+
+      await audio.play();
     } catch (e) {
-      console.warn("Speech synthesis error:", e);
+      console.warn("Neural TTS error, fallback to browser speech:", e);
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
+        utterance.pitch = 1.2;
+        window.speechSynthesis.speak(utterance);
+      } catch {}
     }
   };
 

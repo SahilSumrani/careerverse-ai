@@ -500,9 +500,30 @@ h1 em,
 
 /* Resume Builder Print Styles */
 @media print {
-  body > * { display: none !important; }
-  .print-resume-wrapper { display: block !important; }
-  @page { margin: 10mm; size: A4; }
+  @page {
+    margin: 0;
+    size: A4 portrait;
+  }
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  #resume-print-area {
+    margin: 0 auto !important;
+    padding: 12mm 15mm !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+    page-break-after: avoid;
+  }
 }
 
 /* Hide scrollbar utility used in tabs */

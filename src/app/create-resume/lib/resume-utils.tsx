@@ -198,3 +198,19 @@ export const SAMPLE_DATA: ResumeData = {
   ],
   languages: ["English", "Hindi"],
 };
+
+// Generates synchronized storage key for authenticated users or isolated session guests
+export function getResumeStorageKey(userId?: string | null): string {
+  if (userId) {
+    return `cv_resume_draft_${userId}`;
+  }
+  if (typeof window !== "undefined") {
+    let guestSession = sessionStorage.getItem("cv_guest_sid");
+    if (!guestSession) {
+      guestSession = Math.random().toString(36).slice(2, 10);
+      sessionStorage.setItem("cv_guest_sid", guestSession);
+    }
+    return `cv_resume_draft_guest_${guestSession}`;
+  }
+  return "cv_resume_draft_guest";
+}

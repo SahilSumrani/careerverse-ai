@@ -53,6 +53,12 @@ next-env.d.ts
 
 # local data
 /uploads
+/uploads/
+/tmp
+/tmp/
+/output
+/output/
+tmp-marquee.json
 /prisma/dev.db
 /prisma/dev.db-journal
 *.db

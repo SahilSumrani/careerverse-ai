@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { FileUp, FileText, Loader2, AlertCircle } from "lucide-react";
 import { ResumeBuilder, ResumeData } from "./components/ResumeBuilder";
+import { getResumeStorageKey } from "./lib/resume-utils";
 
 type FlowState = "onboarding" | "upload" | "builder";
 
@@ -19,7 +20,7 @@ export default function CreateResumePage() {
   const [hasServerResume, setHasServerResume] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const storageKey = session?.user?.id ? `cv_resume_draft_${session.user.id}` : "cv_resume_draft_guest";
+  const storageKey = getResumeStorageKey(session?.user?.id);
 
   // Check if logged-in user has an existing saved resume in their account
   useEffect(() => {

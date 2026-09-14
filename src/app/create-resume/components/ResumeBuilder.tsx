@@ -20,6 +20,7 @@ import {
   getStarterResume,
   getResumeSuggestions,
   stripEmojisFromObject,
+  getResumeStorageKey,
 } from "../lib/resume-utils";
 
 import { PersonalInfoForm } from "./sections/PersonalInfoForm";
@@ -76,20 +77,7 @@ export function ResumeBuilder({ initialData, onBack }: ResumeBuilderProps) {
   const isInitializedRef = useRef(false);
 
   // Derive isolated guest or user-scoped storage key
-  const storageKey = useMemo(() => {
-    if (session?.user?.id) {
-      return `cv_resume_draft_${session.user.id}`;
-    }
-    if (typeof window !== "undefined") {
-      let guestSession = sessionStorage.getItem("cv_guest_sid");
-      if (!guestSession) {
-        guestSession = Math.random().toString(36).slice(2, 10);
-        sessionStorage.setItem("cv_guest_sid", guestSession);
-      }
-      return `cv_resume_draft_guest_${guestSession}`;
-    }
-    return "cv_resume_draft_guest";
-  }, [session?.user?.id]);
+  const storageKey = useMemo(() => getResumeStorageKey(session?.user?.id), [session?.user?.id]);
 
   const defaultStarter = useMemo(() => getStarterResume(session?.user), [session?.user]);
 

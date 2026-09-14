@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
         ],
       },
+      {
+        source: "/api/search",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
+        ],
+      },
     ];
   },
 };

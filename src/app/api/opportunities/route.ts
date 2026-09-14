@@ -72,7 +72,9 @@ export async function GET(req: Request) {
     );
   }
 
-  const session = await auth();
+  const cookieHeader = req.headers.get("cookie") || "";
+  const hasAuthCookie = cookieHeader.includes("authjs") || cookieHeader.includes("next-auth");
+  const session = (mine || hasAuthCookie) ? await auth() : null;
   const ctx = !mine && session?.user?.id ? await getCareerContext(session.user.id) : null;
   const matchQuota =
     ctx && items.length

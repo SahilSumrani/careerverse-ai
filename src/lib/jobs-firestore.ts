@@ -36,7 +36,7 @@ function mapJobDoc(id: string, data: Record<string, unknown>, fromOpportunities 
 }
 
 let cachedJobsResult: { jobs: JobListing[]; source: string; timestamp: number; limit: number } | null = null;
-const JOBS_CACHE_TTL_MS = 30_000; // 30 seconds
+const JOBS_CACHE_TTL_MS = 60_000; // 60 seconds
 
 /** Load published jobs from Firestore with in-memory TTL caching. */
 export async function loadJobsFromFirestore(limit = 40): Promise<{ jobs: JobListing[]; source: string }> {

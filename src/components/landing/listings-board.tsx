@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState, useTransition } from "react";
 import {
   MapPin,
   IndianRupee,
@@ -30,7 +30,7 @@ type Props = {
   subtitle: string;
   items: DummyJob[];
   filters: readonly string[];
-  initialFilters: ListingFilters;
+  initialFilters?: ListingFilters;
   searchPlaceholder?: string;
 };
 
@@ -139,25 +139,45 @@ function FiltersBody({
   );
 }
 
-export function ListingsBoard({
+function ListingsBoardInner({
   kind,
   title,
   subtitle,
   items,
   filters,
-  initialFilters,
+  initialFilters = EMPTY_FILTERS,
   searchPlaceholder = "e.g. Design, Mumbai, React",
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const qParam = searchParams.get("q") ?? "";
+
   const [pending, startTransition] = useTransition();
-  const [draft, setDraft] = useState<ListingFilters>(initialFilters);
-  const [search, setSearch] = useState(initialFilters.q);
+  const [draft, setDraft] = useState<ListingFilters>(() => ({
+    ...initialFilters,
+    q: initialFilters.q || qParam,
+  }));
+  const [search, setSearch] = useState(() => initialFilters.q || qParam);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Sync draft and search input if URL search query changes (browser navigation or external links)
   useEffect(() => {
-    setDraft(initialFilters);
-    setSearch(initialFilters.q);
-  }, [initialFilters]);
+    setDraft((prev) => {
+      const targetQ = qParam || initialFilters.q || "";
+      if (prev.q === targetQ) return prev;
+      return { ...prev, q: targetQ };
+    });
+    setSearch(qParam || initialFilters.q || "");
+  }, [qParam, initialFilters.q]);
+
+  // Sync when initialFilters (e.g. category/location from route slug) changes
+  useEffect(() => {
+    setDraft((prev) => ({
+      ...prev,
+      ...initialFilters,
+      q: qParam || initialFilters.q || prev.q,
+    }));
+  }, [initialFilters.category, initialFilters.location, initialFilters.wfh, initialFilters.partTime, initialFilters.q, qParam]);
 
   const filtered = useMemo(() => filterListings(items, draft), [items, draft]);
   const countLabel = kind === "internships" ? "internships" : "jobs";
@@ -167,7 +187,7 @@ export function ListingsBoard({
   function navigate(next: ListingFilters) {
     setDraft(next);
     startTransition(() => {
-      router.push(listingFilterHref(kind, next));
+      router.push(listingFilterHref(kind, next), { scroll: false });
     });
   }
 
@@ -179,9 +199,8 @@ export function ListingsBoard({
     navigate({ ...draft, partTime: !draft.partTime });
   }
 
-    function setCategory(category: string | null) {
-    const normalized =
-      category === "Big brands" ? "Engineering" : category;
+  function setCategory(category: string | null) {
+    const normalized = category === "Big brands" ? "Engineering" : category;
     navigate({
       ...draft,
       category: draft.category === normalized ? null : normalized,
@@ -327,6 +346,98 @@ export function ListingsBoard({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ListingsBoardStaticShell({
+  kind,
+  title,
+  subtitle,
+  items,
+  filters,
+  initialFilters = EMPTY_FILTERS,
+  searchPlaceholder = "e.g. Design, Mumbai, React",
+}: Props) {
+  const filtered = filterListings(items, initialFilters);
+  const countLabel = kind === "internships" ? "internships" : "jobs";
+  const filterCount = activeFilterCount(initialFilters);
+  const categoryChips = filters.filter((c) => c !== "Work from home" && c !== "Part-time");
+
+  return (
+    <div className="cv-board">
+      <header className="cv-board-hero">
+        <div className="cv-board-hero-inner">
+          <p className="cv-board-kicker">CareerVerse AI</p>
+          <h1>{title}</h1>
+          <p className="cv-board-sub">{subtitle}</p>
+          <div className="cv-board-search">
+            <input
+              name="q"
+              type="search"
+              defaultValue={initialFilters.q}
+              placeholder={searchPlaceholder}
+              aria-label="Search listings"
+              readOnly
+            />
+            <button type="button">Search</button>
+          </div>
+        </div>
+      </header>
+
+      <div className="cv-board-mobile-bar">
+        <button type="button" className="cv-board-mobile-filters">
+          <SlidersHorizontal size={16} aria-hidden />
+          Filters{filterCount > 0 ? ` (${filterCount})` : ""}
+        </button>
+      </div>
+
+      <div className="cv-board-body">
+        <aside className="cv-board-filters cv-board-filters-desktop" aria-label="Filters">
+          <FiltersBody
+            idPrefix="desk-fallback"
+            draft={initialFilters}
+            filterCount={filterCount}
+            categoryChips={categoryChips}
+            onClearAll={() => {}}
+            onToggleWfh={() => {}}
+            onTogglePartTime={() => {}}
+            onSetCategory={() => {}}
+            onSetLocation={() => {}}
+          />
+        </aside>
+
+        <section className="cv-board-list" aria-label={`${countLabel} list`}>
+          <div className="cv-board-list-head">
+            <h2>
+              {filtered.length} {countLabel} available
+            </h2>
+            <p>
+              {filterCount > 0
+                ? "Showing filtered sample listings — sign in for explainable match scores."
+                : "Sample listings — sign in for explainable match scores."}
+            </p>
+          </div>
+
+          <div className="cv-board-cards">
+            {filtered.length === 0 ? (
+              <div className="cv-board-empty">
+                <p>No {countLabel} match these filters.</p>
+              </div>
+            ) : (
+              filtered.map((job) => <ListingCard key={job.id} job={job} kind={kind} />)
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export function ListingsBoard(props: Props) {
+  return (
+    <Suspense fallback={<ListingsBoardStaticShell {...props} />}>
+      <ListingsBoardInner {...props} />
+    </Suspense>
   );
 }
 

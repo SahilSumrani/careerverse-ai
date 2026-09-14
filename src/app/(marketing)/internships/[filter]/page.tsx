@@ -7,8 +7,9 @@ import { loadMarketingListings, resolveListingBySlug } from "@/lib/listings-publ
 
 type Props = {
   params: Promise<{ filter: string }>;
-  searchParams: Promise<{ q?: string }>;
 };
+
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { filter } = await params;
@@ -19,9 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function InternshipFilterPage({ params, searchParams }: Props) {
+export default async function InternshipFilterPage({ params }: Props) {
   const { filter } = await params;
-  const { q } = await searchParams;
 
   if (isLegacyListingId(filter)) {
     const job = await resolveListingBySlug(filter);
@@ -29,7 +29,7 @@ export default async function InternshipFilterPage({ params, searchParams }: Pro
     redirect(listingHref(job));
   }
 
-  const initialFilters = parseFilterSlug("internships", filter, q);
+  const initialFilters = parseFilterSlug("internships", filter);
   const all = await loadMarketingListings();
   const items = listingsForKind("internships", all);
 

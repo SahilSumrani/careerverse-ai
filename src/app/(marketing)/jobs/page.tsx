@@ -12,13 +12,8 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-type Props = {
-  searchParams: Promise<{ q?: string }>;
-};
-
-export default async function JobsMarketingPage({ searchParams }: Props) {
-  const { q } = await searchParams;
-  const initialFilters = parseFilterSlug("jobs", null, q);
+export default async function JobsMarketingPage() {
+  const initialFilters = parseFilterSlug("jobs", null);
   const all = await loadMarketingListings();
   const items = listingsForKind("jobs", all);
 

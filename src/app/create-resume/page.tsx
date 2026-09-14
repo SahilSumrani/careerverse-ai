@@ -18,12 +18,9 @@ export default function CreateResumePage() {
 
   const processFile = async (file: File) => {
     const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
-    const isDocx =
-      file.name.toLowerCase().endsWith(".docx") ||
-      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    if (!isPdf && !isDocx) {
-      setUploadError("Please upload a PDF (.pdf) or Word (.docx) file.");
+    if (!isPdf) {
+      setUploadError("Please upload a valid PDF (.pdf) file.");
       return;
     }
 
@@ -132,13 +129,12 @@ export default function CreateResumePage() {
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">I have a resume</h3>
                 <p className="text-slate-600 text-center">
-                  Upload your existing resume. We&apos;ll parse it, format it in executive or classic layout, and let you edit it.
+                  Upload your existing PDF resume. We&apos;ll parse it, format it in executive or classic layout, and let you edit it.
                 </p>
               </button>
 
               <button
                 onClick={() => {
-                  // Try to load draft from localStorage
                   const draft = localStorage.getItem("cv_resume_draft");
                   if (draft) {
                     try {
@@ -168,7 +164,7 @@ export default function CreateResumePage() {
         {flowState === "upload" && (
           <div className="w-full max-w-xl text-center">
             <h2 className="text-3xl font-bold mb-4 text-slate-900">Upload Resume</h2>
-            <p className="text-slate-600 mb-8">Upload your PDF or DOCX file to get started.</p>
+            <p className="text-slate-600 mb-8">Upload your PDF file to get started.</p>
 
             <div
               onDragOver={handleDragOver}
@@ -184,7 +180,7 @@ export default function CreateResumePage() {
               {isUploading ? (
                 <>
                   <Loader2 className="text-blue-600 animate-spin mb-4" size={48} />
-                  <p className="text-slate-800 font-semibold mb-2">Parsing your resume...</p>
+                  <p className="text-slate-800 font-semibold mb-2">Parsing your resume with AI...</p>
                   <p className="text-slate-500 text-sm">
                     Extracting work experience, education, skills, and achievements.
                   </p>
@@ -195,23 +191,23 @@ export default function CreateResumePage() {
                     <FileUp size={40} />
                   </div>
                   <p className="text-slate-700 font-medium mb-2">
-                    {isDragging ? "Drop your resume file here" : "Drag and drop your file here, or click to browse"}
+                    {isDragging ? "Drop your PDF file here" : "Drag and drop your PDF here, or click to browse"}
                   </p>
-                  <p className="text-xs text-slate-400 mb-6">Supports PDF &amp; DOCX up to 5MB</p>
+                  <p className="text-xs text-slate-400 mb-6">Supports PDF up to 5MB</p>
 
                   <input
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
                     id="resume-upload"
-                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    accept=".pdf,application/pdf"
                     onChange={handleFileChange}
                   />
                   <label
                     htmlFor="resume-upload"
                     className="bg-blue-600 text-white px-8 py-3 rounded-full font-medium cursor-pointer hover:bg-blue-700 transition-colors shadow-sm hover:shadow"
                   >
-                    Select File
+                    Select PDF
                   </label>
                 </>
               )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useFieldArray, Controller } from "react-hook-form";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import {
   Loader2,
@@ -15,10 +15,9 @@ import {
   Check,
   Layout,
   LogIn,
-  FileCode,
   FileType,
+  Volume2,
 } from "lucide-react";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 
 export interface ResumeData {
   templateId?: "executive" | "classic";
@@ -69,7 +68,7 @@ export interface ResumeData {
   }>;
   languages?: Array<{
     name: string;
-    proficiency: number; // 1 to 5
+    proficiency: number;
   }>;
   certifications?: Array<{
     name: string;
@@ -78,86 +77,85 @@ export interface ResumeData {
   }>;
 }
 
-// Sample fallback content matching screenshots if user starts from scratch
+// Clean markdown bold (**) and asterisks (*) into React elements
+function renderFormattedText(text: string | undefined): ReactNode {
+  if (!text) return null;
+
+  // Split by bold tokens **...**
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const inner = part.slice(2, -2).replace(/\*/g, "").trim();
+      return (
+        <strong key={index} className="font-bold text-slate-900">
+          {inner}
+        </strong>
+      );
+    }
+    // Clean any stray lone asterisks
+    const cleaned = part.replace(/\*/g, "");
+    return <span key={index}>{cleaned}</span>;
+  });
+}
+
+// Sample fallback content
 const SAMPLE_DATA: ResumeData = {
-  templateId: "executive",
+  templateId: "classic",
   personalInfo: {
-    fullName: "Brad Jensen",
+    fullName: "Sahil Sumrani",
     headline: "Chief Experience Officer | Customer-Centric Strategies | Digital Transformation",
-    email: "b.jensen@enhancv.com",
-    phone: "(212) 555-01XX",
+    email: "officialsahilarora05@gmail.com",
+    phone: "8700543448",
     location: "Indianapolis, Indiana",
-    linkedin: "linkedin.com/in/bradjensen",
-    github: "github.com/bradjensen",
+    linkedin: "linkedin.com/in/sahil-sumrani",
+    github: "github.com/sahilsumrani",
   },
   professionalSummary:
-    "With over 15 years in customer experience management, I excel in creating impactful strategies that enhance journeys. Proven record includes achieving a 30% increase in customer satisfaction through innovative initiatives, all backed by strong analytical skills and leadership in dynamic environments.",
+    "Motivated and results-driven student with a strong foundation in web development seeking an internship to apply and expand technical skills in a dynamic environment.",
   experience: [
     {
-      company: "TechForward Solutions",
-      position: "Chief Experience Officer",
-      startDate: "01/2023",
+      company: "Chief Electoral Office Delhi",
+      position: "Graphic Designing Intern",
+      startDate: "06/2023",
       endDate: "Present",
-      location: "Indianapolis, IN",
+      location: "San Diego, California",
       description: [
-        "Developed and implemented an extensive customer experience strategy that achieved a 40% increase in Net Promoter Score (NPS) within the first year.",
-        "Led a cross-functional team to enhance customer journey mappings, increasing conversion rates by 25% through informed insights.",
-        "Collaborated closely with product and marketing teams, resulting in a 30% reduction in customer complaints by aligning service offerings with expectations.",
-      ],
-    },
-    {
-      company: "VisionaryTech Innovations",
-      position: "Director of Customer Experience",
-      startDate: "06/2018",
-      endDate: "12/2022",
-      location: "Chicago, IL",
-      description: [
-        "Oversaw the re-design of the customer feedback loop, leading to an increase in actionable insights and a 35% improvement in satisfaction ratings.",
-        "Facilitated a series of workshops to empower teams on customer-centric thinking, contributing to an increase in service quality.",
-      ],
-    },
-    {
-      company: "InnovativeDigital Corp.",
-      position: "Customer Experience Manager",
-      startDate: "05/2014",
-      endDate: "05/2018",
-      location: "Louisville, KY",
-      description: [
-        "Launched a customer journey optimization project that improved user feedback scores, leading to a significant enhancement in service processes.",
+        "Collaborated with product teams to outline requirements, resulting in a successful launch of features.",
+        "Executed rigorous testing protocols that enhanced software stability and improved user satisfaction.",
       ],
     },
   ],
   education: [
     {
-      institution: "University of Chicago",
-      degree: "Master of Business Administration (MBA)",
-      startDate: "2012",
-      endDate: "2014",
-      location: "Chicago, IL",
-      score: "3.9 GPA",
+      institution: "School of Open Learning, University of Delhi",
+      degree: "Bachelor of Computer Applications",
+      startDate: "2023",
+      endDate: "2026",
+      location: "Delhi, India",
+      score: "",
     },
   ],
   projects: [],
   skills: {
-    languages: ["Customer Experience Strategy", "Journey Mapping Techniques", "CRM Software Expertise"],
-    frameworks: ["Team Leadership & Mentoring", "Analytical Thinking", "Effective Communication"],
-    tools: ["Data Analysis & Interpretation", "Problem-Solving", "Agile Leadership"],
+    languages: ["JavaScript", "PHP", "HTML", "CSS", "TypeScript"],
+    frameworks: ["React.js", "Next.js", "WordPress"],
+    tools: ["Shopify", "MongoDB", "Git", "Figma"],
   },
   keyAchievements: [
     {
       title: "Revamped Customer Feedback System",
       description:
-        "Introduced an innovative feedback system at TechForward Solutions that enhanced response rates by 50%, leading to actionable insights that drove initiatives to improve satisfaction.",
+        "Introduced an innovative feedback system that enhanced response rates by 50%, leading to actionable insights that drove initiatives to improve satisfaction.",
     },
     {
       title: "Increased Customer Retention",
       description:
-        "Successfully designed a customer loyalty program at VisionaryTech Innovations that increased retention by 20%, significantly improving overall profitability for the year.",
+        "Successfully designed a customer loyalty program that increased retention by 20%, significantly improving overall profitability.",
     },
     {
       title: "Elevated Service Quality",
       description:
-        "Implemented a new training curriculum at InnovativeDigital Corp. that increased customer service quality ratings by 30% within six months.",
+        "Implemented a new training curriculum that increased customer service quality ratings by 30% within six months.",
     },
   ],
   trainingCourses: [
@@ -176,11 +174,11 @@ const SAMPLE_DATA: ResumeData = {
   ],
   languages: [
     { name: "English", proficiency: 5 },
-    { name: "Spanish", proficiency: 4 },
+    { name: "Hindi", proficiency: 5 },
   ],
 };
 
-// Tag editor for skills (replaces the string splitting anti-pattern)
+// Tag editor for skills
 function TagInput({
   label,
   tags,
@@ -218,7 +216,7 @@ function TagInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
       <div className="flex flex-wrap gap-2 p-2 border border-slate-300 rounded-lg bg-white min-h-[44px] focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
         {tags.map((tag, i) => (
           <span
@@ -242,7 +240,7 @@ function TagInput({
           onKeyDown={handleKeyDown}
           onBlur={() => addTag(inputVal)}
           placeholder={tags.length === 0 ? placeholder : "Add more..."}
-          className="flex-1 min-w-[120px] text-sm outline-none bg-transparent"
+          className="flex-1 min-w-[120px] text-xs outline-none bg-transparent"
         />
       </div>
       <p className="text-[11px] text-slate-400 mt-1">Press Enter or comma to add</p>
@@ -270,6 +268,8 @@ export function ResumeBuilder({
   const [aiMessage, setAiMessage] = useState("");
   const [voiceLang, setVoiceLang] = useState<"en" | "hi">("en");
   const previewRef = useRef<HTMLDivElement>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   const initialValues: ResumeData = {
     ...SAMPLE_DATA,
@@ -283,7 +283,7 @@ export function ResumeBuilder({
       frameworks: initialData?.skills?.frameworks?.length ? initialData.skills.frameworks : SAMPLE_DATA.skills.frameworks,
       tools: initialData?.skills?.tools?.length ? initialData.skills.tools : SAMPLE_DATA.skills.tools,
     },
-    templateId: initialData?.templateId || "executive",
+    templateId: initialData?.templateId || "classic",
   };
 
   const { register, control, watch, reset, getValues, setValue } = useForm<ResumeData>({
@@ -325,9 +325,9 @@ export function ResumeBuilder({
   }, [initialData, reset]);
 
   const formData = watch();
-  const currentTemplate = formData.templateId || "executive";
+  const currentTemplate = formData.templateId || "classic";
 
-  // Auto-save draft to localStorage (guest & authenticated)
+  // Auto-save draft to localStorage
   useEffect(() => {
     const handler = setTimeout(() => {
       localStorage.setItem("cv_resume_draft", JSON.stringify(formData));
@@ -335,213 +335,64 @@ export function ResumeBuilder({
     return () => clearTimeout(handler);
   }, [formData]);
 
-  // Handle Save to Account or Prompt Sign-in
-  const handleSaveToAccount = async () => {
-    if (!session?.user) {
-      setShowSignInPrompt(true);
-      return;
-    }
-
-    setIsSaving(true);
-    setSaveStatus(null);
-    try {
-      const res = await fetch("/api/resume/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeData: getValues(),
-          templateId: currentTemplate,
-          title: `${getValues().personalInfo.fullName || "My"} Resume`,
-        }),
-      });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.error || "Failed to save resume");
-      }
-      setSaveStatus("Saved to your account!");
-      setTimeout(() => setSaveStatus(null), 4000);
-    } catch (err: any) {
-      console.error("Save error:", err);
-      alert(err.message || "Failed to save resume. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Export PDF (Print-to-PDF / Clean print layout)
-  const exportPDF = () => {
-    setIsExporting(true);
-    const handleAfterPrint = () => {
-      setIsExporting(false);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-    window.addEventListener("afterprint", handleAfterPrint);
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
-  // Export DOCX using docx library
-  const exportDOCX = async () => {
-    try {
-      const data = getValues();
-      const docChildren: Paragraph[] = [
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          heading: HeadingLevel.HEADING_1,
-          children: [new TextRun({ text: data.personalInfo.fullName || "Candidate", bold: true, size: 32 })],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({
-              text: data.personalInfo.headline || "",
-              italics: true,
-              size: 22,
-            }),
-          ],
-        }),
-        new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [
-            new TextRun({
-              text: [data.personalInfo.email, data.personalInfo.phone, data.personalInfo.location, data.personalInfo.linkedin]
-                .filter(Boolean)
-                .join(" | "),
-              size: 18,
-            }),
-          ],
-        }),
-      ];
-
-      if (data.professionalSummary) {
-        docChildren.push(new Paragraph({ children: [] }));
-        docChildren.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: "SUMMARY", bold: true })],
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: data.professionalSummary })],
-          })
-        );
-      }
-
-      if (data.experience?.length) {
-        docChildren.push(new Paragraph({ children: [] }));
-        docChildren.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: "EXPERIENCE", bold: true })],
-          })
-        );
-        for (const exp of data.experience) {
-          docChildren.push(
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${exp.company} — ${exp.position}`, bold: true }),
-                new TextRun({ text: `  (${exp.startDate} - ${exp.endDate})`, italics: true }),
-              ],
-            })
-          );
-          for (const bullet of exp.description || []) {
-            docChildren.push(
-              new Paragraph({
-                bullet: { level: 0 },
-                children: [new TextRun({ text: bullet })],
-              })
-            );
-          }
-        }
-      }
-
-      if (data.education?.length) {
-        docChildren.push(new Paragraph({ children: [] }));
-        docChildren.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: "EDUCATION", bold: true })],
-          })
-        );
-        for (const edu of data.education) {
-          docChildren.push(
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${edu.institution} — ${edu.degree}`, bold: true }),
-                new TextRun({ text: ` (${edu.startDate} - ${edu.endDate})`, italics: true }),
-              ],
-            })
-          );
-        }
-      }
-
-      const allSkills = [
-        ...(data.skills?.languages || []),
-        ...(data.skills?.frameworks || []),
-        ...(data.skills?.tools || []),
-      ];
-      if (allSkills.length) {
-        docChildren.push(new Paragraph({ children: [] }));
-        docChildren.push(
-          new Paragraph({
-            heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: "SKILLS", bold: true })],
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: allSkills.join(", ") })],
-          })
-        );
-      }
-
-      const doc = new Document({
-        sections: [{ properties: {}, children: docChildren }],
-      });
-      const blob = await Packer.toBlob(doc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${(data.personalInfo.fullName || "resume").replace(/\s+/g, "_")}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("DOCX export error:", e);
-      alert("Failed to export DOCX. Please try again.");
-    }
-  };
-
-  // Clean native audio player ref
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-
+  // Voice speech synthesis with infallible fallback
   const speakResponse = async (text: string, lang: "en" | "hi") => {
     if (!text || typeof window === "undefined") return;
+
+    // Stop ongoing audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+
     try {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, lang }),
       });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      currentAudioRef.current = audio;
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        currentAudioRef.current = null;
-      };
-      await audio.play();
-    } catch (e) {
-      console.error("Audio error:", e);
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        currentAudioRef.current = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          currentAudioRef.current = null;
+        };
+        await audio.play();
+        return;
+      }
+    } catch {
+      // Fall through to native synthesis
+    }
+
+    // Native Web Speech fallback ensures assistant ALWAYS talks
+    if ("speechSynthesis" in window) {
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
+        utterance.rate = 1.0;
+        utterance.pitch = 1.05;
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(
+          (v) =>
+            v.lang.startsWith(lang === "hi" ? "hi" : "en") &&
+            (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Neural"))
+        );
+        if (preferredVoice) utterance.voice = preferredVoice;
+        window.speechSynthesis.speak(utterance);
+      } catch (synthErr) {
+        console.warn("Speech synthesis error:", synthErr);
+      }
     }
   };
 
-  const recognitionRef = useRef<any>(null);
-
+  // Clean toggle for voice recognition
   const toggleListening = async () => {
     if (isListening) {
       if (recognitionRef.current) recognitionRef.current.stop();
@@ -569,8 +420,8 @@ export function ResumeBuilder({
         setIsProcessingVoice(false);
         setAiMessage(
           voiceLang === "hi"
-            ? "🎙️ Sun raha hoon... Boliye kya add karna hai"
-            : "🎙️ Listening... Tell me what to add to your resume"
+            ? "🎙️ Sun raha hoon... Boliye kya add karna hai (jaise: 'Mera professional summary improve karo')"
+            : "🎙️ Listening... Speak your request (e.g., 'Enhance my summary for web development')"
         );
       };
 
@@ -587,8 +438,13 @@ export function ResumeBuilder({
           const res = await fetch("/api/resume/assistant", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ transcript, resumeState: currentValues }),
+            body: JSON.stringify({
+              transcript,
+              resumeState: currentValues,
+              lang: voiceLang,
+            }),
           });
+
           if (!res.ok) throw new Error("Assistant request failed");
           const responseData = await res.json();
           const { updatedResume, aiResponse } = responseData?.data || {};
@@ -601,11 +457,23 @@ export function ResumeBuilder({
               skills: { ...currentValues.skills, ...(updatedResume.skills || {}) },
             });
           }
-          const reply = aiResponse || (voiceLang === "hi" ? "Resume update ho gaya!" : "Updated your resume!");
+
+          const reply =
+            aiResponse ||
+            (voiceLang === "hi"
+              ? "Aapka resume update ho gaya hai!"
+              : "Updated your resume with your request!");
+
           setAiMessage(reply);
           speakResponse(reply, voiceLang);
-        } catch (err) {
-          setAiMessage("Could not update. Please try again.");
+        } catch (err: any) {
+          console.error("Voice command error:", err);
+          const errMsg =
+            voiceLang === "hi"
+              ? "Command process nahi ho paayi. Kripya dobara koshish karein."
+              : "Could not process command. Please try again.";
+          setAiMessage(errMsg);
+          speakResponse(errMsg, voiceLang);
         } finally {
           setIsProcessingVoice(false);
         }
@@ -622,21 +490,65 @@ export function ResumeBuilder({
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (err) {
+    } catch {
       setIsListening(false);
       setIsProcessingVoice(false);
     }
+  };
+
+  // Save to account
+  const handleSaveToAccount = async () => {
+    if (!session?.user) {
+      setShowSignInPrompt(true);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus(null);
+    try {
+      const res = await fetch("/api/resume/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeData: getValues(),
+          templateId: currentTemplate,
+          title: `${getValues().personalInfo.fullName || "My"} Resume`,
+        }),
+      });
+
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to save");
+      setSaveStatus("Saved to your account!");
+      setTimeout(() => setSaveStatus(null), 4000);
+    } catch (err: any) {
+      alert(err.message || "Failed to save resume.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Export PDF
+  const exportPDF = () => {
+    setIsExporting(true);
+    const handleAfterPrint = () => {
+      setIsExporting(false);
+      window.removeEventListener("afterprint", handleAfterPrint);
+    };
+    window.addEventListener("afterprint", handleAfterPrint);
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   return (
     <div className="w-full flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden bg-slate-100 print:h-auto print:overflow-visible print:block">
       {/* LEFT: Editor */}
       <div className="w-full md:w-[45%] lg:w-[42%] h-full flex flex-col border-r border-slate-200 bg-white print:hidden shrink-0 shadow-sm">
-        {/* Top bar with back, template switcher, and action buttons */}
+        {/* Top bar with back, template switcher, and save/export buttons */}
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-slate-200 bg-slate-50/70">
           <button
             onClick={onBack}
-            className="text-slate-600 hover:text-slate-900 text-sm font-medium flex items-center gap-1"
+            className="text-slate-600 hover:text-slate-900 text-xs font-semibold flex items-center gap-1 cursor-pointer"
           >
             &larr; Back
           </button>
@@ -645,7 +557,7 @@ export function ResumeBuilder({
           <div className="flex items-center bg-slate-200/80 p-0.5 rounded-lg text-xs font-semibold">
             <button
               onClick={() => setValue("templateId", "executive")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
                 currentTemplate === "executive"
                   ? "bg-white text-blue-700 shadow-xs font-bold"
                   : "text-slate-600 hover:text-slate-900"
@@ -656,7 +568,7 @@ export function ResumeBuilder({
             </button>
             <button
               onClick={() => setValue("templateId", "classic")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
                 currentTemplate === "classic"
                   ? "bg-white text-blue-700 shadow-xs font-bold"
                   : "text-slate-600 hover:text-slate-900"
@@ -667,13 +579,12 @@ export function ResumeBuilder({
             </button>
           </div>
 
-          {/* Actions: Save & Export */}
+          {/* Actions: Save & PDF Export */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveToAccount}
               disabled={isSaving}
-              title={session?.user ? "Save to CareerVerse account" : "Sign in to save"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 session?.user
                   ? "bg-emerald-600 text-white hover:bg-emerald-700"
                   : "bg-slate-800 text-white hover:bg-slate-900"
@@ -691,25 +602,14 @@ export function ResumeBuilder({
               <span>{saveStatus || (session?.user ? "Save" : "Sign In to Save")}</span>
             </button>
 
-            <div className="flex items-center gap-1">
-              <button
-                onClick={exportPDF}
-                disabled={isExporting}
-                title="Download Print-ready PDF"
-                className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                <span>PDF</span>
-              </button>
-              <button
-                onClick={exportDOCX}
-                title="Export as Word DOCX"
-                className="flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-md text-xs font-semibold hover:bg-slate-200 transition-colors"
-              >
-                <FileCode size={14} />
-                <span>DOCX</span>
-              </button>
-            </div>
+            <button
+              onClick={exportPDF}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 bg-blue-600 text-white px-3.5 py-1.5 rounded-md text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs cursor-pointer"
+            >
+              {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              <span>PDF</span>
+            </button>
           </div>
         </div>
 
@@ -727,9 +627,9 @@ export function ResumeBuilder({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors ${
+              className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                 activeTab === tab.id
-                  ? "border-blue-600 text-blue-600 bg-blue-50/30"
+                  ? "border-blue-600 text-blue-600 bg-blue-50/40"
                   : "border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300"
               }`}
             >
@@ -739,25 +639,25 @@ export function ResumeBuilder({
         </div>
 
         {/* Form Content Area */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {activeTab === "personal" && (
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-3.5 animate-in fade-in">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
                 <input
                   {...register("personalInfo.fullName")}
-                  placeholder="e.g. Brad Jensen"
-                  className="w-full p-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g. Sahil Sumrani"
+                  className="w-full p-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Headline / Target Title (shows under name)
+                  Headline / Role Title
                 </label>
                 <input
                   {...register("personalInfo.headline")}
-                  placeholder="e.g. Chief Experience Officer | Customer-Centric Strategies | Digital Transformation"
-                  className="w-full p-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g. Full Stack Developer | Web Technologies"
+                  className="w-full p-2 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -783,12 +683,12 @@ export function ResumeBuilder({
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Location</label>
                   <input
                     {...register("personalInfo.location")}
-                    placeholder="e.g. Indianapolis, Indiana"
+                    placeholder="e.g. Delhi, India"
                     className="w-full p-2 text-sm border border-slate-300 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">LinkedIn Profile</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">LinkedIn URL</label>
                   <input
                     {...register("personalInfo.linkedin")}
                     placeholder="linkedin.com/in/username"
@@ -800,18 +700,15 @@ export function ResumeBuilder({
           )}
 
           {activeTab === "summary" && (
-            <div className="space-y-4 animate-in fade-in">
+            <div className="space-y-3.5 animate-in fade-in">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Professional Summary</label>
                 <textarea
                   {...register("professionalSummary")}
                   rows={6}
-                  placeholder="Write a compelling executive summary emphasizing your career trajectory and key strengths..."
+                  placeholder="Motivated and results-driven student with a strong foundation in..."
                   className="w-full p-3 text-sm border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 leading-relaxed"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Keep it between 3–5 sentences highlighting leadership, metrics, and domain mastery.
-                </p>
               </div>
             </div>
           )}
@@ -819,7 +716,7 @@ export function ResumeBuilder({
           {activeTab === "experience" && (
             <div className="space-y-4 animate-in fade-in">
               {expFields.map((field, index) => (
-                <div key={field.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/70 relative">
+                <div key={field.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 relative">
                   <button
                     type="button"
                     onClick={() => removeExp(index)}
@@ -827,21 +724,21 @@ export function ResumeBuilder({
                   >
                     <Trash2 size={16} />
                   </button>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <div className="grid grid-cols-2 gap-2 pr-6">
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-0.5">Company</label>
                         <input
                           {...register(`experience.${index}.company`)}
-                          placeholder="TechForward Solutions"
+                          placeholder="Company name"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-0.5">Position / Title</label>
+                        <label className="block text-xs font-medium text-slate-600 mb-0.5">Position</label>
                         <input
                           {...register(`experience.${index}.position`)}
-                          placeholder="Chief Experience Officer"
+                          placeholder="Job Title"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
@@ -851,7 +748,7 @@ export function ResumeBuilder({
                         <label className="block text-xs font-medium text-slate-600 mb-0.5">Start Date</label>
                         <input
                           {...register(`experience.${index}.startDate`)}
-                          placeholder="01/2023"
+                          placeholder="06/2023"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
@@ -867,7 +764,7 @@ export function ResumeBuilder({
                         <label className="block text-xs font-medium text-slate-600 mb-0.5">Location</label>
                         <input
                           {...register(`experience.${index}.location`)}
-                          placeholder="Indianapolis, IN"
+                          placeholder="Delhi, India"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
@@ -877,14 +774,13 @@ export function ResumeBuilder({
                         Bullet Points (one per line)
                       </label>
                       <textarea
-                        rows={4}
+                        rows={3}
                         defaultValue={(formData.experience?.[index]?.description || []).join("\n")}
                         onChange={(e) => {
                           const lines = e.target.value.split("\n").filter((l) => l.trim().length > 0);
                           setValue(`experience.${index}.description`, lines);
                         }}
-                        placeholder="• Achieved a 40% increase in NPS within the first year&#10;• Led cross-functional team of 15 members"
-                        className="w-full p-2 text-xs border border-slate-300 rounded bg-white font-mono"
+                        className="w-full p-2 text-xs border border-slate-300 rounded bg-white"
                       />
                     </div>
                   </div>
@@ -902,9 +798,9 @@ export function ResumeBuilder({
                     description: [],
                   })
                 }
-                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-xs font-semibold cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-semibold cursor-pointer"
               >
-                <Plus size={15} /> Add Work Experience
+                <Plus size={14} /> Add Experience
               </button>
             </div>
           )}
@@ -912,37 +808,37 @@ export function ResumeBuilder({
           {activeTab === "education" && (
             <div className="space-y-4 animate-in fade-in">
               {eduFields.map((field, index) => (
-                <div key={field.id} className="p-4 border border-slate-200 rounded-xl bg-slate-50/70 relative">
+                <div key={field.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 relative">
                   <button
                     type="button"
                     onClick={() => removeEdu(index)}
-                    className="absolute top-3 right-3 text-slate-400 hover:text-red-600 transition-colors"
+                    className="absolute top-3 right-3 text-slate-400 hover:text-red-600"
                   >
                     <Trash2 size={16} />
                   </button>
-                  <div className="grid gap-3 pr-6">
+                  <div className="grid gap-2.5 pr-6">
                     <div>
                       <label className="block text-xs font-medium text-slate-600 mb-0.5">Institution</label>
                       <input
                         {...register(`education.${index}.institution`)}
-                        placeholder="University of Chicago"
+                        placeholder="University / College"
                         className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Degree / Study</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Degree / Course</label>
                       <input
                         {...register(`education.${index}.degree`)}
-                        placeholder="Master of Business Administration (MBA)"
+                        placeholder="Bachelor of Computer Applications"
                         className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-medium text-slate-600 mb-0.5">Start Date</label>
                         <input
                           {...register(`education.${index}.startDate`)}
-                          placeholder="2012"
+                          placeholder="2023"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
@@ -950,15 +846,7 @@ export function ResumeBuilder({
                         <label className="block text-xs font-medium text-slate-600 mb-0.5">End Date</label>
                         <input
                           {...register(`education.${index}.endDate`)}
-                          placeholder="2014"
-                          className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-0.5">Score / Honors</label>
-                        <input
-                          {...register(`education.${index}.score`)}
-                          placeholder="3.9 GPA"
+                          placeholder="2026"
                           className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white"
                         />
                       </div>
@@ -971,9 +859,9 @@ export function ResumeBuilder({
                 onClick={() =>
                   appendEdu({ institution: "", degree: "", startDate: "", endDate: "", score: "", location: "" })
                 }
-                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-xs font-semibold cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-semibold cursor-pointer"
               >
-                <Plus size={15} /> Add Education
+                <Plus size={14} /> Add Education
               </button>
             </div>
           )}
@@ -985,10 +873,10 @@ export function ResumeBuilder({
                 name="skills.languages"
                 render={({ field }) => (
                   <TagInput
-                    label="Core Competencies & Strategy"
+                    label="Programming & Web Technologies"
                     tags={field.value || []}
                     onChange={field.onChange}
-                    placeholder="e.g. Customer Experience Strategy, CRM Software"
+                    placeholder="e.g. JavaScript, PHP, HTML, CSS, TypeScript"
                   />
                 )}
               />
@@ -998,10 +886,10 @@ export function ResumeBuilder({
                 name="skills.frameworks"
                 render={({ field }) => (
                   <TagInput
-                    label="Methodologies & Leadership"
+                    label="Frameworks & Libraries"
                     tags={field.value || []}
                     onChange={field.onChange}
-                    placeholder="e.g. Team Leadership, Journey Mapping, Agile"
+                    placeholder="e.g. React.js, Next.js, Tailwind CSS"
                   />
                 )}
               />
@@ -1011,10 +899,10 @@ export function ResumeBuilder({
                 name="skills.tools"
                 render={({ field }) => (
                   <TagInput
-                    label="Tools & Platforms"
+                    label="Platforms & Tools"
                     tags={field.value || []}
                     onChange={field.onChange}
-                    placeholder="e.g. Salesforce, Excel, SQL, Google Analytics"
+                    placeholder="e.g. MongoDB, Git, Figma, Shopify"
                   />
                 )}
               />
@@ -1022,34 +910,31 @@ export function ResumeBuilder({
           )}
 
           {activeTab === "achievements" && (
-            <div className="space-y-4 animate-in fade-in">
-              <p className="text-xs text-slate-500">
-                Key achievements appear prominently in both templates (right column in Executive, bottom grid in Classic).
-              </p>
+            <div className="space-y-3.5 animate-in fade-in">
               {achFields.map((field, index) => (
-                <div key={field.id} className="p-3.5 border border-slate-200 rounded-xl bg-slate-50/70 relative">
+                <div key={field.id} className="p-3 border border-slate-200 rounded-xl bg-slate-50/70 relative">
                   <button
                     type="button"
                     onClick={() => removeAch(index)}
-                    className="absolute top-3 right-3 text-slate-400 hover:text-red-600 transition-colors"
+                    className="absolute top-2.5 right-2.5 text-slate-400 hover:text-red-600"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                   <div className="space-y-2 pr-6">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Achievement Title</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Title</label>
                       <input
                         {...register(`keyAchievements.${index}.title` as any)}
-                        placeholder="e.g. Revamped Customer Feedback System"
+                        placeholder="Achievement Title"
                         className="w-full p-1.5 text-sm border border-slate-300 rounded bg-white font-semibold"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Description & Outcome</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-0.5">Description</label>
                       <textarea
                         rows={2}
                         {...register(`keyAchievements.${index}.description` as any)}
-                        placeholder="Introduced a system that enhanced response rates by 50%..."
+                        placeholder="Describe the impact or outcome..."
                         className="w-full p-1.5 text-xs border border-slate-300 rounded bg-white"
                       />
                     </div>
@@ -1059,44 +944,37 @@ export function ResumeBuilder({
               <button
                 type="button"
                 onClick={() => appendAch({ title: "", description: "" })}
-                className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-xs font-semibold cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 py-2 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 text-xs font-semibold cursor-pointer"
               >
-                <Plus size={15} /> Add Key Achievement
+                <Plus size={14} /> Add Achievement
               </button>
             </div>
           )}
 
           {activeTab === "courses" && (
-            <div className="space-y-5 animate-in fade-in">
+            <div className="space-y-4 animate-in fade-in">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Training / Courses</h3>
-                <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">Training / Courses</h3>
+                <div className="space-y-2.5">
                   {courseFields.map((field, index) => (
-                    <div key={field.id} className="p-3 border border-slate-200 rounded-xl bg-slate-50/70 relative">
+                    <div key={field.id} className="p-2.5 border border-slate-200 rounded-xl bg-slate-50/70 relative">
                       <button
                         type="button"
                         onClick={() => removeCourse(index)}
-                        className="absolute top-2.5 right-2.5 text-slate-400 hover:text-red-600"
+                        className="absolute top-2 right-2 text-slate-400 hover:text-red-600"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
-                      <div className="space-y-2 pr-6">
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            {...register(`trainingCourses.${index}.name` as any)}
-                            placeholder="Course name"
-                            className="p-1.5 text-xs border border-slate-300 rounded bg-white font-medium"
-                          />
-                          <input
-                            {...register(`trainingCourses.${index}.provider` as any)}
-                            placeholder="Provider (Coursera, edX)"
-                            className="p-1.5 text-xs border border-slate-300 rounded bg-white"
-                          />
-                        </div>
+                      <div className="space-y-1.5 pr-5">
+                        <input
+                          {...register(`trainingCourses.${index}.name` as any)}
+                          placeholder="Course name"
+                          className="w-full p-1 text-xs border border-slate-300 rounded bg-white font-semibold"
+                        />
                         <input
                           {...register(`trainingCourses.${index}.description` as any)}
-                          placeholder="Brief description of skills or certification gained"
-                          className="w-full p-1.5 text-xs border border-slate-300 rounded bg-white"
+                          placeholder="Provider & skills learned"
+                          className="w-full p-1 text-xs border border-slate-300 rounded bg-white"
                         />
                       </div>
                     </div>
@@ -1104,48 +982,9 @@ export function ResumeBuilder({
                   <button
                     type="button"
                     onClick={() => appendCourse({ name: "", provider: "", description: "" })}
-                    className="w-full py-2 border border-dashed border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 text-xs font-medium"
+                    className="w-full py-1.5 border border-dashed border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 text-xs font-medium cursor-pointer"
                   >
-                    + Add Training / Course
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Languages</h3>
-                <div className="space-y-2">
-                  {langFields.map((field, index) => (
-                    <div key={field.id} className="flex items-center gap-2">
-                      <input
-                        {...register(`languages.${index}.name` as any)}
-                        placeholder="Language (e.g. English)"
-                        className="flex-1 p-1.5 text-xs border border-slate-300 rounded bg-white font-medium"
-                      />
-                      <select
-                        {...register(`languages.${index}.proficiency` as any, { valueAsNumber: true })}
-                        className="p-1.5 text-xs border border-slate-300 rounded bg-white"
-                      >
-                        <option value={5}>Native / Fluent (5/5)</option>
-                        <option value={4}>Advanced (4/5)</option>
-                        <option value={3}>Intermediate (3/5)</option>
-                        <option value={2}>Elementary (2/5)</option>
-                        <option value={1}>Beginner (1/5)</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => removeLang(index)}
-                        className="text-slate-400 hover:text-red-600 p-1"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => appendLang({ name: "", proficiency: 5 })}
-                    className="w-full py-2 border border-dashed border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 text-xs font-medium mt-1"
-                  >
-                    + Add Language
+                    + Add Course
                   </button>
                 </div>
               </div>
@@ -1154,28 +993,29 @@ export function ResumeBuilder({
         </div>
       </div>
 
-      {/* RIGHT: Live Preview of Selected Template */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-200/70 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
-        {/* Printable / Viewable Container */}
+      {/* RIGHT: Live Preview */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-200/80 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
         <div
           ref={previewRef}
           id="resume-print-area"
-          className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm p-[10mm] md:p-[12mm] text-slate-800 transition-all transform origin-top md:scale-100 scale-75 print:scale-100 print:transform-none print:w-full print:min-h-0 print:shadow-none print:p-[10mm] print:m-0 shrink-0 font-sans"
+          className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm p-[12mm] md:p-[15mm] text-slate-900 transition-all font-sans shrink-0 print:shadow-none print:w-full print:p-[12mm]"
         >
+          {/* ========================================================= */}
           {/* TEMPLATE 1: Executive 2-Column (Brad Jensen style) */}
+          {/* ========================================================= */}
           {currentTemplate === "executive" && (
-            <div className="flex flex-col h-full text-slate-900">
+            <div className="flex flex-col h-full text-slate-900 leading-normal">
               {/* Header */}
-              <header className="border-b-2 border-slate-900 pb-3 mb-4">
-                <h1 className="text-3xl font-extrabold tracking-tight uppercase text-slate-900 leading-none mb-1.5">
+              <header className="border-b-2 border-slate-900 pb-4 mb-5">
+                <h1 className="text-3xl font-extrabold tracking-tight uppercase text-slate-900 mb-1">
                   {formData.personalInfo?.fullName || "YOUR NAME"}
                 </h1>
                 {formData.personalInfo?.headline && (
-                  <p className="text-xs font-bold text-sky-700 tracking-wide mb-2">
+                  <p className="text-sm font-bold text-sky-700 tracking-wide mb-2.5">
                     {formData.personalInfo.headline}
                   </p>
                 )}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-600 font-medium">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-700 font-medium">
                   {formData.personalInfo?.phone && <span>📞 {formData.personalInfo.phone}</span>}
                   {formData.personalInfo?.email && <span>✉️ {formData.personalInfo.email}</span>}
                   {formData.personalInfo?.linkedin && (
@@ -1185,44 +1025,44 @@ export function ResumeBuilder({
                 </div>
               </header>
 
-              {/* 2-Column Body */}
-              <div className="grid grid-cols-12 gap-6 flex-1">
-                {/* LEFT MAIN COLUMN (~62% width) */}
-                <div className="col-span-7 space-y-4">
+              {/* 2-Column Grid */}
+              <div className="grid grid-cols-12 gap-7 flex-1">
+                {/* Left Column (60%) */}
+                <div className="col-span-7 space-y-5">
                   {formData.professionalSummary && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Summary
                       </h2>
-                      <p className="text-[11px] text-slate-700 leading-relaxed text-justify">
-                        {formData.professionalSummary}
+                      <p className="text-[13px] text-slate-800 leading-relaxed text-justify">
+                        {renderFormattedText(formData.professionalSummary)}
                       </p>
                     </section>
                   )}
 
                   {formData.experience?.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-3">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-3.5">
                         Experience
                       </h2>
-                      <div className="space-y-3.5">
+                      <div className="space-y-4">
                         {formData.experience.map((exp, i) => (
                           <div key={i}>
-                            <div className="font-bold text-[12px] text-slate-900 leading-tight">
+                            <div className="font-bold text-[14px] text-slate-900 leading-tight">
                               {exp.position}
                             </div>
-                            <div className="text-[11px] font-semibold text-sky-700">
+                            <div className="text-[13px] font-semibold text-sky-700">
                               {exp.company}
                             </div>
-                            <div className="text-[10px] text-slate-500 font-medium mb-1 flex items-center gap-2">
+                            <div className="text-xs text-slate-500 font-medium mb-1.5 flex items-center gap-2">
                               <span>
                                 {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
                               </span>
                               {exp.location && <span>• {exp.location}</span>}
                             </div>
-                            <ul className="list-disc list-outside ml-3.5 text-[10.5px] text-slate-700 space-y-1 leading-snug">
+                            <ul className="list-disc list-outside ml-4 text-[12.5px] text-slate-800 space-y-1.5 leading-relaxed">
                               {exp.description?.map((bullet, j) => (
-                                <li key={j}>{bullet}</li>
+                                <li key={j}>{renderFormattedText(bullet)}</li>
                               ))}
                             </ul>
                           </div>
@@ -1232,22 +1072,22 @@ export function ResumeBuilder({
                   )}
                 </div>
 
-                {/* RIGHT SIDEBAR COLUMN (~38% width) */}
-                <div className="col-span-5 space-y-4 border-l border-slate-200 pl-5">
+                {/* Right Column (40%) */}
+                <div className="col-span-5 space-y-5 border-l border-slate-200 pl-6">
                   {/* Key Achievements */}
                   {formData.keyAchievements && formData.keyAchievements.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Key Achievements
                       </h2>
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         {formData.keyAchievements.map((ach, i) => (
                           <div key={i}>
-                            <div className="text-[11px] font-bold text-slate-900 leading-tight">
+                            <div className="text-[13px] font-bold text-slate-900 leading-tight">
                               {ach.title}
                             </div>
-                            <p className="text-[10px] text-slate-600 leading-normal mt-0.5">
-                              {ach.description}
+                            <p className="text-xs text-slate-700 leading-relaxed mt-1">
+                              {renderFormattedText(ach.description)}
                             </p>
                           </div>
                         ))}
@@ -1255,12 +1095,12 @@ export function ResumeBuilder({
                     </section>
                   )}
 
-                  {/* Skills (badges) */}
+                  {/* Skills Badges */}
                   {(formData.skills?.languages?.length > 0 ||
                     formData.skills?.frameworks?.length > 0 ||
                     formData.skills?.tools?.length > 0) && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Skills
                       </h2>
                       <div className="flex flex-wrap gap-1.5">
@@ -1271,7 +1111,7 @@ export function ResumeBuilder({
                         ].map((skill, idx) => (
                           <span
                             key={idx}
-                            className="inline-block px-2 py-0.5 text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded"
+                            className="inline-block px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded"
                           >
                             {skill}
                           </span>
@@ -1283,22 +1123,21 @@ export function ResumeBuilder({
                   {/* Education */}
                   {formData.education?.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Education
                       </h2>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {formData.education.map((edu, i) => (
                           <div key={i}>
-                            <div className="text-[11px] font-bold text-slate-900 leading-tight">
+                            <div className="text-[13px] font-bold text-slate-900 leading-tight">
                               {edu.degree}
                             </div>
-                            <div className="text-[10.5px] font-medium text-sky-700">
+                            <div className="text-xs font-semibold text-sky-700">
                               {edu.institution}
                             </div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="text-[11.5px] text-slate-500">
                               {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
                               {edu.location && ` • ${edu.location}`}
-                              {edu.score && ` • ${edu.score}`}
                             </div>
                           </div>
                         ))}
@@ -1309,17 +1148,17 @@ export function ResumeBuilder({
                   {/* Training / Courses */}
                   {formData.trainingCourses && formData.trainingCourses.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Training / Courses
                       </h2>
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         {formData.trainingCourses.map((c, i) => (
                           <div key={i}>
-                            <div className="text-[10.5px] font-bold text-slate-900 leading-tight">
+                            <div className="text-[12.5px] font-bold text-slate-900 leading-tight">
                               {c.name}
                             </div>
-                            <p className="text-[10px] text-slate-600 leading-normal mt-0.5">
-                              {c.description}
+                            <p className="text-xs text-slate-700 leading-relaxed mt-0.5">
+                              {renderFormattedText(c.description)}
                             </p>
                           </div>
                         ))}
@@ -1327,21 +1166,21 @@ export function ResumeBuilder({
                     </section>
                   )}
 
-                  {/* Languages with 5-segment bars */}
+                  {/* Languages */}
                   {formData.languages && formData.languages.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
                         Languages
                       </h2>
                       <div className="space-y-2">
                         {formData.languages.map((l, i) => (
-                          <div key={i} className="flex items-center justify-between">
-                            <span className="text-[10.5px] font-bold text-slate-800">{l.name}</span>
-                            <div className="flex gap-1">
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-800">{l.name}</span>
+                            <div className="flex gap-1.5">
                               {[1, 2, 3, 4, 5].map((seg) => (
                                 <div
                                   key={seg}
-                                  className={`w-2.5 h-1.5 rounded-xs ${
+                                  className={`w-3 h-2 rounded-xs ${
                                     seg <= (l.proficiency || 5) ? "bg-sky-600" : "bg-slate-200"
                                   }`}
                                 />
@@ -1357,20 +1196,22 @@ export function ResumeBuilder({
             </div>
           )}
 
+          {/* ========================================================= */}
           {/* TEMPLATE 2: Classic 1-Column (Alexander Taylor style) */}
+          {/* ========================================================= */}
           {currentTemplate === "classic" && (
-            <div className="flex flex-col h-full text-slate-900">
+            <div className="flex flex-col h-full text-slate-900 leading-normal font-sans">
               {/* Centered Classic Header */}
-              <header className="text-center pb-4 mb-4 border-b border-slate-300">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-normal text-slate-900 mb-1 font-serif">
-                  {formData.personalInfo?.fullName || "Alexander Taylor"}
+              <header className="text-center pb-5 mb-5 border-b border-slate-300">
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mb-1.5 font-serif">
+                  {formData.personalInfo?.fullName || "Sahil Sumrani"}
                 </h1>
                 {formData.personalInfo?.headline && (
-                  <p className="text-xs font-medium text-slate-700 tracking-wide mb-1.5">
+                  <p className="text-sm font-semibold text-slate-700 tracking-wide mb-2">
                     {formData.personalInfo.headline}
                   </p>
                 )}
-                <div className="text-[11px] text-slate-600 flex flex-wrap justify-center gap-x-3 gap-y-0.5">
+                <div className="text-xs text-slate-600 flex flex-wrap justify-center gap-x-4 gap-y-1 font-medium">
                   {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
                   {formData.personalInfo?.email && <span>• {formData.personalInfo.email}</span>}
                   {formData.personalInfo?.linkedin && (
@@ -1380,43 +1221,45 @@ export function ResumeBuilder({
                 </div>
               </header>
 
-              <div className="space-y-4 text-[11px]">
+              <div className="space-y-5 text-slate-800">
                 {/* Summary */}
                 {formData.professionalSummary && (
                   <section>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
                       Summary
                     </h2>
-                    <p className="text-[11px] text-slate-700 leading-relaxed text-justify">
-                      {formData.professionalSummary}
+                    <p className="text-[13.5px] text-slate-800 leading-relaxed text-justify">
+                      {renderFormattedText(formData.professionalSummary)}
                     </p>
                   </section>
                 )}
 
-                {/* Experience (Left: Company/Role, Right: Location/Dates) */}
+                {/* Experience */}
                 {formData.experience?.length > 0 && (
                   <section>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-2.5 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-3 text-center font-serif">
                       Experience
                     </h2>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {formData.experience.map((exp, i) => (
                         <div key={i}>
                           <div className="flex justify-between items-baseline">
-                            <span className="font-bold text-slate-900 text-[11.5px]">{exp.company}</span>
-                            <span className="text-[10px] text-slate-600 font-medium">
+                            <span className="font-bold text-slate-900 text-sm">{exp.company}</span>
+                            <span className="text-xs text-slate-600 font-medium">
                               {exp.location || "San Diego, California"}
                             </span>
                           </div>
-                          <div className="flex justify-between items-baseline mb-1">
-                            <span className="font-semibold text-slate-800 italic text-[11px]">{exp.position}</span>
-                            <span className="text-[10px] text-slate-500">
+                          <div className="flex justify-between items-baseline mb-1.5">
+                            <span className="font-semibold text-slate-800 italic text-[13px]">
+                              {exp.position}
+                            </span>
+                            <span className="text-xs text-slate-500">
                               {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
                             </span>
                           </div>
-                          <ul className="list-disc list-outside ml-4 text-[10.5px] text-slate-700 space-y-1 leading-snug">
+                          <ul className="list-disc list-outside ml-4 text-[13px] text-slate-800 space-y-1.5 leading-relaxed">
                             {exp.description?.map((bullet, j) => (
-                              <li key={j}>{bullet}</li>
+                              <li key={j}>{renderFormattedText(bullet)}</li>
                             ))}
                           </ul>
                         </div>
@@ -1430,10 +1273,10 @@ export function ResumeBuilder({
                   formData.skills?.frameworks?.length > 0 ||
                   formData.skills?.tools?.length > 0) && (
                   <section>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
                       Skills
                     </h2>
-                    <p className="text-[10.5px] text-slate-700 text-center font-medium">
+                    <p className="text-xs text-slate-800 text-center font-medium leading-relaxed">
                       {[
                         ...(formData.skills?.languages || []),
                         ...(formData.skills?.frameworks || []),
@@ -1446,13 +1289,14 @@ export function ResumeBuilder({
                 {/* Training / Courses */}
                 {formData.trainingCourses && formData.trainingCourses.length > 0 && (
                   <section>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
                       Training / Courses
                     </h2>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {formData.trainingCourses.map((c, i) => (
-                        <div key={i} className="text-[10.5px] text-slate-700">
-                          <span className="font-bold text-slate-900">{c.name}</span> — {c.description}
+                        <div key={i} className="text-xs text-slate-800 leading-relaxed">
+                          <span className="font-bold text-slate-900">{c.name}</span> —{" "}
+                          {renderFormattedText(c.description)}
                         </div>
                       ))}
                     </div>
@@ -1462,21 +1306,21 @@ export function ResumeBuilder({
                 {/* Education */}
                 {formData.education?.length > 0 && (
                   <section>
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
                       Education
                     </h2>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {formData.education.map((edu, i) => (
                         <div key={i}>
                           <div className="flex justify-between items-baseline">
-                            <span className="font-bold text-slate-900">{edu.institution}</span>
-                            <span className="text-[10px] text-slate-600">
+                            <span className="font-bold text-slate-900 text-[13.5px]">{edu.institution}</span>
+                            <span className="text-xs text-slate-600">
                               {edu.location || "Stanford, California"}
                             </span>
                           </div>
                           <div className="flex justify-between items-baseline">
-                            <span className="text-slate-700 italic">{edu.degree}</span>
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-slate-700 italic text-xs">{edu.degree}</span>
+                            <span className="text-xs text-slate-500">
                               {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
                             </span>
                           </div>
@@ -1489,17 +1333,17 @@ export function ResumeBuilder({
                 {/* Key Achievements: 3-column bottom grid */}
                 {formData.keyAchievements && formData.keyAchievements.length > 0 && (
                   <section className="pt-2">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5 mb-2 text-center font-serif">
+                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-3 text-center font-serif">
                       Key Achievements
                     </h2>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-5">
                       {formData.keyAchievements.slice(0, 3).map((ach, i) => (
                         <div key={i} className="text-left">
-                          <h4 className="font-bold text-slate-900 text-[10.5px] mb-1 leading-tight">
+                          <h4 className="font-bold text-slate-900 text-xs mb-1 leading-tight">
                             {ach.title}
                           </h4>
-                          <p className="text-[9.5px] text-slate-600 leading-snug">
-                            {ach.description}
+                          <p className="text-[11.5px] text-slate-600 leading-snug">
+                            {renderFormattedText(ach.description)}
                           </p>
                         </div>
                       ))}
@@ -1508,8 +1352,8 @@ export function ResumeBuilder({
                 )}
               </div>
 
-              {/* Bottom watermark / signature */}
-              <div className="mt-auto pt-6 text-right text-[9px] text-slate-400 print:hidden font-sans">
+              {/* Watermark */}
+              <div className="mt-auto pt-8 text-right text-[10px] text-slate-400 print:hidden font-sans">
                 Powered by <span className="font-bold text-slate-500">CareerVerse AI</span>
               </div>
             </div>
@@ -1520,32 +1364,41 @@ export function ResumeBuilder({
       {/* Floating Voice Assistant */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end print:hidden">
         {aiMessage && (
-          <div className="mb-4 bg-white border border-blue-200 shadow-xl rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4">
+          <div className="mb-3 bg-white border border-blue-200 shadow-xl rounded-2xl p-4 max-w-sm animate-in fade-in slide-in-from-bottom-4">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-blue-500" />
                 <span className="font-bold text-xs text-slate-800">AI Assistant</span>
               </div>
-              <div className="flex gap-1 bg-slate-100 p-0.5 rounded text-[11px]">
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setVoiceLang("en")}
-                  className={`px-1.5 py-0.5 rounded ${
-                    voiceLang === "en" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
-                  }`}
+                  onClick={() => speakResponse(aiMessage, voiceLang)}
+                  title="Listen to response"
+                  className="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  EN
+                  <Volume2 size={15} />
                 </button>
-                <button
-                  onClick={() => setVoiceLang("hi")}
-                  className={`px-1.5 py-0.5 rounded ${
-                    voiceLang === "hi" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
-                  }`}
-                >
-                  हिं
-                </button>
+                <div className="flex gap-1 bg-slate-100 p-0.5 rounded text-[11px]">
+                  <button
+                    onClick={() => setVoiceLang("en")}
+                    className={`px-1.5 py-0.5 rounded cursor-pointer ${
+                      voiceLang === "en" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    onClick={() => setVoiceLang("hi")}
+                    className={`px-1.5 py-0.5 rounded cursor-pointer ${
+                      voiceLang === "hi" ? "bg-white font-bold text-blue-600 shadow-xs" : "text-slate-500"
+                    }`}
+                  >
+                    हिं
+                  </button>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-600">{aiMessage}</p>
+            <p className="text-xs text-slate-700 leading-relaxed">{aiMessage}</p>
           </div>
         )}
         <button
@@ -1570,19 +1423,19 @@ export function ResumeBuilder({
         </button>
       </div>
 
-      {/* Guest "Sign in to save" Modal */}
+      {/* Guest Sign-in Modal */}
       {showSignInPrompt && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
             <h3 className="text-lg font-bold text-slate-900 mb-2">Save to your Account</h3>
             <p className="text-sm text-slate-600 mb-6">
-              Your resume draft is safely saved in this browser. To sync across devices, access full ATS scoring,
-              and apply directly to jobs, sign in to your CareerVerse account.
+              Your resume draft is safely stored in your browser. Sign in to sync across devices, access ATS analysis,
+              and apply directly to internships.
             </p>
             <div className="flex items-center justify-end gap-3">
               <button
                 onClick={() => setShowSignInPrompt(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 cursor-pointer"
               >
                 Keep editing
               </button>

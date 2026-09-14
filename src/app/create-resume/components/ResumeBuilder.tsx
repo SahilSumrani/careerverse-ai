@@ -120,282 +120,151 @@ export function ResumeBuilder({
     }, 100);
   };
 
-  // We need a ref to hold the conversation instance so we can end it
-  const conversationRef = useRef<any>(null);
-  const sessionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Free Native Web Speech & Synthesis refs
+  const recognitionRef = useRef<any>(null);
 
-  // 6: Cleanup on unmount
+  // Text to speech helper (100% Free Browser Native)
+  const speakResponse = (text: string, lang: "en" | "hi") => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    try {
+      window.speechSynthesis.cancel(); // stop previous speech
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis error:", e);
+    }
+  };
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (conversationRef.current) {
-        conversationRef.current.endSession();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
-      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
   const toggleListening = async () => {
     if (isListening) {
-      if (conversationRef.current) {
-        await conversationRef.current.endSession();
-        conversationRef.current = null;
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
-      if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
       setIsListening(false);
-      setAiMessage("Voice Assistant stopped.");
+      setIsProcessingVoice(false);
+      setAiMessage("Voice Assistant paused.");
+      return;
+    }
+
+    // 0. Browser Web Speech check
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setAiMessage("Is browser me Speech Recognition support nahi hai. Chrome ya Edge use karein.");
       return;
     }
 
     try {
-      setIsProcessingVoice(true);
+      const recognition = new SpeechRecognition();
+      recognition.lang = voiceLang === "hi" ? "hi-IN" : "en-US";
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
-      // 0. Secure context check — getUserMedia only works on HTTPS or localhost
-      if (typeof window !== "undefined" && !window.isSecureContext) {
-        setAiMessage("🔒 Voice feature sirf HTTPS pe kaam karta hai. Please site ko https:// se open karo.");
+      recognition.onstart = () => {
+        setIsListening(true);
         setIsProcessingVoice(false);
-        return;
-      }
+        setAiMessage(
+          voiceLang === "hi"
+            ? "🎙️ Sun raha hoon... Boliye kya add karna hai (jaise: 'Add React and TypeScript to skills')"
+            : "🎙️ Listening... Tell me what to add (e.g., 'Add React and TypeScript to skills')"
+        );
+      };
 
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setAiMessage("Is browser mein microphone access supported nahi hai. Chrome/Edge/Firefox ka latest version try karo.");
-        setIsProcessingVoice(false);
-        return;
-      }
+      recognition.onresult = async (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (!transcript) return;
 
-      // 1. Check permission status using Permissions API — does NOT acquire the mic
-      if (navigator.permissions?.query) {
+        setIsListening(false);
+        setIsProcessingVoice(true);
+        setAiMessage(`"${transcript}"...`);
+
         try {
-          const status = await navigator.permissions.query({ name: "microphone" as PermissionName });
-          if (status.state === "denied") {
-            setAiMessage("🎤 Microphone permanently blocked hai. Address bar mein 🔒 lock icon click karo → Site settings → Microphone → 'Allow' select karo → page reload karo.");
-            setIsProcessingVoice(false);
-            return;
+          const currentValues = getValues();
+          const res = await fetch("/api/resume/assistant", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              transcript,
+              resumeState: currentValues,
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || "Failed to update resume.");
           }
-        } catch (e) {
-          // Firefox/Safari may not support 'microphone' name — safe to ignore
-          console.warn("Permissions API check failed, proceeding anyway", e);
-        }
-      }
 
-      // 2. Device existence check (non-blocking, does not acquire mic)
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const hasMic = devices.some((d) => d.kind === "audioinput");
-        if (!hasMic) {
-          setAiMessage("🎤 Koi microphone detect nahi hua. Please microphone connect karo aur dobara try karo.");
+          const responseData = await res.json();
+          const { updatedResume, aiResponse } = responseData?.data || {};
+
+          if (updatedResume) {
+            reset({
+              ...currentValues,
+              ...updatedResume,
+              personalInfo: { ...currentValues.personalInfo, ...(updatedResume.personalInfo || {}) },
+              skills: { ...currentValues.skills, ...(updatedResume.skills || {}) },
+            });
+          }
+
+          const reply = aiResponse || (voiceLang === "hi" ? "Aapka resume update ho gaya!" : "Updated your resume!");
+          setAiMessage(reply);
+          speakResponse(reply, voiceLang);
+        } catch (err: any) {
+          console.error("Assistant Error:", err);
+          setAiMessage(err.message || "Could not process command.");
+        } finally {
           setIsProcessingVoice(false);
-          return;
         }
-      } catch (e) {
-        console.warn("Could not enumerate devices", e);
-      }
+      };
 
-      // 3. Let ElevenLabs SDK acquire the mic directly (no double getUserMedia)
-      const { Conversation } = await import("@elevenlabs/client");
-
-      // Fetch a signed conversation token server-side (keeps API key secret)
-      const tokenRes = await fetch("/api/elevenlabs/token");
-      if (!tokenRes.ok) {
-        const err = await tokenRes.json().catch(() => ({}));
-        setAiMessage(`Configuration Error: ${err.error || "Could not get voice token. Check Vercel ENV vars."}`);
+      recognition.onerror = (event: any) => {
+        console.warn("Speech recognition error:", event.error);
+        setIsListening(false);
         setIsProcessingVoice(false);
-        return;
-      }
-      const { token } = await tokenRes.json();
+        if (event.error === "not-allowed") {
+          setAiMessage("🎤 Microphone access denied. Browser address bar me lock icon se mic allow karein.");
+        } else if (event.error === "no-speech") {
+          setAiMessage("Koi aawaz nahi suni. Mic dabakar dobara boliye.");
+        } else {
+          setAiMessage(`Speech error: ${event.error}`);
+        }
+      };
 
-      const promptText = voiceLang === "hi"
-        ? `ROLE: Aap CareerVerse AI ke ek friendly resume assistant hain.
-GOAL: User ki jankari LOGICAL CHUNKS mein ikattha karein aur updateResume call karein.
-FLOW:
-0. First ask: "Give me a 1-2 line summary of your career or what role you're targeting."
-1. Then: "Full name, email, phone number, and LinkedIn/GitHub if you have them."
-2. Then: "Most recent job — company name, city, your role, start and end dates (month/year), and 2-3 things you did with results if possible."
-3. Then: "Any other jobs? Same details."
-4. Then: "Education — institution name, city, degree, graduation year, and CGPA if you want to include it."
-5. Then: "Any projects? Name, tech stack, and what you built."
-6. Then: "Certifications or awards, if any."
-7. Then: "List your key skills — languages, frameworks, tools."
-WRITING RULES:
-- ALWAYS write years and dates in numeric digits only (e.g. "2023", "Jan 2023", "2025"). NEVER spell out numbers as words (never write "two thousand twenty three" or similar).
-- When the user mentions a company AND a location together, keep them SEPARATE. Put ONLY the company/organization name in the company field. If a location is mentioned, either omit it or format it as "Company Name, City" — never merge them into one word like "CEOOfficeDelhi".
-- Ask user to clarify if a spoken phrase is ambiguous (e.g., "CEO Office Delhi" could mean company name "CEO Office" located in "Delhi", or something else) rather than guessing.
-CONTENT RULES FOR ATS OPTIMIZATION:
-- Every bullet point MUST start with a strong action verb (Built, Developed, Led, Designed, Automated, Reduced, Implemented, Optimized, Managed, Increased) — never start with "Responsible for" or "Worked on"
-- Include a quantifiable metric wherever the user gives one (%, numbers, time saved, users affected, revenue). If user gives a vague achievement, ask "Do you have a number for that? Like how much time it saved or by what percentage?"
-- Keep each bullet between 10-20 words — long enough to be specific, short enough to scan
-- Never use first-person pronouns (I, we, my, our)
-- Match keywords to standard industry terms — if user says "made a website," ask what tech stack, and use standard terms like "React.js", "Node.js" not casual phrasing
-- Avoid buzzwords with no substance ("hardworking", "team player", "passionate") — always ask for a concrete example instead
-TONE: Encouraging aur brief rahein. Har response maximum 8 words ka ho. Koi lambi explanations nahi. Har chunk ke baad updateResume call karein.`
-        : `ROLE: You are a friendly resume-building assistant for CareerVerse AI.
-GOAL: Collect resume information in LOGICAL CHUNKS and call updateResume.
-FLOW:
-0. First ask: "Give me a 1-2 line summary of your career or what role you're targeting."
-1. Then: "Full name, email, phone number, and LinkedIn/GitHub if you have them."
-2. Then: "Most recent job — company name, city, your role, start and end dates (month/year), and 2-3 things you did with results if possible."
-3. Then: "Any other jobs? Same details."
-4. Then: "Education — institution name, city, degree, graduation year, and CGPA if you want to include it."
-5. Then: "Any projects? Name, tech stack, and what you built."
-6. Then: "Certifications or awards, if any."
-7. Then: "List your key skills — languages, frameworks, tools."
-WRITING RULES:
-- ALWAYS write years and dates in numeric digits only (e.g. "2023", "Jan 2023", "2025"). NEVER spell out numbers as words (never write "two thousand twenty three" or similar).
-- When the user mentions a company AND a location together, keep them SEPARATE. Put ONLY the company/organization name in the company field. If a location is mentioned, either omit it or format it as "Company Name, City" — never merge them into one word like "CEOOfficeDelhi".
-- Ask user to clarify if a spoken phrase is ambiguous (e.g., "CEO Office Delhi" could mean company name "CEO Office" located in "Delhi", or something else) rather than guessing.
-CONTENT RULES FOR ATS OPTIMIZATION:
-- Every bullet point MUST start with a strong action verb (Built, Developed, Led, Designed, Automated, Reduced, Implemented, Optimized, Managed, Increased) — never start with "Responsible for" or "Worked on"
-- Include a quantifiable metric wherever the user gives one (%, numbers, time saved, users affected, revenue). If user gives a vague achievement, ask "Do you have a number for that? Like how much time it saved or by what percentage?"
-- Keep each bullet between 10-20 words — long enough to be specific, short enough to scan
-- Never use first-person pronouns (I, we, my, our)
-- Match keywords to standard industry terms — if user says "made a website," ask what tech stack, and use standard terms like "React.js", "Node.js" not casual phrasing
-- Avoid buzzwords with no substance ("hardworking", "team player", "passionate") — always ask for a concrete example instead
-TONE: Be encouraging and brief. Max 8 words per response. No long explanations. Call updateResume after EVERY chunk.`;
+      recognition.onend = () => {
+        setIsListening(false);
+      };
 
-      const firstMessage = voiceLang === "hi"
-        ? "Namaste! Aapka naam kya hai?"
-        : "Hi! What's your full name?";
-
-      const conversation = await Conversation.startSession({
-        conversationToken: token,
-        onConnect: () => {
-          setIsListening(true);
-          setIsProcessingVoice(false);
-          setAiMessage("I am listening! Speak now.");
-          
-          sessionTimerRef.current = setTimeout(async () => {
-            if (conversationRef.current) {
-              await conversationRef.current.endSession();
-              setAiMessage("Session time limit reached. Please restart if you need more time.");
-            }
-          }, 5 * 60 * 1000); // 5 minute cap
-        },
-        onDisconnect: () => {
-          setIsListening(false);
-          setAiMessage("Disconnected.");
-          conversationRef.current = null;
-          if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-          setTimeout(() => setAiMessage(""), 3000); // Auto-hide widget
-        },
-        onError: (error: any) => {
-          console.error("ElevenLabs Error:", error);
-          setAiMessage(typeof error === "string" ? error : "Error connecting to voice agent.");
-          setIsListening(false);
-          setIsProcessingVoice(false);
-          conversationRef.current = null;
-          if (sessionTimerRef.current) clearTimeout(sessionTimerRef.current);
-          setTimeout(() => setAiMessage(""), 5000); // Auto-hide widget
-        },
-        onModeChange: (mode: any) => {
-          setAiMessage(mode.mode === "speaking" ? "AI is speaking..." : "Listening...");
-        },
-        clientTools: {
-          updateResume: async (params: any) => {
-            try {
-              console.log("🔧 Tool called with:", params); // Debug log
-
-              // Extract the nested resumeData if present
-              let updatedData = params?.resumeData ?? params;
-              if (typeof updatedData === "string") {
-                updatedData = JSON.parse(updatedData);
-              }
-
-              const validateAndClean = (data: any) => {
-                const cleanString = (s: string) => s?.trim().replace(/\s+/g, " ") || s;
-                if (data.personalInfo) {
-                  Object.keys(data.personalInfo).forEach(key => {
-                    if (typeof data.personalInfo[key] === "string") {
-                      data.personalInfo[key] = cleanString(data.personalInfo[key]);
-                    }
-                  });
-                }
-                return data;
-              };
-
-              updatedData = validateAndClean(updatedData);
-
-              const currentValues = getValues();
-              const merged = {
-                ...currentValues,
-                ...updatedData,
-                personalInfo: { ...currentValues.personalInfo, ...(updatedData.personalInfo || {}) },
-                skills: { ...currentValues.skills, ...(updatedData.skills || {}) },
-              };
-
-              // Sanitize dates (defense-in-depth against "two thousand twenty five" outputs)
-              const sanitizeDate = (str: string) => {
-                if (!str) return str;
-                const wordToNum: Record<string, string> = {
-                  zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5",
-                  six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
-                  eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15",
-                  sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19",
-                  twenty: "20", thirty: "30",
-                };
-                const match = str.match(/two thousand\s+([a-z\s]+)/i);
-                if (match) {
-                  const words = match[1].trim().split(/\s+/);
-                  let num = 0;
-                  words.forEach((w) => {
-                    const val = wordToNum[w.toLowerCase()];
-                    if (val) num += parseInt(val, 10);
-                  });
-                  return String(2000 + num);
-                }
-                return str;
-              };
-
-              if (merged.experience) {
-                merged.experience = merged.experience.map((e: any) => ({
-                  ...e,
-                  startDate: sanitizeDate(e.startDate),
-                  endDate: sanitizeDate(e.endDate)
-                }));
-              }
-              if (merged.education) {
-                merged.education = merged.education.map((e: any) => ({
-                  ...e,
-                  startDate: sanitizeDate(e.startDate),
-                  endDate: sanitizeDate(e.endDate)
-                }));
-              }
-
-              // reset() automatically syncs useFieldArray fields. Manual setValue causes race conditions.
-              reset(merged);
-              return "Resume updated successfully!";
-            } catch (e) {
-              console.error("Failed to parse/update:", e);
-              return "Failed to update resume.";
-            }
-          },
-        },
-        // Override agent to be concise + auto-fill to save tokens
-        overrides: {
-          agent: {
-            language: voiceLang,
-            prompt: {
-              prompt: promptText
-            },
-            first_message: firstMessage
-          }
-        },
-      });
-
-      conversationRef.current = conversation;
-
+      recognitionRef.current = recognition;
+      recognition.start();
     } catch (err: any) {
-      console.error("Failed to start ElevenLabs session:", err);
-      if (err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")) {
-        setAiMessage("🎤 Microphone access denied. Browser address bar mein 🔒 icon click karke microphone allow karo, phir dobara try karo.");
-      } else if (err?.name === "NotFoundError") {
-        setAiMessage("🎤 Koi microphone connect nahi mila.");
-      } else if (err?.name === "NotReadableError") {
-        setAiMessage("🎤 Microphone kisi aur app/tab mein use ho raha hai. Baaki apps/tabs band karke phir try karo.");
-      } else {
-        setAiMessage(`Error: ${err?.message || "Unknown error"}. Console check karo.`);
-      }
+      console.error("Failed to start voice recognition:", err);
+      setIsListening(false);
       setIsProcessingVoice(false);
+      setAiMessage("Microphone start karne me error aaya.");
     }
   };
+
+
 
   const sanitizeAndFormat = (text: string) => {
     if (!text) return "";

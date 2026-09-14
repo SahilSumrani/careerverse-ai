@@ -231,7 +231,9 @@ export function ResumeBuilder({
           speakResponse(reply, voiceLang);
         } catch (err: any) {
           console.error("Assistant Error:", err);
-          setAiMessage(err.message || "Could not process command.");
+          const errorMsg = err.message || (voiceLang === "hi" ? "Koshish karne me dikkat aayi, kripya dobara bolein." : "Could not process command. Please try again.");
+          setAiMessage(errorMsg);
+          speakResponse(errorMsg, voiceLang);
         } finally {
           setIsProcessingVoice(false);
         }

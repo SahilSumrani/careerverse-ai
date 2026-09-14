@@ -98,6 +98,7 @@ You must return a JSON object with EXACTLY this structure, and nothing else (no 
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [{ role: "user", content: prompt }],
+          max_tokens: 2000,
         }),
         signal: controller.signal,
       });

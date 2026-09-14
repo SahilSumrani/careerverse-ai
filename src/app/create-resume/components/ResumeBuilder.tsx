@@ -267,6 +267,7 @@ export function ResumeBuilder({
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
   const [voiceLang, setVoiceLang] = useState<"en" | "hi">("en");
+  const [zoom, setZoom] = useState<number>(75);
   const previewRef = useRef<HTMLDivElement>(null);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -994,73 +995,314 @@ export function ResumeBuilder({
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-200/80 print:bg-white flex justify-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
-        <div
-          ref={previewRef}
-          id="resume-print-area"
-          className="w-[210mm] min-h-[297mm] bg-white shadow-2xl rounded-sm p-[12mm] md:p-[15mm] text-slate-900 transition-all font-sans shrink-0 print:shadow-none print:w-full print:p-[12mm]"
-        >
-          {/* ========================================================= */}
-          {/* TEMPLATE 1: Executive 2-Column (Brad Jensen style) */}
-          {/* ========================================================= */}
-          {currentTemplate === "executive" && (
-            <div className="flex flex-col h-full text-slate-900 leading-normal">
-              {/* Header */}
-              <header className="border-b-2 border-slate-900 pb-4 mb-5">
-                <h1 className="text-3xl font-extrabold tracking-tight uppercase text-slate-900 mb-1">
-                  {formData.personalInfo?.fullName || "YOUR NAME"}
-                </h1>
-                {formData.personalInfo?.headline && (
-                  <p className="text-sm font-bold text-sky-700 tracking-wide mb-2.5">
-                    {formData.personalInfo.headline}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-700 font-medium">
-                  {formData.personalInfo?.phone && <span>📞 {formData.personalInfo.phone}</span>}
-                  {formData.personalInfo?.email && <span>✉️ {formData.personalInfo.email}</span>}
-                  {formData.personalInfo?.linkedin && (
-                    <span>🔗 {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
-                  )}
-                  {formData.personalInfo?.location && <span>📍 {formData.personalInfo.location}</span>}
-                </div>
-              </header>
+      <div className="flex-1 overflow-auto p-3 md:p-6 bg-slate-200/90 print:bg-white flex flex-col items-center hide-scrollbar print:overflow-visible print:h-auto print:p-0 print:block">
+        {/* Zoom Controls Bar */}
+        <div className="mb-3 flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-300 shadow-xs print:hidden shrink-0">
+          <span className="text-xs font-semibold text-slate-600">Zoom:</span>
+          <button
+            onClick={() => setZoom((z) => Math.max(50, z - 5))}
+            className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-700 cursor-pointer"
+          >
+            -
+          </button>
+          <span className="text-xs font-bold text-slate-800 min-w-[36px] text-center">{zoom}%</span>
+          <button
+            onClick={() => setZoom((z) => Math.min(120, z + 5))}
+            className="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold text-slate-700 cursor-pointer"
+          >
+            +
+          </button>
+          <div className="h-3.5 w-px bg-slate-300 mx-1" />
+          <button
+            onClick={() => setZoom(75)}
+            className={`text-xs px-2.5 py-0.5 rounded cursor-pointer transition-colors ${
+              zoom === 75 ? "bg-blue-600 text-white font-bold" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            Fit Page
+          </button>
+          <button
+            onClick={() => setZoom(100)}
+            className={`text-xs px-2.5 py-0.5 rounded cursor-pointer transition-colors ${
+              zoom === 100 ? "bg-blue-600 text-white font-bold" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            100%
+          </button>
+        </div>
 
-              {/* 2-Column Grid */}
-              <div className="grid grid-cols-12 gap-7 flex-1">
-                {/* Left Column (60%) */}
-                <div className="col-span-7 space-y-5">
+        {/* Scaled A4 Wrapper */}
+        <div
+          style={{ width: `${210 * (zoom / 100)}mm` }}
+          className="transition-all duration-150 shrink-0 mx-auto"
+        >
+          <div
+            ref={previewRef}
+            id="resume-print-area"
+            style={{
+              transform: `scale(${zoom / 100})`,
+              transformOrigin: "top left",
+            }}
+            className="w-[210mm] min-h-[297mm] max-h-[297mm] bg-white shadow-2xl rounded-sm p-[10mm] text-slate-900 font-sans shrink-0 print:shadow-none print:w-full print:p-[10mm] print:transform-none print:max-h-none overflow-hidden"
+          >
+            {/* ========================================================= */}
+            {/* TEMPLATE 1: Executive 2-Column (Brad Jensen style) */}
+            {/* ========================================================= */}
+            {currentTemplate === "executive" && (
+              <div className="flex flex-col h-full text-slate-900 leading-normal">
+                {/* Header */}
+                <header className="border-b-2 border-slate-900 pb-2.5 mb-3.5">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight uppercase text-slate-900 mb-0.5">
+                    {formData.personalInfo?.fullName || "YOUR NAME"}
+                  </h1>
+                  {formData.personalInfo?.headline && (
+                    <p className="text-xs md:text-[13px] font-bold text-sky-700 tracking-wide mb-1.5">
+                      {formData.personalInfo.headline}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 text-[11px] text-slate-700 font-medium">
+                    {formData.personalInfo?.phone && <span>📞 {formData.personalInfo.phone}</span>}
+                    {formData.personalInfo?.email && <span>✉️ {formData.personalInfo.email}</span>}
+                    {formData.personalInfo?.linkedin && (
+                      <span>🔗 {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                    )}
+                    {formData.personalInfo?.location && <span>📍 {formData.personalInfo.location}</span>}
+                  </div>
+                </header>
+
+                {/* 2-Column Grid */}
+                <div className="grid grid-cols-12 gap-5 flex-1">
+                  {/* Left Column (60%) */}
+                  <div className="col-span-7 space-y-3.5">
+                    {formData.professionalSummary && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Summary
+                        </h2>
+                        <p className="text-[11.5px] text-slate-800 leading-relaxed text-justify">
+                          {renderFormattedText(formData.professionalSummary)}
+                        </p>
+                      </section>
+                    )}
+
+                    {formData.experience?.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-2">
+                          Experience
+                        </h2>
+                        <div className="space-y-3">
+                          {formData.experience.map((exp, i) => (
+                            <div key={i}>
+                              <div className="font-bold text-[12.5px] text-slate-900 leading-tight">
+                                {exp.position}
+                              </div>
+                              <div className="text-[12px] font-semibold text-sky-700">
+                                {exp.company}
+                              </div>
+                              <div className="text-[10.5px] text-slate-500 font-medium mb-1 flex items-center gap-2">
+                                <span>
+                                  {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
+                                </span>
+                                {exp.location && <span>• {exp.location}</span>}
+                              </div>
+                              <ul className="list-disc list-outside ml-3.5 text-[11px] text-slate-800 space-y-1 leading-snug">
+                                {exp.description?.map((bullet, j) => (
+                                  <li key={j}>{renderFormattedText(bullet)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+
+                  {/* Right Column (40%) */}
+                  <div className="col-span-5 space-y-3.5 border-l border-slate-200 pl-4">
+                    {/* Key Achievements */}
+                    {formData.keyAchievements && formData.keyAchievements.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Key Achievements
+                        </h2>
+                        <div className="space-y-2">
+                          {formData.keyAchievements.map((ach, i) => (
+                            <div key={i}>
+                              <div className="text-[11.5px] font-bold text-slate-900 leading-tight">
+                                {ach.title}
+                              </div>
+                              <p className="text-[10.5px] text-slate-700 leading-snug mt-0.5">
+                                {renderFormattedText(ach.description)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Skills Badges */}
+                    {(formData.skills?.languages?.length > 0 ||
+                      formData.skills?.frameworks?.length > 0 ||
+                      formData.skills?.tools?.length > 0) && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Skills
+                        </h2>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            ...(formData.skills?.languages || []),
+                            ...(formData.skills?.frameworks || []),
+                            ...(formData.skills?.tools || []),
+                          ].map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-block px-2 py-0.5 text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Education */}
+                    {formData.education?.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Education
+                        </h2>
+                        <div className="space-y-2">
+                          {formData.education.map((edu, i) => (
+                            <div key={i}>
+                              <div className="text-[11.5px] font-bold text-slate-900 leading-tight">
+                                {edu.degree}
+                              </div>
+                              <div className="text-[11px] font-semibold text-sky-700">
+                                {edu.institution}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
+                                {edu.location && ` • ${edu.location}`}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Training / Courses */}
+                    {formData.trainingCourses && formData.trainingCourses.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Training / Courses
+                        </h2>
+                        <div className="space-y-1.5">
+                          {formData.trainingCourses.map((c, i) => (
+                            <div key={i}>
+                              <div className="text-[11px] font-bold text-slate-900 leading-tight">
+                                {c.name}
+                              </div>
+                              <p className="text-[10px] text-slate-700 leading-snug mt-0.5">
+                                {renderFormattedText(c.description)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Languages */}
+                    {formData.languages && formData.languages.length > 0 && (
+                      <section>
+                        <h2 className="text-[11.5px] font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-0.5 mb-1.5">
+                          Languages
+                        </h2>
+                        <div className="space-y-1.5">
+                          {formData.languages.map((l, i) => (
+                            <div key={i} className="flex items-center justify-between text-[11px]">
+                              <span className="font-bold text-slate-800">{l.name}</span>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((seg) => (
+                                  <div
+                                    key={seg}
+                                    className={`w-2.5 h-1.5 rounded-xs ${
+                                      seg <= (l.proficiency || 5) ? "bg-sky-600" : "bg-slate-200"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ========================================================= */}
+            {/* TEMPLATE 2: Classic 1-Column (Alexander Taylor style) */}
+            {/* ========================================================= */}
+            {currentTemplate === "classic" && (
+              <div className="flex flex-col h-full text-slate-900 leading-normal font-sans">
+                {/* Centered Classic Header */}
+                <header className="text-center pb-3.5 mb-3.5 border-b border-slate-300">
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900 mb-1 font-serif">
+                    {formData.personalInfo?.fullName || "Sahil Sumrani"}
+                  </h1>
+                  {formData.personalInfo?.headline && (
+                    <p className="text-xs md:text-[12.5px] font-semibold text-slate-700 tracking-wide mb-1.5">
+                      {formData.personalInfo.headline}
+                    </p>
+                  )}
+                  <div className="text-[11px] text-slate-600 flex flex-wrap justify-center gap-x-3 gap-y-0.5 font-medium">
+                    {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
+                    {formData.personalInfo?.email && <span>• {formData.personalInfo.email}</span>}
+                    {formData.personalInfo?.linkedin && (
+                      <span>• {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
+                    )}
+                    {formData.personalInfo?.location && <span>• {formData.personalInfo.location}</span>}
+                  </div>
+                </header>
+
+                <div className="space-y-3.5 text-slate-800">
+                  {/* Summary */}
                   {formData.professionalSummary && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
                         Summary
                       </h2>
-                      <p className="text-[13px] text-slate-800 leading-relaxed text-justify">
+                      <p className="text-[11.5px] text-slate-800 leading-relaxed text-justify">
                         {renderFormattedText(formData.professionalSummary)}
                       </p>
                     </section>
                   )}
 
+                  {/* Experience */}
                   {formData.experience?.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-3.5">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-2 text-center font-serif">
                         Experience
                       </h2>
-                      <div className="space-y-4">
+                      <div className="space-y-2.5">
                         {formData.experience.map((exp, i) => (
                           <div key={i}>
-                            <div className="font-bold text-[14px] text-slate-900 leading-tight">
-                              {exp.position}
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-bold text-slate-900 text-[12px]">{exp.company}</span>
+                              <span className="text-[10.5px] text-slate-600 font-medium">
+                                {exp.location || "San Diego, California"}
+                              </span>
                             </div>
-                            <div className="text-[13px] font-semibold text-sky-700">
-                              {exp.company}
-                            </div>
-                            <div className="text-xs text-slate-500 font-medium mb-1.5 flex items-center gap-2">
-                              <span>
+                            <div className="flex justify-between items-baseline mb-1">
+                              <span className="font-semibold text-slate-800 italic text-[11.5px]">
+                                {exp.position}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
                                 {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
                               </span>
-                              {exp.location && <span>• {exp.location}</span>}
                             </div>
-                            <ul className="list-disc list-outside ml-4 text-[12.5px] text-slate-800 space-y-1.5 leading-relaxed">
+                            <ul className="list-disc list-outside ml-4 text-[11px] text-slate-800 space-y-0.5 leading-snug">
                               {exp.description?.map((bullet, j) => (
                                 <li key={j}>{renderFormattedText(bullet)}</li>
                               ))}
@@ -1070,51 +1312,37 @@ export function ResumeBuilder({
                       </div>
                     </section>
                   )}
-                </div>
 
-                {/* Right Column (40%) */}
-                <div className="col-span-5 space-y-5 border-l border-slate-200 pl-6">
-                  {/* Key Achievements */}
-                  {formData.keyAchievements && formData.keyAchievements.length > 0 && (
-                    <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
-                        Key Achievements
-                      </h2>
-                      <div className="space-y-3">
-                        {formData.keyAchievements.map((ach, i) => (
-                          <div key={i}>
-                            <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                              {ach.title}
-                            </div>
-                            <p className="text-xs text-slate-700 leading-relaxed mt-1">
-                              {renderFormattedText(ach.description)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Skills Badges */}
+                  {/* Skills */}
                   {(formData.skills?.languages?.length > 0 ||
                     formData.skills?.frameworks?.length > 0 ||
                     formData.skills?.tools?.length > 0) && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
                         Skills
                       </h2>
-                      <div className="flex flex-wrap gap-1.5">
+                      <p className="text-[11px] text-slate-800 text-center font-medium leading-relaxed">
                         {[
                           ...(formData.skills?.languages || []),
                           ...(formData.skills?.frameworks || []),
                           ...(formData.skills?.tools || []),
-                        ].map((skill, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-block px-2.5 py-1 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded"
-                          >
-                            {skill}
-                          </span>
+                        ].join(" • ")}
+                      </p>
+                    </section>
+                  )}
+
+                  {/* Training / Courses */}
+                  {formData.trainingCourses && formData.trainingCourses.length > 0 && (
+                    <section>
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1 text-center font-serif">
+                        Training / Courses
+                      </h2>
+                      <div className="space-y-1">
+                        {formData.trainingCourses.map((c, i) => (
+                          <div key={i} className="text-[10.5px] text-slate-800 leading-snug">
+                            <span className="font-bold text-slate-900">{c.name}</span> —{" "}
+                            {renderFormattedText(c.description)}
+                          </div>
                         ))}
                       </div>
                     </section>
@@ -1123,21 +1351,23 @@ export function ResumeBuilder({
                   {/* Education */}
                   {formData.education?.length > 0 && (
                     <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-1.5 text-center font-serif">
                         Education
                       </h2>
-                      <div className="space-y-2.5">
+                      <div className="space-y-1.5">
                         {formData.education.map((edu, i) => (
                           <div key={i}>
-                            <div className="text-[13px] font-bold text-slate-900 leading-tight">
-                              {edu.degree}
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-bold text-slate-900 text-[11.5px]">{edu.institution}</span>
+                              <span className="text-[10px] text-slate-600">
+                                {edu.location || "Stanford, California"}
+                              </span>
                             </div>
-                            <div className="text-xs font-semibold text-sky-700">
-                              {edu.institution}
-                            </div>
-                            <div className="text-[11.5px] text-slate-500">
-                              {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
-                              {edu.location && ` • ${edu.location}`}
+                            <div className="flex justify-between items-baseline">
+                              <span className="text-slate-700 italic text-[11px]">{edu.degree}</span>
+                              <span className="text-[10px] text-slate-500">
+                                {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1145,219 +1375,35 @@ export function ResumeBuilder({
                     </section>
                   )}
 
-                  {/* Training / Courses */}
-                  {formData.trainingCourses && formData.trainingCourses.length > 0 && (
-                    <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
-                        Training / Courses
+                  {/* Key Achievements: 3-column bottom grid */}
+                  {formData.keyAchievements && formData.keyAchievements.length > 0 && (
+                    <section className="pt-1">
+                      <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-0.5 mb-2 text-center font-serif">
+                        Key Achievements
                       </h2>
-                      <div className="space-y-2.5">
-                        {formData.trainingCourses.map((c, i) => (
-                          <div key={i}>
-                            <div className="text-[12.5px] font-bold text-slate-900 leading-tight">
-                              {c.name}
-                            </div>
-                            <p className="text-xs text-slate-700 leading-relaxed mt-0.5">
-                              {renderFormattedText(c.description)}
+                      <div className="grid grid-cols-3 gap-4">
+                        {formData.keyAchievements.slice(0, 3).map((ach, i) => (
+                          <div key={i} className="text-left">
+                            <h4 className="font-bold text-slate-900 text-[11px] mb-0.5 leading-tight">
+                              {ach.title}
+                            </h4>
+                            <p className="text-[10px] text-slate-600 leading-snug">
+                              {renderFormattedText(ach.description)}
                             </p>
                           </div>
                         ))}
                       </div>
                     </section>
                   )}
+                </div>
 
-                  {/* Languages */}
-                  {formData.languages && formData.languages.length > 0 && (
-                    <section>
-                      <h2 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 border-b-2 border-slate-900 pb-1 mb-2.5">
-                        Languages
-                      </h2>
-                      <div className="space-y-2">
-                        {formData.languages.map((l, i) => (
-                          <div key={i} className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-slate-800">{l.name}</span>
-                            <div className="flex gap-1.5">
-                              {[1, 2, 3, 4, 5].map((seg) => (
-                                <div
-                                  key={seg}
-                                  className={`w-3 h-2 rounded-xs ${
-                                    seg <= (l.proficiency || 5) ? "bg-sky-600" : "bg-slate-200"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                {/* Watermark */}
+                <div className="mt-auto pt-4 text-right text-[9px] text-slate-400 print:hidden font-sans">
+                  Powered by <span className="font-bold text-slate-500">CareerVerse AI</span>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* TEMPLATE 2: Classic 1-Column (Alexander Taylor style) */}
-          {/* ========================================================= */}
-          {currentTemplate === "classic" && (
-            <div className="flex flex-col h-full text-slate-900 leading-normal font-sans">
-              {/* Centered Classic Header */}
-              <header className="text-center pb-5 mb-5 border-b border-slate-300">
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 mb-1.5 font-serif">
-                  {formData.personalInfo?.fullName || "Sahil Sumrani"}
-                </h1>
-                {formData.personalInfo?.headline && (
-                  <p className="text-sm font-semibold text-slate-700 tracking-wide mb-2">
-                    {formData.personalInfo.headline}
-                  </p>
-                )}
-                <div className="text-xs text-slate-600 flex flex-wrap justify-center gap-x-4 gap-y-1 font-medium">
-                  {formData.personalInfo?.phone && <span>{formData.personalInfo.phone}</span>}
-                  {formData.personalInfo?.email && <span>• {formData.personalInfo.email}</span>}
-                  {formData.personalInfo?.linkedin && (
-                    <span>• {formData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?/, "")}</span>
-                  )}
-                  {formData.personalInfo?.location && <span>• {formData.personalInfo.location}</span>}
-                </div>
-              </header>
-
-              <div className="space-y-5 text-slate-800">
-                {/* Summary */}
-                {formData.professionalSummary && (
-                  <section>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
-                      Summary
-                    </h2>
-                    <p className="text-[13.5px] text-slate-800 leading-relaxed text-justify">
-                      {renderFormattedText(formData.professionalSummary)}
-                    </p>
-                  </section>
-                )}
-
-                {/* Experience */}
-                {formData.experience?.length > 0 && (
-                  <section>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-3 text-center font-serif">
-                      Experience
-                    </h2>
-                    <div className="space-y-4">
-                      {formData.experience.map((exp, i) => (
-                        <div key={i}>
-                          <div className="flex justify-between items-baseline">
-                            <span className="font-bold text-slate-900 text-sm">{exp.company}</span>
-                            <span className="text-xs text-slate-600 font-medium">
-                              {exp.location || "San Diego, California"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-baseline mb-1.5">
-                            <span className="font-semibold text-slate-800 italic text-[13px]">
-                              {exp.position}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {exp.startDate} {exp.startDate && exp.endDate && "–"} {exp.endDate}
-                            </span>
-                          </div>
-                          <ul className="list-disc list-outside ml-4 text-[13px] text-slate-800 space-y-1.5 leading-relaxed">
-                            {exp.description?.map((bullet, j) => (
-                              <li key={j}>{renderFormattedText(bullet)}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Skills */}
-                {(formData.skills?.languages?.length > 0 ||
-                  formData.skills?.frameworks?.length > 0 ||
-                  formData.skills?.tools?.length > 0) && (
-                  <section>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
-                      Skills
-                    </h2>
-                    <p className="text-xs text-slate-800 text-center font-medium leading-relaxed">
-                      {[
-                        ...(formData.skills?.languages || []),
-                        ...(formData.skills?.frameworks || []),
-                        ...(formData.skills?.tools || []),
-                      ].join(" • ")}
-                    </p>
-                  </section>
-                )}
-
-                {/* Training / Courses */}
-                {formData.trainingCourses && formData.trainingCourses.length > 0 && (
-                  <section>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
-                      Training / Courses
-                    </h2>
-                    <div className="space-y-2">
-                      {formData.trainingCourses.map((c, i) => (
-                        <div key={i} className="text-xs text-slate-800 leading-relaxed">
-                          <span className="font-bold text-slate-900">{c.name}</span> —{" "}
-                          {renderFormattedText(c.description)}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Education */}
-                {formData.education?.length > 0 && (
-                  <section>
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-2 text-center font-serif">
-                      Education
-                    </h2>
-                    <div className="space-y-2">
-                      {formData.education.map((edu, i) => (
-                        <div key={i}>
-                          <div className="flex justify-between items-baseline">
-                            <span className="font-bold text-slate-900 text-[13.5px]">{edu.institution}</span>
-                            <span className="text-xs text-slate-600">
-                              {edu.location || "Stanford, California"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-baseline">
-                            <span className="text-slate-700 italic text-xs">{edu.degree}</span>
-                            <span className="text-xs text-slate-500">
-                              {edu.startDate} {edu.startDate && edu.endDate && "–"} {edu.endDate}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {/* Key Achievements: 3-column bottom grid */}
-                {formData.keyAchievements && formData.keyAchievements.length > 0 && (
-                  <section className="pt-2">
-                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-900 border-b border-slate-300 pb-1 mb-3 text-center font-serif">
-                      Key Achievements
-                    </h2>
-                    <div className="grid grid-cols-3 gap-5">
-                      {formData.keyAchievements.slice(0, 3).map((ach, i) => (
-                        <div key={i} className="text-left">
-                          <h4 className="font-bold text-slate-900 text-xs mb-1 leading-tight">
-                            {ach.title}
-                          </h4>
-                          <p className="text-[11.5px] text-slate-600 leading-snug">
-                            {renderFormattedText(ach.description)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-              </div>
-
-              {/* Watermark */}
-              <div className="mt-auto pt-8 text-right text-[10px] text-slate-400 print:hidden font-sans">
-                Powered by <span className="font-bold text-slate-500">CareerVerse AI</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

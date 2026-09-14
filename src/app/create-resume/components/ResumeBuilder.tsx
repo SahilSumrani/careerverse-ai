@@ -123,15 +123,41 @@ export function ResumeBuilder({
   // Free Native Web Speech & Synthesis refs
   const recognitionRef = useRef<any>(null);
 
-  // Text to speech helper (100% Free Browser Native)
+  // Text to speech helper (Natural Female Voice, 100% Free)
   const speakResponse = (text: string, lang: "en" | "hi") => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     try {
       window.speechSynthesis.cancel(); // stop previous speech
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang === "hi" ? "hi-IN" : "en-US";
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
+      utterance.rate = 1.05; // Slightly faster, conversational
+      utterance.pitch = 1.15; // Higher, natural female pitch (not robotic)
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        // Priority list for pleasant female voices
+        const targetLang = lang === "hi" ? "hi" : "en";
+        const femaleVoice = voices.find(
+          (v) =>
+            v.lang.toLowerCase().startsWith(targetLang) &&
+            (v.name.toLowerCase().includes("zira") ||
+              v.name.toLowerCase().includes("female") ||
+              v.name.toLowerCase().includes("samantha") ||
+              v.name.toLowerCase().includes("victoria") ||
+              v.name.toLowerCase().includes("kavya") ||
+              v.name.toLowerCase().includes("swara") ||
+              v.name.toLowerCase().includes("priya") ||
+              v.name.toLowerCase().includes("natural") ||
+              v.name.toLowerCase().includes("google") ||
+              v.name.toLowerCase().includes("eva") ||
+              v.name.toLowerCase().includes("jenny"))
+        ) || voices.find((v) => v.lang.toLowerCase().startsWith(targetLang));
+
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+        }
+      }
+
       window.speechSynthesis.speak(utterance);
     } catch (e) {
       console.warn("Speech synthesis error:", e);

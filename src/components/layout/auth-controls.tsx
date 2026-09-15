@@ -38,7 +38,11 @@ export function AuthControls({ compact }: AuthControlsProps) {
         >
           {session.user.image ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={session.user.image} alt="" className="h-6 w-6 rounded-full object-cover" />
+            <img
+              src={session.user.image}
+              alt={session.user.name || label || "Profile photo"}
+              className="h-6 w-6 rounded-full object-cover"
+            />
           ) : (
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#225aea] text-[10px] font-bold text-white">
               {label.slice(0, 1).toUpperCase()}

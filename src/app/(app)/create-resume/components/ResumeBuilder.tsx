@@ -11,6 +11,7 @@ import {
   Layout,
   LogIn,
   FileType,
+  FileText,
   Sparkles,
 } from "lucide-react";
 
@@ -47,7 +48,7 @@ export function ResumeBuilder({ initialData, onBack }: ResumeBuilderProps) {
   const { data: session } = useSession();
 
   // Layout & view states
-  const [currentTemplate, setCurrentTemplate] = useState<"executive" | "classic">("executive");
+  const [currentTemplate, setCurrentTemplate] = useState<"executive" | "classic" | "ats-classic">("executive");
   const [activeTab, setActiveTab] = useState<ActiveTab | "personal">("personal");
   const [zoom, setZoom] = useState<number>(75);
   const [resumeFontSize, setResumeFontSize] = useState<"compact" | "standard" | "large">("standard");
@@ -86,7 +87,7 @@ export function ResumeBuilder({ initialData, onBack }: ResumeBuilderProps) {
   });
 
   // Keep template state in sync
-  const handleTemplateChange = (t: "executive" | "classic") => {
+  const handleTemplateChange = (t: "executive" | "classic" | "ats-classic") => {
     setCurrentTemplate(t);
     setValue("templateId", t);
   };
@@ -507,6 +508,19 @@ export function ResumeBuilder({ initialData, onBack }: ResumeBuilderProps) {
             >
               <FileType size={13} />
               <span>Classic (1-Col)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTemplateChange("ats-classic")}
+              aria-label="ATS Classic single-column template"
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                currentTemplate === "ats-classic"
+                  ? "bg-white text-blue-600 shadow-xs font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <FileText size={13} />
+              <span>ATS Classic</span>
             </button>
           </div>
 

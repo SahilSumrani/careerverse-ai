@@ -16,34 +16,33 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Session check or guest IP throttling to prevent quota theft
-  const session = await auth();
-  if (session?.user?.id) {
-    const quota = await consumeDailyQuota(session.user.id, "voiceToken", VOICE_SESSION_DAILY_CAP);
-    if (!quota.ok) {
-      return NextResponse.json(
-        { error: "Daily voice conversation limit reached. Please try again tomorrow." },
-        { status: 429 }
-      );
-    }
-  } else {
-    // Guest protection via IP sliding window
-    const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const ip = (forwarded || req.headers.get("x-real-ip") || "unknown").slice(0, 128).replaceAll("/", "_");
-    const hour = new Date().toISOString().slice(0, 13);
-    const allowed = await consumeWindowQuota("voice-guest-ip", ip, VOICE_GUEST_HOURLY_CAP, hour);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "Guest voice limit reached for this hour. Please sign in for higher limits." },
-        { status: 429 }
-      );
-    }
-  }
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
 
   try {
+    // Session check or guest IP throttling to prevent quota theft
+    const session = await auth();
+    if (session?.user?.id) {
+      const quota = await consumeDailyQuota(session.user.id, "voiceToken", VOICE_SESSION_DAILY_CAP);
+      if (!quota.ok) {
+        return NextResponse.json(
+          { error: "Daily voice conversation limit reached. Please try again tomorrow." },
+          { status: 429 }
+        );
+      }
+    } else {
+      // Guest protection via IP sliding window
+      const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      const ip = (forwarded || req.headers.get("x-real-ip") || "unknown").slice(0, 128).replaceAll("/", "_");
+      const hour = new Date().toISOString().slice(0, 13);
+      const allowed = await consumeWindowQuota("voice-guest-ip", ip, VOICE_GUEST_HOURLY_CAP, hour);
+      if (!allowed) {
+        return NextResponse.json(
+          { error: "Guest voice limit reached for this hour. Please sign in for higher limits." },
+          { status: 429 }
+        );
+      }
+    }
     const res = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agentId}`,
       {

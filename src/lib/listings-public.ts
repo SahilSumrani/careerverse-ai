@@ -1,5 +1,6 @@
-import { loadJobsFromFirestore, getJobById, type JobListing } from "@/lib/jobs-firestore";
+import { loadJobsFromFirestore, getJobById, type JobListing as FirestoreJobListing } from "@/lib/jobs-firestore";
 import {
+  type JobListing,
   type DummyJob,
   getJobBySlugFromList,
   filterHomeJobs,
@@ -7,7 +8,7 @@ import {
   listingHref,
 } from "@/data/jobs";
 
-export function jobListingToDummy(j: JobListing): DummyJob {
+export function jobListingToPublic(j: FirestoreJobListing): JobListing {
   return {
     id: j.id,
     title: j.title,
@@ -21,6 +22,8 @@ export function jobListingToDummy(j: JobListing): DummyJob {
     activelyHiring: true,
   };
 }
+
+export const jobListingToDummy = jobListingToPublic;
 
 /** Public + marketing listings from Firestore only (empty OK). */
 export async function loadMarketingListings(limit = 80): Promise<DummyJob[]> {

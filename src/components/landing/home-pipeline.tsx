@@ -1,7 +1,13 @@
 "use client";
 
-import { PipelineGlobe, type GlobeMarker } from "@/components/landing/pipeline-globe";
+import dynamic from "next/dynamic";
+import type { GlobeMarker } from "@/components/landing/pipeline-globe";
 import "./home-pipeline.css";
+
+const PipelineGlobe = dynamic(
+  () => import("@/components/landing/pipeline-globe").then((m) => m.PipelineGlobe),
+  { ssr: false }
+);
 
 const STAGES = [
   { title: "Applied", count: 128, note: "From live applications" },

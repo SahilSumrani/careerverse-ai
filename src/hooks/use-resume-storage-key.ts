@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useSession } from "next-auth/react";
-import { getResumeStorageKey } from "@/app/create-resume/lib/resume-utils";
+import { getResumeStorageKey } from "@/app/(app)/create-resume/lib/resume-utils";
 
 export function useResumeStorageKey(): string {
   const { data: session } = useSession();

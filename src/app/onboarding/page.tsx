@@ -3,18 +3,23 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { AlertTriangle, CheckCircle2, FileText, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select, Textarea } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   computeMonths,
   createExperienceEntry,
   deriveExperienceSummary,
-  toMonthInputValue,
   toStoredExperience,
   type ExperienceFormEntry,
 } from "@/lib/experiences";
+
+import { StepResumeUpload } from "./components/StepResumeUpload";
+import { StepBasics } from "./components/StepBasics";
+import { StepBackground } from "./components/StepBackground";
+import { StepSkillsInterests } from "./components/StepSkillsInterests";
+import { StepGoals } from "./components/StepGoals";
+import { StepFinish, type CareerAnalysisResult } from "./components/StepFinish";
+
 import "./onboarding.css";
 
 const STEPS = [
@@ -25,19 +30,6 @@ const STEPS = [
   { id: "goals", title: "Goals", desc: "Career goals and preferences" },
   { id: "finish", title: "Generate", desc: "Create your explainable profile" },
 ];
-
-const FIELD_LABELS: Record<string, string> = {
-  name: "Full name",
-  education: "Education level",
-  degree: "Degree",
-  college: "College / university",
-  graduationYear: "Graduation year",
-  skills: "Skills",
-  interests: "Interests",
-  careerGoals: "Career goals",
-  experienceSummary: "Experience summary",
-  experiences: "Experience",
-};
 
 const DEFAULT_INTEREST_SUGGESTIONS = [
   "AI",
@@ -116,14 +108,7 @@ export default function OnboardingPage() {
   const [interestDraft, setInterestDraft] = useState("");
   const [suggestedSkills, setSuggestedSkills] = useState<string[]>([]);
   const [resumeInterestHints, setResumeInterestHints] = useState<string[]>([]);
-  const [analysis, setAnalysis] = useState<{
-    careerScore: number;
-    strengths: string[];
-    skillGaps: string[];
-    suitablePaths: Array<{ title: string; score: number }>;
-    recommendedActions: string[];
-    disclaimer: string;
-  } | null>(null);
+  const [analysis, setAnalysis] = useState<CareerAnalysisResult | null>(null);
 
   const [form, setForm] = useState<FormState>({
     name: "",
@@ -353,7 +338,6 @@ export default function OnboardingPage() {
           next.experienceSummary = profile.experienceSummary;
           filled.push("experienceSummary");
         }
-        // Map structured experience blocks only — never invent from summary prose
         if (profile.experiences?.length) {
           const mapped = profile.experiences
             .filter((e) => e?.company?.trim())
@@ -507,448 +491,82 @@ export default function OnboardingPage() {
 
           <div className="cv-onboard-card">
             {step === 0 && (
-              <div className="cv-onboard-fields">
-                <h2>Upload your resume</h2>
-                <p>
-                  PDF or DOCX first. CareerVerse parses text and auto-fills education, skills, and goals where it finds
-                  evidence—never invents qualifications.
-                </p>
-                <label className={`cv-onboard-upload${resumeName ? " is-ready" : ""}`}>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,application/pdf"
-                    hidden
-                    disabled={resumeUploading}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) void uploadResume(file);
-                    }}
-                  />
-                  {resumeName ? (
-                    <CheckCircle2 className="h-8 w-8 text-[#225aea]" />
-                  ) : (
-                    <Upload className="h-8 w-8 text-[#667085]" />
-                  )}
-                  <strong>
-                    {resumeUploading
-                      ? "Uploading & analyzing…"
-                      : resumeName
-                        ? "Resume uploaded"
-                        : "Drop resume here or browse"}
-                  </strong>
-                  <span>{resumeName || "PDF / DOCX up to 5MB"}</span>
-                </label>
-                {resumeName ? (
-                  <p className="cv-onboard-file">
-                    <FileText className="h-4 w-4" /> {resumeName}
-                  </p>
-                ) : null}
-                {autofilled.length > 0 ? (
-                  <div className="cv-onboard-notice is-ok">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <div>
-                      <strong>Auto-filled from resume</strong>
-                      <p>{autofilled.map((f) => FIELD_LABELS[f] || f).join(", ")}</p>
-                    </div>
-                  </div>
-                ) : null}
-                {parseMissing.length > 0 && resumeName ? (
-                  <div className="cv-onboard-notice is-warn">
-                    <AlertTriangle className="h-4 w-4" />
-                    <div>
-                      <strong>Still needed — review upcoming steps</strong>
-                      <ul>
-                        {parseMissing.map((f) => (
-                          <li key={f}>{FIELD_LABELS[f] || f}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+              <StepResumeUpload
+                resumeName={resumeName}
+                resumeUploading={resumeUploading}
+                onUploadResume={uploadResume}
+                autofilled={autofilled}
+                parseMissing={parseMissing}
+              />
             )}
 
             {step === 1 && (
-              <div className="cv-onboard-fields">
-                <h2>About you</h2>
-                <p>We’ll use this across your dashboard and match scores.</p>
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                <Label htmlFor="roleIntent">I am joining as</Label>
-                <Select
-                  id="roleIntent"
-                  value={form.roleIntent}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      roleIntent: e.target.value,
-                      careerStage: e.target.value === "HR" ? "MID_CAREER" : form.careerStage,
-                    })
-                  }
-                >
-                  <option value="STUDENT">Student / Job seeker</option>
-                  <option value="PROFESSIONAL">Professional</option>
-                  <option value="HR">Recruiter / HR</option>
-                  <option value="FOUNDER">Founder</option>
-                  <option value="MENTOR">Mentor</option>
-                </Select>
-              </div>
+              <StepBasics
+                name={form.name}
+                roleIntent={form.roleIntent}
+                careerStage={form.careerStage}
+                onUpdate={(patch) => setForm((f) => ({ ...f, ...patch }))}
+              />
             )}
 
             {step === 2 && (
-              <div className="cv-onboard-fields">
-                <h2>Education & experience</h2>
-                {autofilled.some((f) =>
-                  ["education", "degree", "college", "experienceSummary", "experiences"].includes(f),
-                ) ? (
-                  <p className="cv-onboard-hint">Pre-filled from your resume — edit anything that looks off.</p>
-                ) : null}
-                <div className="cv-onboard-grid-2">
-                  <div>
-                    <Label>Education level</Label>
-                    <Input value={form.education} onChange={(e) => setForm({ ...form, education: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Graduation year</Label>
-                    <Input
-                      type="number"
-                      value={form.graduationYear}
-                      onChange={(e) => setForm({ ...form, graduationYear: Number(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <Label>Degree</Label>
-                <Input value={form.degree} onChange={(e) => setForm({ ...form, degree: e.target.value })} />
-                <Label>College / university</Label>
-                <Input value={form.college} onChange={(e) => setForm({ ...form, college: e.target.value })} />
-
-                <div className="cv-onboard-section-head">
-                  <div>
-                    <Label>Experience</Label>
-                    <p className="cv-onboard-subhint">Add roles or internships. Optional — leave empty if you’re just starting.</p>
-                  </div>
-                  <Button type="button" variant="outline" onClick={addExperience}>
-                    <Plus className="h-4 w-4" />
-                    Add experience
-                  </Button>
-                </div>
-
-                {form.experiences.length === 0 ? (
-                  <div className="cv-onboard-empty">
-                    No experiences yet. Click <strong>Add experience</strong> to include internships, jobs, or freelance work.
-                  </div>
-                ) : (
-                  <div className="cv-onboard-exp-list">
-                    {form.experiences.map((entry, index) => {
-                      const present = /^present$/i.test(entry.end.trim());
-                      return (
-                        <article key={entry.id} className="cv-onboard-exp-card">
-                          <div className="cv-onboard-exp-card-head">
-                            <strong>Experience {index + 1}</strong>
-                            <button
-                              type="button"
-                              className="cv-onboard-icon-btn"
-                              aria-label="Delete experience"
-                              onClick={() => removeExperience(entry.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <Label>Company name</Label>
-                          <Input
-                            value={entry.company}
-                            onChange={(e) => updateExperience(entry.id, { company: e.target.value })}
-                            placeholder="Acme Corp"
-                          />
-                          <div className="cv-onboard-grid-2">
-                            <div>
-                              <Label>Start</Label>
-                              <Input
-                                type="month"
-                                value={toMonthInputValue(entry.start)}
-                                onChange={(e) => updateExperience(entry.id, { start: e.target.value })}
-                              />
-                            </div>
-                            <div>
-                              <Label>End</Label>
-                              <div className="cv-onboard-end-row">
-                                <Input
-                                  type="month"
-                                  disabled={present}
-                                  value={present ? "" : toMonthInputValue(entry.end)}
-                                  onChange={(e) => updateExperience(entry.id, { end: e.target.value })}
-                                />
-                                <label className="cv-onboard-present">
-                                  <input
-                                    type="checkbox"
-                                    checked={present}
-                                    onChange={(e) =>
-                                      updateExperience(entry.id, {
-                                        end: e.target.checked ? "Present" : "",
-                                      })
-                                    }
-                                  />
-                                  Present
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                          <Label>Duration (months)</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={600}
-                            value={entry.months ?? ""}
-                            onChange={(e) =>
-                              updateExperience(entry.id, {
-                                months: e.target.value === "" ? null : Number(e.target.value),
-                              })
-                            }
-                            placeholder={
-                              entry.start
-                                ? String(computeMonths(entry.start, entry.end || "Present") ?? "")
-                                : "Auto from dates"
-                            }
-                          />
-                          <Label>Responsibilities</Label>
-                          <Textarea
-                            value={entry.responsibilities}
-                            onChange={(e) => updateExperience(entry.id, { responsibilities: e.target.value })}
-                            placeholder={"• Built dashboards\n• Collaborated with design"}
-                          />
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              <StepBackground
+                education={form.education}
+                graduationYear={form.graduationYear}
+                degree={form.degree}
+                college={form.college}
+                experiences={form.experiences}
+                autofilled={autofilled}
+                onUpdateForm={(patch) => setForm((f) => ({ ...f, ...patch }))}
+                onAddExperience={addExperience}
+                onRemoveExperience={removeExperience}
+                onUpdateExperience={updateExperience}
+              />
             )}
 
             {step === 3 && (
-              <div className="cv-onboard-fields">
-                <h2>Skills & interests</h2>
-                {autofilled.includes("skills") ? (
-                  <p className="cv-onboard-hint">Skills detected from your resume — add or remove as needed.</p>
-                ) : null}
-
-                <Label>Skills</Label>
-                <div className="cv-onboard-chip-field">
-                  <div className="cv-onboard-chips">
-                    {form.skills.map((skill) => (
-                      <button
-                        key={skill}
-                        type="button"
-                        className="cv-onboard-chip is-selected"
-                        onClick={() => removeSkill(skill)}
-                      >
-                        {skill}
-                        <X className="h-3 w-3" />
-                      </button>
-                    ))}
-                    <input
-                      className="cv-onboard-chip-input"
-                      value={skillDraft}
-                      onChange={(e) => setSkillDraft(e.target.value)}
-                      onKeyDown={onSkillKeyDown}
-                      onBlur={() => {
-                        if (skillDraft.trim()) commitSkill();
-                      }}
-                      placeholder={form.skills.length ? "Add skill" : "Type a skill and press Enter"}
-                      aria-label="Add skill"
-                    />
-                  </div>
-                </div>
-                {skillSuggestions.length > 0 ? (
-                  <div className="cv-onboard-suggest-row">
-                    <span>From resume</span>
-                    <div className="cv-onboard-chips">
-                      {skillSuggestions.map((skill) => (
-                        <button
-                          key={skill}
-                          type="button"
-                          className="cv-onboard-chip is-suggest"
-                          onClick={() => commitSkill(skill)}
-                        >
-                          <Plus className="h-3 w-3" />
-                          {skill}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <Label>Interests</Label>
-                {recommendedInterests.length > 0 ? (
-                  <div className="cv-onboard-suggest-row">
-                    <span>Recommended</span>
-                    <div className="cv-onboard-chips">
-                      {recommendedInterests.map((interest) => (
-                        <button
-                          key={interest}
-                          type="button"
-                          className="cv-onboard-chip is-suggest"
-                          onClick={() => commitInterest(interest)}
-                        >
-                          <Plus className="h-3 w-3" />
-                          {interest}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <div className="cv-onboard-chip-field">
-                  <div className="cv-onboard-chips">
-                    {form.interests.map((interest) => (
-                      <button
-                        key={interest}
-                        type="button"
-                        className="cv-onboard-chip is-selected is-interest"
-                        onClick={() => removeInterest(interest)}
-                      >
-                        {interest}
-                        <X className="h-3 w-3" />
-                      </button>
-                    ))}
-                    <input
-                      className="cv-onboard-chip-input"
-                      value={interestDraft}
-                      onChange={(e) => setInterestDraft(e.target.value)}
-                      onKeyDown={onInterestKeyDown}
-                      onBlur={() => {
-                        if (interestDraft.trim()) commitInterest();
-                      }}
-                      placeholder={form.interests.length ? "Add interest" : "Type an interest and press Enter"}
-                      aria-label="Add interest"
-                    />
-                  </div>
-                </div>
-              </div>
+              <StepSkillsInterests
+                skills={form.skills}
+                interests={form.interests}
+                autofilled={autofilled}
+                skillDraft={skillDraft}
+                setSkillDraft={setSkillDraft}
+                interestDraft={interestDraft}
+                setInterestDraft={setInterestDraft}
+                skillSuggestions={skillSuggestions}
+                recommendedInterests={recommendedInterests}
+                onCommitSkill={commitSkill}
+                onRemoveSkill={removeSkill}
+                onSkillKeyDown={onSkillKeyDown}
+                onCommitInterest={commitInterest}
+                onRemoveInterest={removeInterest}
+                onInterestKeyDown={onInterestKeyDown}
+              />
             )}
 
             {step === 4 && (
-              <div className="cv-onboard-fields">
-                <h2>Goals & preferences</h2>
-                <Label>Career goals</Label>
-                <Textarea
-                  value={form.careerGoals}
-                  onChange={(e) => setForm({ ...form, careerGoals: e.target.value })}
-                  placeholder="I want to become an AI-focused career coach within 2 years..."
-                />
-                <Label>Preferred industries</Label>
-                <Input
-                  value={form.preferredIndustries}
-                  onChange={(e) => setForm({ ...form, preferredIndustries: e.target.value })}
-                  placeholder="SaaS, Fintech"
-                />
-                <Label>Preferred locations</Label>
-                <Input
-                  value={form.preferredLocations}
-                  onChange={(e) => setForm({ ...form, preferredLocations: e.target.value })}
-                  placeholder="Remote, Bengaluru"
-                />
-                <div className="cv-onboard-grid-2">
-                  <div>
-                    <Label>Work preference</Label>
-                    <Select
-                      value={form.workPreference}
-                      onChange={(e) => setForm({ ...form, workPreference: e.target.value })}
-                    >
-                      <option value="FULL_TIME">Full-time</option>
-                      <option value="INTERNSHIP">Internship</option>
-                      <option value="PART_TIME">Part-time</option>
-                      <option value="FREELANCE">Freelance</option>
-                      <option value="CONTRACT">Contract</option>
-                      <option value="FLEXIBLE">Flexible</option>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Career stage</Label>
-                    <Select
-                      value={form.careerStage}
-                      onChange={(e) => setForm({ ...form, careerStage: e.target.value })}
-                    >
-                      <option value="STUDENT">Student</option>
-                      <option value="FRESHER">Fresher</option>
-                      <option value="EARLY_CAREER">Early career</option>
-                      <option value="MID_CAREER">Mid career</option>
-                      <option value="SENIOR">Senior</option>
-                      <option value="CAREER_SWITCH">Career switch</option>
-                      <option value="LEADERSHIP">Leadership</option>
-                    </Select>
-                  </div>
-                </div>
-                <Label>LinkedIn (optional)</Label>
-                <Input value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })} />
-              </div>
+              <StepGoals
+                careerGoals={form.careerGoals}
+                preferredIndustries={form.preferredIndustries}
+                preferredLocations={form.preferredLocations}
+                workPreference={form.workPreference}
+                careerStage={form.careerStage}
+                linkedinUrl={form.linkedinUrl}
+                onUpdateForm={(patch) => setForm((f) => ({ ...f, ...patch }))}
+              />
             )}
 
             {step === 5 && (
-              <div className="cv-onboard-fields">
-                <h2>Generate My Career Profile</h2>
-                <p>
-                  We’ll create strengths, suitable paths, skill gaps, and next actions from your inputs—without fabricating
-                  qualifications.
-                </p>
-
-                {hardMissing.length > 0 ? (
-                  <div className="cv-onboard-notice is-warn">
-                    <AlertTriangle className="h-4 w-4" />
-                    <div>
-                      <strong>Missing required details</strong>
-                      <ul>
-                        {hardMissing.map((f) => (
-                          <li key={f}>{FIELD_LABELS[f] || f}</li>
-                        ))}
-                      </ul>
-                      <label className="cv-onboard-check">
-                        <input
-                          type="checkbox"
-                          checked={allowGenerateWithWarnings}
-                          onChange={(e) => setAllowGenerateWithWarnings(e.target.checked)}
-                        />
-                        Continue anyway with warnings (name + skills still required)
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="cv-onboard-notice is-ok">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <div>
-                      <strong>Profile looks ready</strong>
-                      <p>All required fields are present. Generate when you’re happy with the review.</p>
-                    </div>
-                  </div>
-                )}
-
-                {analysis ? (
-                  <div className="cv-onboard-result">
-                    <div className="cv-onboard-result-head">
-                      <p>Career Score {analysis.careerScore}</p>
-                      <Badge tone="accent">AI-generated estimate</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{analysis.disclaimer}</p>
-                    <div>
-                      <p className="text-sm font-medium">Top paths</p>
-                      <ul className="mt-1 space-y-1 text-sm">
-                        {analysis.suitablePaths.slice(0, 3).map((p) => (
-                          <li key={p.title}>
-                            {p.title} — {p.score}%
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Skill gaps</p>
-                      <p className="text-sm text-muted-foreground">{analysis.skillGaps.slice(0, 6).join(", ")}</p>
-                    </div>
-                    <Button onClick={() => router.push("/dashboard")}>Go to dashboard</Button>
-                  </div>
-                ) : (
-                  <Button onClick={() => void generate()} disabled={busy || !canGenerate()}>
-                    {busy ? "Analyzing your career profile…" : "Generate My Career Profile"}
-                  </Button>
-                )}
-              </div>
+              <StepFinish
+                hardMissing={hardMissing}
+                allowGenerateWithWarnings={allowGenerateWithWarnings}
+                setAllowGenerateWithWarnings={setAllowGenerateWithWarnings}
+                analysis={analysis}
+                busy={busy}
+                canGenerate={canGenerate()}
+                onGenerate={generate}
+                onNavigateDashboard={() => router.push("/dashboard")}
+              />
             )}
 
             {error ? <p className="cv-onboard-error">{error}</p> : null}

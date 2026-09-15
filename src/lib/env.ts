@@ -48,6 +48,11 @@ export function validateEnv() {
   };
 }
 
+// Auto-run validation on boot in server environments (excluding tests)
+if (typeof window === "undefined" && process.env.NODE_ENV !== "test") {
+  validateEnv();
+}
+
 export const env = {
   get isProduction() {
     return process.env.NODE_ENV === "production";

@@ -53,7 +53,7 @@ export interface PersonalInfo {
 }
 
 export interface ResumeData {
-  templateId?: "executive" | "classic";
+  templateId?: "executive" | "classic" | "ats-classic";
   personalInfo: PersonalInfo;
   professionalSummary?: string;
   education: EducationItem[];

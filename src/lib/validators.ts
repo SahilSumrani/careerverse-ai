@@ -230,6 +230,8 @@ export const adminMutationSchema = z.discriminatedUnion("action", [
   }),
 ]);
 
+export type AdminMutationPayload = z.infer<typeof adminMutationSchema>;
+
 export const applicationCreateSchema = z.object({
   opportunityId: z.string().min(1).max(128).optional(),
   opportunity: z

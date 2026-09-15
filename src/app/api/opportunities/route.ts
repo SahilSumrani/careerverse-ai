@@ -12,116 +12,121 @@ const MATCH_TOP_N = 8;
 const MATCH_DAILY_CAP = Number(process.env.AI_MATCH_DAILY_CAP || 10);
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const q = (searchParams.get("q") || "").slice(0, 120).toLowerCase();
-  const mine = searchParams.get("mine") === "1";
-  const { jobs, source } = await loadJobsFromFirestore(50);
+  try {
+    const { searchParams } = new URL(req.url);
+    const q = (searchParams.get("q") || "").slice(0, 120).toLowerCase();
+    const mine = searchParams.get("mine") === "1";
+    const { jobs, source } = await loadJobsFromFirestore(50);
 
-  let filtered = jobs;
-  if (mine) {
-    const session = await auth();
-    if (!session?.user?.id) return jsonError("Unauthorized", 401);
-    if (!hasFirebaseAdminCredentials()) return jsonOk({ items: [], source: "unconfigured" });
-    try {
-      const snap = await getAdminDb()
-        .collection("jobs")
-        .where("createdBy", "==", session.user.id)
-        .limit(50)
-        .get();
-      filtered = snap.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          title: String(data.title || "Role"),
-          company: String(data.company || "Company"),
-          location: String(data.location || "TBA"),
-          type: String(data.type || "Full-time"),
-          workMode: String(data.workMode || "Hybrid"),
-          salary: data.salary ? String(data.salary) : undefined,
-          tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
-          blurb: String(data.blurb || ""),
-          isDemo: Boolean(data.isDemo),
-        };
-      });
-    } catch {
-      filtered = [];
-    }
-  }
-
-  let items = filtered.map((j) => ({
-    id: j.id,
-    title: j.title,
-    description: j.blurb,
-    organizationName: j.company,
-    location: j.location,
-    type: j.type,
-    workMode: j.workMode,
-    skillsJson: JSON.stringify(j.tags),
-    skills: j.tags.map((name) => ({ skill: { name } })),
-    status: "PUBLISHED",
-    isDemo: false,
-    createdAt: new Date().toISOString(),
-  }));
-
-  if (q) {
-    items = items.filter(
-      (i) =>
-        i.title.toLowerCase().includes(q) ||
-        i.organizationName.toLowerCase().includes(q) ||
-        i.description.toLowerCase().includes(q),
-    );
-  }
-
-  const cookieHeader = req.headers.get("cookie") || "";
-  const hasAuthCookie = cookieHeader.includes("authjs") || cookieHeader.includes("next-auth");
-  const session = (mine || hasAuthCookie) ? await auth() : null;
-  const ctx = !mine && session?.user?.id ? await getCareerContext(session.user.id) : null;
-  const matchQuota =
-    ctx && items.length
-      ? await consumeDailyQuota(session!.user.id, "jobMatching", MATCH_DAILY_CAP)
-      : { ok: false, remaining: 0 };
-  const withMatch = ctx && matchQuota.ok
-    ? await Promise.all(
-        items.map(async (o, index) => {
-          if (index >= MATCH_TOP_N) return o;
+    let filtered = jobs;
+    if (mine) {
+      const session = await auth();
+      if (!session?.user?.id) return jsonError("Unauthorized", 401);
+      if (!hasFirebaseAdminCredentials()) return jsonOk({ items: [], source: "unconfigured" });
+      try {
+        const snap = await getAdminDb()
+          .collection("jobs")
+          .where("createdBy", "==", session.user.id)
+          .limit(50)
+          .get();
+        filtered = snap.docs.map((d) => {
+          const data = d.data();
           return {
-            ...o,
-            match: await aiService.jobMatching({
-              ctx,
-              opportunity: {
-                title: o.title,
-                description: o.description,
-                skills: o.skills.map((s) => s.skill.name),
-                eligibility: null,
-                type: o.type,
-              },
-            }),
+            id: d.id,
+            title: String(data.title || "Role"),
+            company: String(data.company || "Company"),
+            location: String(data.location || "TBA"),
+            type: String(data.type || "Full-time"),
+            workMode: String(data.workMode || "Hybrid"),
+            salary: data.salary ? String(data.salary) : undefined,
+            tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+            blurb: String(data.blurb || ""),
+            isDemo: Boolean(data.isDemo),
           };
-        }),
-      )
-    : items;
+        });
+      } catch {
+        filtered = [];
+      }
+    }
 
-  const isPublicCatalog = !mine && !session?.user?.id;
-  const cacheHeader = isPublicCatalog
-    ? "public, s-maxage=60, stale-while-revalidate=300"
-    : "private, no-cache, no-store";
+    let items = filtered.map((j) => ({
+      id: j.id,
+      title: j.title,
+      description: j.blurb,
+      organizationName: j.company,
+      location: j.location,
+      type: j.type,
+      workMode: j.workMode,
+      skillsJson: JSON.stringify(j.tags),
+      skills: j.tags.map((name) => ({ skill: { name } })),
+      status: "PUBLISHED",
+      isDemo: false,
+      createdAt: new Date().toISOString(),
+    }));
 
-  return jsonOk(
-    {
-      items: withMatch,
-      total: withMatch.length,
-      page: 1,
-      pageSize: withMatch.length,
-      source: mine ? "firestore" : source,
-      matchedTopN: ctx && matchQuota.ok ? Math.min(MATCH_TOP_N, items.length) : 0,
-      matchRemaining: ctx ? matchQuota.remaining : null,
-    },
-    {
-      headers: {
-        "Cache-Control": cacheHeader,
+    if (q) {
+      items = items.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.organizationName.toLowerCase().includes(q) ||
+          i.description.toLowerCase().includes(q),
+      );
+    }
+
+    const cookieHeader = req.headers.get("cookie") || "";
+    const hasAuthCookie = cookieHeader.includes("authjs") || cookieHeader.includes("next-auth");
+    const session = (mine || hasAuthCookie) ? await auth() : null;
+    const ctx = !mine && session?.user?.id ? await getCareerContext(session.user.id) : null;
+    const matchQuota =
+      ctx && items.length
+        ? await consumeDailyQuota(session!.user.id, "jobMatching", MATCH_DAILY_CAP)
+        : { ok: false, remaining: 0 };
+    const withMatch = ctx && matchQuota.ok
+      ? await Promise.all(
+          items.map(async (o, index) => {
+            if (index >= MATCH_TOP_N) return o;
+            return {
+              ...o,
+              match: await aiService.jobMatching({
+                ctx,
+                opportunity: {
+                  title: o.title,
+                  description: o.description,
+                  skills: o.skills.map((s) => s.skill.name),
+                  eligibility: null,
+                  type: o.type,
+                },
+              }),
+            };
+          }),
+        )
+      : items;
+
+    const isPublicCatalog = !mine && !session?.user?.id;
+    const cacheHeader = isPublicCatalog
+      ? "public, s-maxage=60, stale-while-revalidate=300"
+      : "private, no-cache, no-store";
+
+    return jsonOk(
+      {
+        items: withMatch,
+        total: withMatch.length,
+        page: 1,
+        pageSize: withMatch.length,
+        source: mine ? "firestore" : source,
+        matchedTopN: ctx && matchQuota.ok ? Math.min(MATCH_TOP_N, items.length) : 0,
+        matchRemaining: ctx ? matchQuota.remaining : null,
       },
-    },
-  );
+      {
+        headers: {
+          "Cache-Control": cacheHeader,
+        },
+      },
+    );
+  } catch (error) {
+    console.error("Opportunities API error:", error);
+    return jsonError("Unable to load opportunities", 500);
+  }
 }
 
 /** Approved recruiters (HR + recruiterApproved) or PLATFORM_ADMIN may publish jobs. */

@@ -3,8 +3,8 @@ export const DS = {
   heroWave: "/dropship/img/hero-wave.webp",
   heroWave1600: "/dropship/img/hero-wave-1600.webp",
   aiSearchBg: "/dropship/img/ai-search-bg.webp",
-  stripMillions: "/dropship/img/feature-candidates.png",
-  stripTrack: "/dropship/img/feature-pipeline.png",
+  stripMillions: "/dropship/img/millions-products.webp",
+  stripTrack: "/dropship/img/track-revenue.webp",
   /** Dropship globe land mesh (world-atlas@2) — used by pipeline Three.js earth */
   countries110m: "/dropship/geo/countries-110m.json",
   chromeIcon: "/dropship/icons/69cb344e12c41954adba10a8_ec29ef29b8b063150dc88466dbc7820f_Chrome-Icon.svg",

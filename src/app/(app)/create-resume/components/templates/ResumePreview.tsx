@@ -5,10 +5,11 @@ import { Control, useWatch } from "react-hook-form";
 import { ResumeData } from "../../types/resume";
 import { ExecutiveTemplate } from "./ExecutiveTemplate";
 import { ClassicTemplate } from "./ClassicTemplate";
+import { AtsClassicTemplate } from "./AtsClassicTemplate";
 
 interface ResumePreviewProps {
   control: Control<ResumeData>;
-  templateId: "executive" | "classic";
+  templateId: "executive" | "classic" | "ats-classic";
   zoom: number;
   fontSize: "compact" | "standard" | "large";
   previewRef: RefObject<HTMLDivElement | null>;
@@ -47,6 +48,8 @@ export const ResumePreview = memo(function ResumePreview({
       >
         {templateId === "executive" ? (
           <ExecutiveTemplate data={formData || {}} />
+        ) : templateId === "ats-classic" ? (
+          <AtsClassicTemplate data={formData || {}} />
         ) : (
           <ClassicTemplate data={formData || {}} />
         )}

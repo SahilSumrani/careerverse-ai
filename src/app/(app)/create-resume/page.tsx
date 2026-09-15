@@ -2,8 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
 import { FileUp, FileText, Loader2, AlertCircle } from "lucide-react";
 import { ResumeBuilder, ResumeData } from "./components/ResumeBuilder";
 import { getResumeStorageKey } from "./lib/resume-utils";
@@ -118,19 +116,13 @@ export default function CreateResumePage() {
 
   if (flowState === "builder") {
     return (
-      <div className="flex flex-col min-h-screen">
-        <div className="print:hidden">
-          <SiteHeader />
-        </div>
-        <ResumeBuilder initialData={resumeData} onBack={() => setFlowState("onboarding")} />
-      </div>
+      <ResumeBuilder initialData={resumeData} onBack={() => setFlowState("onboarding")} />
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <SiteHeader />
-      <main className="flex-1 flex flex-col items-center justify-center p-6">
+    <div className="flex flex-col min-h-[calc(100vh-8rem)] w-full">
+      <div className="flex-1 flex flex-col items-center justify-center p-2 md:p-6">
         {flowState === "onboarding" && (
           <div className="max-w-3xl w-full text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
@@ -291,8 +283,7 @@ export default function CreateResumePage() {
             </button>
           </div>
         )}
-      </main>
-      <SiteFooter />
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-export type DummyJob = {
+export type JobListing = {
   id: string;
   title: string;
   company: string;
@@ -18,11 +18,14 @@ export type DummyJob = {
   perks?: string[];
 };
 
+/** Backwards-compatible alias for JobListing */
+export type DummyJob = JobListing;
+
 /**
  * Starter catalog written to Firestore by PLATFORM_ADMIN (`seed_starter_jobs`).
  * Never render this array as live openings — marketing/app read Firestore only.
  */
-export const JOB_SEED_CATALOG: DummyJob[] = [
+export const JOB_SEED_CATALOG: JobListing[] = [
   {
     id: "jv-1",
     title: "Junior Frontend Engineer",

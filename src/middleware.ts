@@ -42,6 +42,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/career") ||
     pathname.startsWith("/applications") ||
     pathname.startsWith("/resume") ||
+    pathname.startsWith("/create-resume") ||
     pathname.startsWith("/roadmap") ||
     pathname.startsWith("/copilot") ||
     pathname.startsWith("/network") ||
@@ -100,6 +101,7 @@ export const config = {
     "/career/:path*",
     "/applications/:path*",
     "/resume/:path*",
+    "/create-resume/:path*",
     "/roadmap/:path*",
     "/copilot/:path*",
     "/network/:path*",

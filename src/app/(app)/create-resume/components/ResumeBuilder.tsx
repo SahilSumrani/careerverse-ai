@@ -173,18 +173,53 @@ export function ResumeBuilder({ initialData, onBack }: ResumeBuilderProps) {
     };
   }, [initialData, session?.user?.id, storageKey, reset, defaultStarter]);
 
-  // Debounced auto-save to localStorage
+  // Debounced auto-save to localStorage & Cloud
   useEffect(() => {
+    let timeout: NodeJS.Timeout;
     const subscription = watch((val) => {
       if (!isInitializedRef.current) return;
+      
+      const currentValues = getValues();
+      
       if (typeof window !== "undefined") {
         try {
-          localStorage.setItem(storageKey, JSON.stringify(val));
+          localStorage.setItem(storageKey, JSON.stringify(currentValues));
         } catch {}
       }
+
+      if (session?.user?.id) {
+        setSaveStatus("Saving...");
+        clearTimeout(timeout);
+        timeout = setTimeout(async () => {
+          try {
+            const res = await fetch("/api/resume/save", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                resumeData: currentValues,
+                templateId: currentTemplate,
+                title: `${currentValues.personalInfo?.fullName || "My"} Resume`,
+              }),
+            });
+            if (res.ok) {
+              setSaveStatus("Auto-saved");
+              setTimeout(() => setSaveStatus(null), 2500);
+            } else {
+              setSaveStatus(null);
+            }
+          } catch (e) {
+            console.error("Auto-save failed", e);
+            setSaveStatus(null);
+          }
+        }, 3000);
+      }
     });
-    return () => subscription.unsubscribe();
-  }, [watch, storageKey]);
+    
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
+  }, [watch, storageKey, session?.user?.id, currentTemplate, getValues]);
 
   // Real-time suggestions (debounced watch)
   const [liveSuggestions, setLiveSuggestions] = useState<string[]>([]);
